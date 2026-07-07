@@ -10,6 +10,7 @@ import (
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	githuboauth "github.com/perfect-panel/server/pkg/oauth/github"
 	"github.com/perfect-panel/server/pkg/oauth/google"
 	"github.com/perfect-panel/server/pkg/oauth/telegram"
 	"github.com/perfect-panel/server/pkg/random"
@@ -43,7 +44,7 @@ func (l *OAuthLoginLogic) OAuthLogin(req *types.OAthLoginRequest) (resp *types.O
 	case "telegram":
 		uri, err = l.telegram(req)
 	case "github":
-		uri, err = l.github()
+		uri, err = l.github(req)
 	case "facebook":
 		uri, err = l.facebook()
 
@@ -101,15 +102,38 @@ func (l *OAuthLoginLogic) apple(req *types.OAthLoginRequest) (string, error) {
 	uri := "https://appleid.apple.com/auth/authorize?client_id=%s&redirect_uri=%s&response_type=code&state=%s&scope=name email&response_mode=form_post"
 	// generate the state code
 	code := random.KeyNew(8, 1)
-	// save the state code
-	err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf("telegram:%s", code), req.Redirect, 5*60*time.Second).Err()
+	// save the state code under correct apple prefix
+	err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf("apple:%s", code), req.Redirect, 5*60*time.Second).Err()
 	if err != nil {
 		l.Errorw("error save state code to redis: %v", logger.Field("code", code), logger.Field("error", err.Error()))
 	}
 	return fmt.Sprintf(uri, cfg.ClientId, fmt.Sprintf("%s/v1/auth/oauth/callback/apple", cfg.RedirectURL), code), nil
 }
-func (l *OAuthLoginLogic) github() (string, error) {
-	return "", nil
+func (l *OAuthLoginLogic) github(req *types.OAthLoginRequest) (string, error) {
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "github")
+	if err != nil {
+		return "", err
+	}
+	var cfg auth.GithubAuthConfig
+	err = json.Unmarshal([]byte(authMethod.Config), &cfg)
+	if err != nil {
+		l.Errorw("error unmarshal github config: %v", logger.Field("config", authMethod.Config), logger.Field("error", err.Error()))
+		return "", err
+	}
+	client := githuboauth.New(&githuboauth.Config{
+		ClientID:     cfg.ClientId,
+		ClientSecret: cfg.ClientSecret,
+		RedirectURL:  req.Redirect,
+	})
+	// generate the state code
+	code := random.KeyNew(8, 1)
+	// save the state code
+	err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf("github:%s", code), req.Redirect, 5*60*time.Second).Err()
+	if err != nil {
+		return "", err
+	}
+	uri := client.AuthCodeURL(code, oauth2.AccessTypeOffline)
+	return uri, nil
 }
 func (l *OAuthLoginLogic) telegram(req *types.OAthLoginRequest) (string, error) {
 	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "telegram")
@@ -119,13 +143,13 @@ func (l *OAuthLoginLogic) telegram(req *types.OAthLoginRequest) (string, error) 
 	var cfg auth.TelegramAuthConfig
 	err = json.Unmarshal([]byte(authMethod.Config), &cfg)
 	if err != nil {
-		l.Errorw("error unmarshal apple config: %v", logger.Field("config", authMethod.Config), logger.Field("error", err.Error()))
+		l.Errorw("error unmarshal telegram config: %v", logger.Field("config", authMethod.Config), logger.Field("error", err.Error()))
 		return "", err
 	}
 	// generate the state code
 	code := random.KeyNew(8, 1)
-	// save the state code
-	err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf("apple:%s", code), req.Redirect, 5*60*time.Second).Err()
+	// save the state code under correct telegram prefix
+	err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf("telegram:%s", code), req.Redirect, 5*60*time.Second).Err()
 	if err != nil {
 		l.Errorw("error save state code to redis", logger.Field("code", code), logger.Field("error", err.Error()))
 		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "error save state code to redis")

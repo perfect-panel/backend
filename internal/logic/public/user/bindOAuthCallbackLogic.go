@@ -14,6 +14,7 @@ import (
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/oauth/apple"
+	githuboauth "github.com/perfect-panel/server/pkg/oauth/github"
 	"github.com/perfect-panel/server/pkg/oauth/google"
 	"github.com/perfect-panel/server/pkg/oauth/telegram"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -58,6 +59,8 @@ func (l *BindOAuthCallbackLogic) BindOAuthCallback(req *types.BindOAuthCallbackR
 		err = l.apple(req)
 	case "telegram":
 		err = l.telegram(req)
+	case "github":
+		err = l.github(req)
 	default:
 		l.Errorw("oauth login method not support", logger.Field("method", req.Method))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "oauth login method not support: %v", req.Method)
@@ -310,5 +313,83 @@ func (l *BindOAuthCallbackLogic) telegram(req *types.BindOAuthCallbackRequest) e
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert telegram user auth method failed")
 	}
 
+	return nil
+}
+
+func (l *BindOAuthCallbackLogic) github(req *types.BindOAuthCallbackRequest) error {
+	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
+	if !ok {
+		logger.Error("current user is not found in context")
+		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
+	}
+
+	var request googleRequest
+	err := tool.CloneMapToStruct(req.Callback.(map[string]interface{}), &request)
+	if err != nil {
+		l.Errorw("error CloneMapToStruct: %v", logger.Field("error", err.Error()))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "CloneMapToStruct failed")
+	}
+
+	// validate the state code
+	redirect, err := l.svcCtx.Redis.Get(l.ctx, fmt.Sprintf("github:%s", request.State)).Result()
+	if err != nil {
+		l.Errorw("error get github state code: %v", logger.Field("error", err.Error()))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get github state code failed")
+	}
+
+	// get github config
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "github")
+	if err != nil {
+		l.Errorw("error find github auth method: %v", logger.Field("error", err.Error()))
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find github auth method failed")
+	}
+
+	var cfg auth.GithubAuthConfig
+	err = cfg.Unmarshal(authMethod.Config)
+	if err != nil {
+		l.Errorw("error unmarshal github config: %v", logger.Field("config", authMethod.Config), logger.Field("error", err.Error()))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal github config failed")
+	}
+
+	client := githuboauth.New(&githuboauth.Config{
+		ClientID:     cfg.ClientId,
+		ClientSecret: cfg.ClientSecret,
+		RedirectURL:  redirect,
+	})
+
+	token, err := client.Exchange(l.ctx, request.Code)
+	if err != nil {
+		l.Errorw("error exchange github token: %v", logger.Field("error", err.Error()))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "exchange github token failed")
+	}
+
+	githubUserInfo, err := client.GetUserInfo(token.AccessToken)
+	if err != nil {
+		l.Errorw("error get github user info: %v", logger.Field("error", err.Error()))
+		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get github user info failed")
+	}
+
+	// check if this GitHub account is already bound to another user
+	openID := fmt.Sprintf("%d", githubUserInfo.OpenID)
+	userAuthMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "github", openID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user auth method failed")
+	}
+	if userAuthMethod.Id > 0 {
+		return errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "github user already exists")
+	}
+
+	// bind github
+	userAuthMethod = &user.AuthMethods{
+		UserId:         u.Id,
+		AuthType:       "github",
+		AuthIdentifier: openID,
+		Verified:       true,
+	}
+	err = l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, userAuthMethod)
+	if err != nil {
+		l.Errorw("error insert user auth method: %v", logger.Field("error", err.Error()))
+		return err
+	}
 	return nil
 }

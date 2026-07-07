@@ -64,18 +64,25 @@ func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
 	}
 
 	client := epay.NewClient(config.Pid, config.Url, config.Key, config.Type)
-	if !client.VerifySign(l.meta.Params) && !l.svcCtx.Config.Debug {
-		l.Logger.Error("[EPayNotify] Verify sign failed",
-			logger.Field("orderNo", req.OutTradeNo),
-			logger.Field("receivedParams", l.meta.Params),
-			logger.Field("method", l.meta.Method),
-		)
-		return errors.New("verify sign failed")
+	if !client.VerifySign(l.meta.Params) {
+		if l.svcCtx.Config.Debug {
+			l.Logger.Infow("[EPayNotify] Signature verification SKIPPED in debug mode",
+				logger.Field("orderNo", req.OutTradeNo),
+				logger.Field("method", l.meta.Method),
+			)
+		} else {
+			l.Logger.Error("[EPayNotify] Verify sign failed",
+				logger.Field("orderNo", req.OutTradeNo),
+				logger.Field("receivedParams", l.meta.Params),
+				logger.Field("method", l.meta.Method),
+			)
+			return errors.New("verify sign failed")
+		}
 	}
 
 	if req.TradeStatus != "TRADE_SUCCESS" {
 		l.Logger.Error("[EPayNotify] Trade status is not success", logger.Field("orderNo", req.OutTradeNo), logger.Field("tradeStatus", req.TradeStatus))
-		return nil
+		return errors.New("trade status is not success")
 	}
 	if orderInfo.Status == 5 {
 		return nil

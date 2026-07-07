@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/auth"
+	githuboauth "github.com/perfect-panel/server/pkg/oauth/github"
 	"github.com/perfect-panel/server/pkg/oauth/google"
 	"github.com/perfect-panel/server/pkg/oauth/telegram"
 	"github.com/perfect-panel/server/pkg/random"
@@ -43,7 +44,7 @@ func (l *BindOAuthLogic) BindOAuth(req *types.BindOAuthRequest) (resp *types.Bin
 	case "telegram":
 		uri, err = l.telegram(req)
 	case "github":
-		uri, err = l.github()
+		uri, err = l.github(req)
 	case "facebook":
 		uri, err = l.facebook()
 	default:
@@ -110,8 +111,31 @@ func (l *BindOAuthLogic) apple(req *types.BindOAuthRequest) (string, error) {
 	}
 	return fmt.Sprintf(uri, cfg.ClientId, fmt.Sprintf("%s/v1/auth/oauth/callback/apple", cfg.RedirectURL), code), nil
 }
-func (l *BindOAuthLogic) github() (string, error) {
-	return "", nil
+func (l *BindOAuthLogic) github(req *types.BindOAuthRequest) (string, error) {
+	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "github")
+	if err != nil {
+		return "", err
+	}
+	var cfg auth.GithubAuthConfig
+	err = cfg.Unmarshal(authMethod.Config)
+	if err != nil {
+		l.Errorw("error unmarshal github config: %v", logger.Field("config", authMethod.Config), logger.Field("error", err.Error()))
+		return "", err
+	}
+	client := githuboauth.New(&githuboauth.Config{
+		ClientID:     cfg.ClientId,
+		ClientSecret: cfg.ClientSecret,
+		RedirectURL:  req.Redirect,
+	})
+	// generate the state code
+	code := random.KeyNew(8, 1)
+	// save the state code
+	err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf("github:%s", code), req.Redirect, 5*60*time.Second).Err()
+	if err != nil {
+		return "", err
+	}
+	uri := client.AuthCodeURL(code, oauth2.AccessTypeOffline)
+	return uri, nil
 }
 
 func (l *BindOAuthLogic) telegram(req *types.BindOAuthRequest) (string, error) {

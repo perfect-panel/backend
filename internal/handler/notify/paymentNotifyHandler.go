@@ -28,12 +28,15 @@ func PaymentNotifyHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
 		switch payment.ParsePlatform(platform) {
 		case payment.EPay, payment.CryptoSaaS:
 			req := &types.EPayNotifyRequest{}
-			if err := c.ShouldBind(req); err != nil {
-				result.HttpResult(c, nil, err)
-				return
-			}
 			if err := c.Request.ParseForm(); err != nil {
 				logger.WithContext(c.Request.Context()).Errorw("[PaymentNotifyHandler] ParseForm failed", logger.Field("error", err.Error()))
+				c.String(http.StatusBadRequest, "parse form failed")
+				return
+			}
+			if err := c.ShouldBind(req); err != nil {
+				logger.WithContext(c.Request.Context()).Errorw("[PaymentNotifyHandler] ShouldBind failed", logger.Field("error", err.Error()))
+				c.String(http.StatusBadRequest, "%s", "invalid request")
+				return
 			}
 			l := notify.NewEPayNotifyLogic(c.Request.Context(), svcCtx, notify.EPayNotifyMeta{
 				Method: c.Request.Method,
@@ -41,7 +44,7 @@ func PaymentNotifyHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
 			})
 			if err := l.EPayNotify(req); err != nil {
 				logger.WithContext(c.Request.Context()).Errorf("EPayNotify failed: %v", err.Error())
-				c.String(http.StatusBadRequest, err.Error())
+				c.String(http.StatusBadRequest, "%s", err.Error())
 				return
 			}
 			c.String(http.StatusOK, "%s", "success")
