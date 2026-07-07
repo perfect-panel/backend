@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -40,18 +40,29 @@ func GetTelegramConfig(ctx context.Context, svcCtx *svc.ServiceContext) (*types.
 }
 
 func ApiLink(ctx context.Context, svcCtx *svc.ServiceContext, method string) string {
-	cfg, _ := GetTelegramConfig(ctx, svcCtx)
+	cfg, err := GetTelegramConfig(ctx, svcCtx)
+	if err != nil {
+		logger.WithContext(ctx).Errorw("[ApiLink] failed to get telegram config", logger.Field("error", err.Error()))
+		return ""
+	}
 	return "https://api.telegram.org/bot" + cfg.TelegramBotToken + "/" + method
 }
 
 func SendUserMessage(ctx context.Context, svcCtx *svc.ServiceContext, u user.User, text string, parseMode string) {
-	req, _ := http.NewRequest("GET", ApiLink(ctx, svcCtx, "sendMessage"), nil)
-	q := req.URL.Query()
+	if !svcCtx.Config.Telegram.EnableNotify {
+		return
+	}
+	apiURL := ApiLink(ctx, svcCtx, "sendMessage")
+	if apiURL == "" {
+		return
+	}
 
 	userTelegramChatId, ok := findTelegram(&u)
 	if !ok {
 		return
 	}
+	req, _ := http.NewRequest("GET", apiURL, nil)
+	q := req.URL.Query()
 	q.Add("chat_id", strconv.FormatInt(userTelegramChatId, 10))
 	if parseMode == "markdown" {
 		text = strings.ReplaceAll(text, "_", "\\_")
@@ -59,21 +70,45 @@ func SendUserMessage(ctx context.Context, svcCtx *svc.ServiceContext, u user.Use
 	q.Add("text", text)
 	q.Add("parse_mode", parseMode)
 	req.URL.RawQuery = q.Encode()
-	_, _ = http.DefaultClient.Do(req)
 
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		logger.WithContext(ctx).Errorw("[SendUserMessage] HTTP request failed",
+			logger.Field("error", err.Error()),
+			logger.Field("chat_id", userTelegramChatId),
+		)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		logger.WithContext(ctx).Errorw("[SendUserMessage] Telegram API returned non-OK status",
+			logger.Field("status", resp.StatusCode),
+			logger.Field("chat_id", userTelegramChatId),
+			logger.Field("response", string(body)),
+		)
+	}
 }
 
 func SendAdminMessage(ctx context.Context, svcCtx *svc.ServiceContext, text string, parseMode string) {
+	if !svcCtx.Config.Telegram.EnableNotify {
+		return
+	}
+	apiURL := ApiLink(ctx, svcCtx, "sendMessage")
+	if apiURL == "" {
+		return
+	}
+
 	var adminTelegram []int64
-	f := false
+	found := false
 	adminTelegramJson, err := svcCtx.Redis.Get(ctx, config.AdminTelegramChatIdsKey).Result()
 	if err == nil {
 		err = json.Unmarshal([]byte(adminTelegramJson), &adminTelegram)
 		if err == nil {
-			f = true
+			found = true
 		}
 	}
-	if !f {
+	if !found {
 		admins, err := svcCtx.Store.User().QueryAdminUsers(ctx)
 		if err != nil {
 			logger.WithContext(ctx).Error("[SendAdminMessage] query admin users failed", logger.Field("error", err.Error()))
@@ -87,33 +122,40 @@ func SendAdminMessage(ctx context.Context, svcCtx *svc.ServiceContext, text stri
 		val, _ := json.Marshal(adminTelegram)
 		_ = svcCtx.Redis.Set(ctx, config.AdminTelegramChatIdsKey, string(val), time.Duration(3600)*time.Second).Err()
 	}
-	req, _ := http.NewRequest("GET", ApiLink(ctx, svcCtx, "sendMessage"), nil)
-	q := req.URL.Query()
+	if len(adminTelegram) == 0 {
+		return
+	}
+
 	if parseMode == "markdown" {
 		text = strings.ReplaceAll(text, "_", "\\_")
 	}
-	q.Add("text", text)
-	q.Add("parse_mode", parseMode)
-	for _, telegram := range adminTelegram {
-		q.Add("chat_id", strconv.FormatInt(telegram, 10))
-		req.URL.RawQuery = q.Encode()
-		_, _ = http.DefaultClient.Do(req)
-	}
-}
 
-func SetWebhook(ctx context.Context, svcCtx *svc.ServiceContext) error {
-	configs, _ := svcCtx.Store.System().GetSiteConfig(ctx)
-	cfg := &types.SiteConfig{}
-	tool.SystemConfigSliceReflectToStruct(configs, cfg)
-	req, _ := http.NewRequest("GET", ApiLink(ctx, svcCtx, "setWebhook"), nil)
-	q := req.URL.Query()
-	q.Add("url", cfg.Host+"/telegram/webhook")
-	req.URL.RawQuery = q.Encode()
-	_, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set webhook error: %v", err)
+	for _, telegram := range adminTelegram {
+		req, _ := http.NewRequest("GET", apiURL, nil)
+		q := req.URL.Query()
+		q.Add("chat_id", strconv.FormatInt(telegram, 10))
+		q.Add("text", text)
+		q.Add("parse_mode", parseMode)
+		req.URL.RawQuery = q.Encode()
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			logger.WithContext(ctx).Errorw("[SendAdminMessage] HTTP request failed",
+				logger.Field("error", err.Error()),
+				logger.Field("chat_id", telegram),
+			)
+			continue
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			logger.WithContext(ctx).Errorw("[SendAdminMessage] Telegram API returned non-OK status",
+				logger.Field("status", resp.StatusCode),
+				logger.Field("chat_id", telegram),
+				logger.Field("response", string(body)),
+			)
+		}
 	}
-	return nil
 }
 
 func findTelegram(u *user.User) (int64, bool) {

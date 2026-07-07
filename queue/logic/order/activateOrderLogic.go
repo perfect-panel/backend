@@ -787,6 +787,9 @@ func (l *ActivateOrderLogic) buildAdminNotificationData(orderInfo *order.Order, 
 
 // sendUserNotifyWithTelegram sends a notification message to a user via Telegram
 func (l *ActivateOrderLogic) sendUserNotifyWithTelegram(chatId int64, text string) {
+	if !l.svc.Config.Telegram.EnableNotify {
+		return
+	}
 	msg := tgbotapi.NewMessage(chatId, text)
 	msg.ParseMode = "markdown"
 	if _, err := l.svc.TelegramBot.Send(msg); err != nil {
@@ -796,6 +799,9 @@ func (l *ActivateOrderLogic) sendUserNotifyWithTelegram(chatId int64, text strin
 
 // sendAdminNotifyWithTelegram sends a notification message to all admin users via Telegram
 func (l *ActivateOrderLogic) sendAdminNotifyWithTelegram(ctx context.Context, text string) {
+	if !l.svc.Config.Telegram.EnableNotify {
+		return
+	}
 	admins, err := l.svc.Store.User().QueryAdminUsers(ctx)
 	if err != nil {
 		logger.WithContext(ctx).Error("Query admin users failed", logger.Field("error", err.Error()))
