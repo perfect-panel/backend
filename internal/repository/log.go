@@ -3,11 +3,15 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/orm"
 	"gorm.io/gorm"
 )
+
+const maxLogPageSize = 100
 
 // LogRepo log 数据访问接口
 type LogRepo interface {
@@ -18,6 +22,8 @@ type LogRepo interface {
 	FilterSystemLog(ctx context.Context, filter *log.FilterParams) ([]*log.SystemLog, int64, error)
 	FindFirstByDateType(ctx context.Context, date string, typ uint8) (*log.SystemLog, error)
 	FindByDatesType(ctx context.Context, dates []string, typ uint8) ([]*log.SystemLog, error)
+	DeleteBefore(ctx context.Context, end time.Time) error
+	SumAmountByTypeAndObjectID(ctx context.Context, typ uint8, objectID int64) (int64, error)
 }
 
 var _ LogRepo = (*logRepo)(nil)
@@ -69,6 +75,9 @@ func (m *logRepo) FilterSystemLog(ctx context.Context, filter *log.FilterParams)
 	if filter.Size < 1 {
 		filter.Size = 10
 	}
+	if filter.Size > maxLogPageSize {
+		filter.Size = maxLogPageSize
+	}
 
 	if filter.Type != 0 {
 		tx = tx.Where("type = ?", filter.Type)
@@ -87,7 +96,12 @@ func (m *logRepo) FilterSystemLog(ctx context.Context, filter *log.FilterParams)
 
 	var total int64
 	var logs []*log.SystemLog
-	err := tx.Count(&total).Limit(filter.Size).Offset((filter.Page - 1) * filter.Size).Find(&logs).Error
+	if !filter.SkipCount {
+		if err := tx.Count(&total).Error; err != nil {
+			return nil, 0, err
+		}
+	}
+	err := tx.Limit(filter.Size).Offset((filter.Page - 1) * filter.Size).Find(&logs).Error
 	return logs, total, err
 }
 
@@ -112,4 +126,31 @@ func (m *logRepo) FindByDatesType(ctx context.Context, dates []string, typ uint8
 	}
 	err := m.WithContext(ctx).Model(&log.SystemLog{}).Where("date IN ? AND type = ?", dates, typ).Find(&data).Error
 	return data, err
+}
+
+// DeleteBefore deletes system logs whose date is before the given end date.
+func (m *logRepo) DeleteBefore(ctx context.Context, end time.Time) error {
+	return m.WithContext(ctx).
+		Where("date < ?", end.Format(time.DateOnly)).
+		Delete(&log.SystemLog{}).Error
+}
+
+// SumAmountByTypeAndObjectID returns the sum of the "amount" field extracted from JSON content
+// for all system logs matching the given type and object ID.
+func (m *logRepo) SumAmountByTypeAndObjectID(ctx context.Context, typ uint8, objectID int64) (int64, error) {
+	jsonExtract := jsonAmountExpr(m.DB)
+	var sum int64
+	err := m.WithContext(ctx).
+		Model(&log.SystemLog{}).
+		Select(fmt.Sprintf("COALESCE(SUM(%s), 0)", jsonExtract)).
+		Where("type = ? AND object_id = ?", typ, objectID).
+		Scan(&sum).Error
+	return sum, err
+}
+
+func jsonAmountExpr(db *gorm.DB) string {
+	if db != nil && db.Dialector.Name() == orm.DriverPostgres {
+		return "(content::json->>'amount')::bigint"
+	}
+	return "CAST(JSON_EXTRACT(content, '$.amount') AS SIGNED)"
 }

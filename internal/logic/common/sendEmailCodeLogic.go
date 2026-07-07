@@ -11,6 +11,7 @@ import (
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/limit"
 	"github.com/perfect-panel/server/pkg/random"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
@@ -99,7 +100,7 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *types.SendCodeRequest) (resp *ty
 	// Save to Redis
 	payload = CacheKeyPayload{
 		Code:   code,
-		LastAt: time.Now().Unix(),
+		LastAt: timeutil.Now().Unix(),
 	}
 	// Marshal the payload
 	val, _ := json.Marshal(payload)

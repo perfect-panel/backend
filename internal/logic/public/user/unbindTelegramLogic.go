@@ -3,9 +3,9 @@ package user
 import (
 	"context"
 	"strconv"
-	"time"
 
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/perfect-panel/server/internal/logic/telegram"
@@ -65,7 +65,7 @@ func (l *UnbindTelegramLogic) UnbindTelegram() error {
 	// Unbind Telegram Success send message with chatId
 	text, err := tool.RenderTemplateToString(telegram.UnbindNotify, map[string]string{
 		"Id":   strconv.FormatInt(u.Id, 10),
-		"Time": time.Now().Format("2006-01-02 15:04:05"),
+		"Time": timeutil.Now().Format("2006-01-02 15:04:05"),
 	})
 	if err != nil {
 		l.Errorw("UnbindTelegramLogic RenderTemplateToString Error", logger.Field("id", u.Id), logger.Field("error", err.Error()))

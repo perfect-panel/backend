@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/perfect-panel/server/internal/model/auth"
 	"github.com/perfect-panel/server/internal/model/user"
@@ -262,10 +262,10 @@ func (l *BindOAuthCallbackLogic) telegram(req *types.BindOAuthCallbackRequest) e
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "invalid telegram callback payload")
 	}
 
-	if time.Now().Unix()-*callbackData.AuthDate > telegramBindAuthExpire {
+	if timeutil.Now().Unix()-*callbackData.AuthDate > telegramBindAuthExpire {
 		l.Errorw("telegram auth date expired",
 			logger.Field("auth_date", *callbackData.AuthDate),
-			logger.Field("current_time", time.Now().Unix()),
+			logger.Field("current_time", timeutil.Now().Unix()),
 			logger.Field("expire_seconds", telegramBindAuthExpire),
 		)
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "auth date expired")

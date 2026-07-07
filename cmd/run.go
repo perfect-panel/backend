@@ -23,6 +23,7 @@ import (
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/service"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/queue"
 	"github.com/perfect-panel/server/scheduler"
@@ -82,6 +83,10 @@ func getServers() *service.Group {
 		}
 	}
 	conf.MustLoad(startConfigPath, &c)
+	// Initialize application timezone
+	if err := timeutil.LoadLocation(c.AppLocation); err != nil {
+		logger.Errorf("load app timezone %q failed: %v, falling back to Local", c.AppLocation, err)
+	}
 	if !c.Debug {
 		hertzx.SetMode(hertzx.ReleaseMode)
 	}

@@ -5,9 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"text/template"
-	"time"
 
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/log"
@@ -141,7 +141,7 @@ func (l *SendEmailLogic) ProcessTask(ctx context.Context, task *asynq.Task) erro
 
 	if err = l.svcCtx.Store.Log().Insert(ctx, &log.SystemLog{
 		Type:     log.TypeEmailMessage.Uint8(),
-		Date:     time.Now().Format("2006-01-02"),
+		Date:     timeutil.Now().Format("2006-01-02"),
 		ObjectID: 0,
 		Content:  string(emailLog),
 	}); err != nil {

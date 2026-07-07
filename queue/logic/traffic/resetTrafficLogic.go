@@ -13,6 +13,7 @@ import (
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/queue/types"
 
 	"github.com/hibiken/asynq"
@@ -56,7 +57,7 @@ func NewResetTrafficLogic(svc *svc.ServiceContext) *ResetTrafficLogic {
 // ProcessTask executes the traffic reset task for all subscription types with enhanced retry mechanism
 func (l *ResetTrafficLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
 	var err error
-	startTime := time.Now()
+	startTime := timeutil.Now()
 
 	// Get current retry count
 	retryCount := l.getRetryCount(ctx)
@@ -178,7 +179,7 @@ func (l *ResetTrafficLogic) ProcessTask(ctx context.Context, _ *asynq.Task) erro
 // resetMonth handles monthly cycle reset based on subscription start date
 // reset_cycle = 2: Reset monthly based on subscription start date
 func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
-	now := time.Now()
+	now := timeutil.Now()
 
 	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
 		// Get all subscriptions that reset monthly based on start date
@@ -235,7 +236,7 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 // reset1st handles reset on 1st of every month
 // reset_cycle = 1: Reset on 1st of every month
 func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCache) error {
-	now := time.Now()
+	now := timeutil.Now()
 
 	// Check if we already reset this month using cache
 	if firstDayResetAlreadyProcessed(now, cache) {
@@ -314,7 +315,7 @@ func firstDayResetAlreadyProcessed(now time.Time, cache resetTrafficCache) bool 
 // resetYear handles yearly reset based on subscription start date anniversary
 // reset_cycle = 3: Reset yearly based on subscription start date
 func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
-	now := time.Now()
+	now := timeutil.Now()
 
 	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
 		// Get all subscriptions that reset yearly
@@ -553,7 +554,7 @@ func (l *ResetTrafficLogic) insertLog(subId, userId int64) {
 	trafficLog := log.ResetSubscribe{
 		Type:      log.ResetSubscribeTypeAuto,
 		UserId:    userId,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: timeutil.Now().UnixMilli(),
 	}
 	content, _ := trafficLog.Marshal()
 	logCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -561,7 +562,7 @@ func (l *ResetTrafficLogic) insertLog(subId, userId int64) {
 	if err := l.svc.Store.Log().Insert(logCtx, &log.SystemLog{
 		Type:     log.TypeResetSubscribe.Uint8(),
 		ObjectID: subId,
-		Date:     time.Now().Format(time.DateOnly),
+		Date:     timeutil.Now().Format(time.DateOnly),
 		Content:  string(content),
 	}); err != nil {
 		logger.Errorw("[ResetTraffic] Failed to create system log for subscription", logger.Field("error", err.Error()))

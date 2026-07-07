@@ -10,6 +10,7 @@ import (
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -47,7 +48,7 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 	}
 
 	var today, monthly, all types.OrdersStatistics
-	now := time.Now()
+	now := timeutil.Now()
 	// Get today's revenue statistics
 	todayData, err := l.svcCtx.Store.Order().QueryDateOrders(l.ctx, now)
 	if err != nil {
@@ -140,7 +141,7 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 
 // mockRevenueStatistics is a mock function to simulate revenue statistics data.
 func (l *QueryRevenueStatisticsLogic) mockRevenueStatistics() *types.RevenueStatisticsResponse {
-	now := time.Now()
+	now := timeutil.Now()
 
 	// Generate daily data for the current month (from 1st to current date)
 	monthlyList := make([]types.OrdersStatistics, 7)

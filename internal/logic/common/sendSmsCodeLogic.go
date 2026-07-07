@@ -15,6 +15,7 @@ import (
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/phone"
 	"github.com/perfect-panel/server/pkg/random"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
 	queue "github.com/perfect-panel/server/queue/types"
 	"github.com/pkg/errors"
@@ -87,7 +88,7 @@ func (l *SendSmsCodeLogic) SendSmsCode(req *types.SendSmsCodeRequest) (resp *typ
 	// Save to Redis
 	payload := CacheKeyPayload{
 		Code:   code,
-		LastAt: time.Now().Unix(),
+		LastAt: timeutil.Now().Unix(),
 	}
 	// Marshal the payload
 	val, _ := json.Marshal(payload)

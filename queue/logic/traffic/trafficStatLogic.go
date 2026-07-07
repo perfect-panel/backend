@@ -9,6 +9,7 @@ import (
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 )
 
 type StatLogic struct {
@@ -22,11 +23,11 @@ func NewStatLogic(svc *svc.ServiceContext) *StatLogic {
 }
 
 func (l *StatLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
-	now := time.Now()
+	now := timeutil.Now()
 
 	// 获取全部有效订阅
 	// 获取统计时间范围
-	start := time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, time.Local)
+	start := time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, timeutil.Location())
 	end := start.Add(24 * time.Hour)
 
 	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
@@ -156,9 +157,14 @@ func (l *StatLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
 
 		// Delete old traffic logs
 		if l.svc.Config.Log.AutoClear {
-			err = store.TrafficLog().DeleteBefore(ctx, end.AddDate(0, 0, int(-l.svc.Config.Log.ClearDays)))
+			threshold := end.AddDate(0, 0, int(-l.svc.Config.Log.ClearDays))
+			err = store.TrafficLog().DeleteBefore(ctx, threshold)
 			if err != nil {
 				logger.Errorf("[Traffic Stat Queue] Delete server traffic log failed: %v", err.Error())
+			}
+			// Delete old system logs
+			if err = store.Log().DeleteBefore(ctx, threshold); err != nil {
+				logger.Errorf("[Traffic Stat Queue] Delete old system logs failed: %v", err.Error())
 			}
 		}
 		return nil

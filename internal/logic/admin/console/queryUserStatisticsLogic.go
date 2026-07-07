@@ -10,6 +10,7 @@ import (
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 )
 
 const consoleUserStatisticsCacheKey = "console:user_statistics"
@@ -45,7 +46,7 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 	}
 
 	resp = &types.UserStatisticsResponse{}
-	now := time.Now()
+	now := timeutil.Now()
 	// query today user register count
 	todayUserResisterCount, err := l.svcCtx.Store.User().QueryResisterUserTotalByDate(l.ctx, now)
 	if err != nil {
@@ -139,7 +140,7 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 }
 
 func (l *QueryUserStatisticsLogic) mockRevenueStatistics() *types.UserStatisticsResponse {
-	now := time.Now()
+	now := timeutil.Now()
 
 	// Generate daily user statistics for the current month (from 1st to current date)
 	monthlyList := make([]types.UserStatistics, 7)

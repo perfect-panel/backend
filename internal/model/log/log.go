@@ -60,19 +60,20 @@ func (t Type) Uint8() uint8 {
 
 // FilterParams log 列表查询过滤条件
 type FilterParams struct {
-	Page     int
-	Size     int
-	Type     uint8
-	Data     string
-	Search   string
-	ObjectID int64
+	Page      int
+	Size      int
+	Type      uint8
+	Data      string
+	Search    string
+	ObjectID  int64
+	SkipCount bool // when true, skip the COUNT(*) query (total will be 0)
 }
 
 // SystemLog represents a log entry in the system.
 type SystemLog struct {
 	Id        int64     `gorm:"primaryKey;AUTO_INCREMENT"`
 	Type      uint8     `gorm:"index:idx_type;type:tinyint(1);not null;default:0;comment:Log Type: 1: Email Message 2: Mobile Message 3: Subscribe 4: Subscribe Traffic 5: Server Traffic 6: Login 7: Register 8: Balance 9: Commission 10: Reset Subscribe 11: Gift"`
-	Date      string    `gorm:"type:varchar(20);default:null;comment:Log Date"`
+	Date      string    `gorm:"index:idx_date;type:varchar(20);default:null;comment:Log Date"`
 	ObjectID  int64     `gorm:"index:idx_object_id;type:bigint(20);not null;default:0;comment:Object ID"`
 	Content   string    `gorm:"type:text;not null;comment:Log Content"`
 	CreatedAt time.Time `gorm:"<-:create;comment:Create Time"`

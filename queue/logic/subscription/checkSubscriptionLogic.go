@@ -3,11 +3,11 @@ package subscription
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	queue "github.com/perfect-panel/server/queue/types"
 
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/user"
@@ -26,7 +26,7 @@ func NewCheckSubscriptionLogic(svc *svc.ServiceContext) *CheckSubscriptionLogic 
 }
 
 func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
-	logger.Infof("[CheckSubscription] Start check subscription: %s", time.Now().Format("2006-01-02 15:04:05"))
+	logger.Infof("[CheckSubscription] Start check subscription: %s", timeutil.Now().Format("2006-01-02 15:04:05"))
 	// Check subscription traffic
 	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
 		list, err := store.User().FindTrafficExceededSubscribes(ctx)
@@ -39,7 +39,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 			ids = append(ids, item.Id)
 		}
 		if len(ids) > 0 {
-			if err = store.User().MarkSubscribesFinished(ctx, ids, 2, time.Now()); err != nil {
+			if err = store.User().MarkSubscribesFinished(ctx, ids, 2, timeutil.Now()); err != nil {
 				logger.Errorw("[Check Subscription Traffic] Update subscribe status failed", logger.Field("error", err.Error()))
 				return nil
 			}
@@ -69,7 +69,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 	}
 	// Check subscription expire
 	err = l.svc.Store.InTx(ctx, func(store repository.Store) error {
-		list, err := store.User().FindExpiredSubscribes(ctx, time.Now())
+		list, err := store.User().FindExpiredSubscribes(ctx, timeutil.Now())
 		if err != nil {
 			logger.Error("[Check Subscription] Find subscribe failed", logger.Field("error", err.Error()))
 			return err
@@ -79,7 +79,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 			ids = append(ids, item.Id)
 		}
 		if len(ids) > 0 {
-			if err = store.User().MarkSubscribesFinished(ctx, ids, 3, time.Now()); err != nil {
+			if err = store.User().MarkSubscribesFinished(ctx, ids, 3, timeutil.Now()); err != nil {
 				logger.Error("[Check Subscription Expire] Update subscribe status failed", logger.Field("error", err.Error()))
 				return err
 			}

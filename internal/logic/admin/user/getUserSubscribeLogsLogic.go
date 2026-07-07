@@ -2,12 +2,12 @@ package user
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -28,14 +28,40 @@ func NewGetUserSubscribeLogsLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *GetUserSubscribeLogsLogic) GetUserSubscribeLogs(req *types.GetUserSubscribeLogsRequest) (resp *types.GetUserSubscribeLogsResponse, err error) {
-	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{})
+	params := &log.FilterParams{
+		Page:     req.Page,
+		Size:     req.Size,
+		Type:     log.TypeSubscribe.Uint8(),
+		ObjectID: req.UserId,
+	}
+	if req.SubscribeId != 0 {
+		params.Search = `"user_subscribe_id":` + strconv.FormatInt(req.SubscribeId, 10)
+	}
+
+	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, params)
 
 	if err != nil {
 		l.Errorw("[GetUserSubscribeLogs] Get User Subscribe Logs Error:", logger.Field("err", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Get User Subscribe Logs Error")
 	}
 	var list []types.UserSubscribeLog
-	tool.DeepCopy(&list, data)
+
+	for _, datum := range data {
+		var content log.Subscribe
+		if err = content.Unmarshal([]byte(datum.Content)); err != nil {
+			l.Errorf("[GetUserSubscribeLogs] unmarshal subscribe log content failed: %v", err.Error())
+			continue
+		}
+		list = append(list, types.UserSubscribeLog{
+			Id:              datum.Id,
+			UserId:          datum.ObjectID,
+			UserSubscribeId: content.UserSubscribeId,
+			Token:           content.Token,
+			IP:              content.ClientIP,
+			UserAgent:       content.UserAgent,
+			Timestamp:       datum.CreatedAt.UnixMilli(),
+		})
+	}
 
 	return &types.GetUserSubscribeLogsResponse{
 		List:  list,

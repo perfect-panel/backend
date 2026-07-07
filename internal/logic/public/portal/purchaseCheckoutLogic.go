@@ -12,6 +12,7 @@ import (
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/exchangeRate"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	paymentPlatform "github.com/perfect-panel/server/pkg/payment"
 
@@ -477,7 +478,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			err = store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
 				ObjectID: userInfo.Id,
-				Date:     time.Now().Format(time.DateOnly),
+				Date:     timeutil.Now().Format(time.DateOnly),
 				Content:  string(content),
 			})
 			if err != nil {
@@ -492,13 +493,13 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 				Type:      log.BalanceTypePayment, // Type 3 represents payment deduction
 				OrderNo:   o.OrderNo,
 				Balance:   userInfo.Balance,
-				Timestamp: time.Now().UnixMilli(),
+				Timestamp: timeutil.Now().UnixMilli(),
 			}
 			content, _ := balanceLog.Marshal()
 			err = store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeBalance.Uint8(),
 				ObjectID: userInfo.Id,
-				Date:     time.Now().Format(time.DateOnly),
+				Date:     timeutil.Now().Format(time.DateOnly),
 				Content:  string(content),
 			})
 			if err != nil {

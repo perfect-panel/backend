@@ -3,12 +3,12 @@ package user
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/uuidx"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -32,7 +32,7 @@ func NewCreateUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Create
 func (l *CreateUserLogic) CreateUser(req *types.CreateUserRequest) error {
 	if req.ReferCode == "" {
 		// timestamp replaces user id
-		req.ReferCode = uuidx.UserInviteCode(time.Now().UnixMicro())
+		req.ReferCode = uuidx.UserInviteCode(timeutil.Now().UnixMicro())
 	}
 	if req.Password == "" {
 		req.Password = req.Email

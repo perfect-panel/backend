@@ -8,6 +8,7 @@ import (
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -30,7 +31,7 @@ func NewFilterTrafficLogDetailsLogic(ctx context.Context, svcCtx *svc.ServiceCon
 func (l *FilterTrafficLogDetailsLogic) FilterTrafficLogDetails(req *types.FilterTrafficLogDetailsRequest) (resp *types.FilterTrafficLogDetailsResponse, err error) {
 	var start, end time.Time
 	if req.Date != "" {
-		day, err := time.ParseInLocation("2006-01-02", req.Date, time.Local)
+		day, err := time.ParseInLocation("2006-01-02", req.Date, timeutil.Location())
 		if err != nil {
 			l.Errorw("[FilterTrafficLogDetails] Date Parse Error", logger.Field("error", err.Error()))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), " date parse error: %s", err.Error())
@@ -39,7 +40,7 @@ func (l *FilterTrafficLogDetailsLogic) FilterTrafficLogDetails(req *types.Filter
 		end = day.Add(24 * time.Hour)
 	} else {
 		// query today
-		now := time.Now()
+		now := timeutil.Now()
 		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		end = start.Add(24 * time.Hour)
 	}

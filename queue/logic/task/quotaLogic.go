@@ -14,6 +14,7 @@ import (
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 )
 
@@ -167,7 +168,7 @@ func (l *QuotaTaskLogic) getSubscribes(ctx context.Context, subscriberIDs []int6
 func (l *QuotaTaskLogic) processSubscribes(ctx context.Context, subscribes []*user.Subscribe, content task.QuotaContent, taskInfo *task.Task) error {
 	return l.svcCtx.Store.InTx(ctx, func(store repository.Store) error {
 		var errors []ErrorInfo
-		now := time.Now()
+		now := timeutil.Now()
 
 		for _, sub := range subscribes {
 			if err := l.processSubscription(ctx, store, sub, content, now, &errors); err != nil {

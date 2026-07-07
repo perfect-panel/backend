@@ -7,6 +7,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/order"
@@ -249,13 +250,13 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 				Amount:      orderInfo.GiftAmount,
 				Balance:     u.GiftAmount,
 				Remark:      "Purchase order deduction",
-				Timestamp:   time.Now().UnixMilli(),
+				Timestamp:   timeutil.Now().UnixMilli(),
 			}
 			content, _ := giftLog.Marshal()
 
 			if e := txStore.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
-				Date:     time.Now().Format(time.DateOnly),
+				Date:     timeutil.Now().Format(time.DateOnly),
 				ObjectID: u.Id,
 				Content:  string(content),
 			}); e != nil {

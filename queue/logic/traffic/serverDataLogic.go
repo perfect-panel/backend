@@ -3,9 +3,9 @@ package traffic
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/config"
@@ -48,7 +48,7 @@ func (l *ServerDataLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error 
 	serverData.TodayDownload = totalDownloadToday
 	serverData.MonthlyUpload = totalUploadMonthly
 	serverData.MonthlyDownload = totalDownloadMonthly
-	serverData.UpdatedAt = time.Now().UnixMilli()
+	serverData.UpdatedAt = timeutil.Now().UnixMilli()
 	data, err := json.Marshal(serverData)
 	if err != nil {
 		logger.Error("[ServerDataLogic] Marshal server data failed", logger.Field("error", err.Error()), logger.Field("data", serverData))
@@ -63,7 +63,7 @@ func (l *ServerDataLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error 
 }
 
 func (l *ServerDataLogic) getRanking(ctx context.Context) (top10ServerToday, top10ServerYesterday []types.ServerTrafficData, top10UserToday, top10UserYesterday []types.UserTrafficData) {
-	now := time.Now()
+	now := timeutil.Now()
 	// 获取服务器流量排行榜
 	serverToday, err := l.svc.Store.TrafficLog().TopServersTrafficByDay(ctx, now, 10)
 	if err != nil {
@@ -146,7 +146,7 @@ func (l *ServerDataLogic) getRanking(ctx context.Context) (top10ServerToday, top
 }
 
 func (l *ServerDataLogic) trafficCount(ctx context.Context) (totalUploadToday, totalDownloadToday, totalDownloadMonthly, totalUploadMonthly int64) {
-	now := time.Now()
+	now := timeutil.Now()
 	today, err := l.svc.Store.TrafficLog().QueryTrafficByDay(ctx, now)
 	if err != nil {
 		logger.Error("[ServerDataLogic] Query traffic by day failed", logger.Field("error", err.Error()))
