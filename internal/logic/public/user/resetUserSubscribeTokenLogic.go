@@ -2,11 +2,11 @@ package user
 
 import (
 	"context"
-	"time"
 
 	"github.com/perfect-panel/server/internal/model/order"
 
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/google/uuid"
 	"github.com/perfect-panel/server/internal/model/user"
@@ -63,7 +63,7 @@ func (l *ResetUserSubscribeTokenLogic) ResetUserSubscribeToken(req *types.ResetU
 		orderDetails = &order.Details{}
 	}
 
-	userSub.Token = uuidx.SubscribeToken(orderDetails.OrderNo + time.Now().Format("20060102150405.000"))
+	userSub.Token = uuidx.SubscribeToken(orderDetails.OrderNo + timeutil.Now().Format("20060102150405.000"))
 	userSub.UUID = uuid.New().String()
 	var newSub user.Subscribe
 	tool.DeepCopy(&newSub, userSub)

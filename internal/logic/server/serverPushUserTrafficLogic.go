@@ -3,12 +3,12 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	task "github.com/perfect-panel/server/queue/types"
 	"github.com/pkg/errors"
@@ -55,7 +55,7 @@ func (l *ServerPushUserTrafficLogic) ServerPushUserTraffic(req *types.ServerPush
 	}
 
 	// Update server last reported time
-	now := time.Now()
+	now := timeutil.Now()
 	serverInfo.LastReportedAt = &now
 
 	err = l.svcCtx.Store.Node().UpdateServer(l.ctx, serverInfo)

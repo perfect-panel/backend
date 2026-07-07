@@ -14,6 +14,7 @@ import (
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -51,7 +52,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		}
 	}
 
-	now := time.Now()
+	now := timeutil.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	todayEnd := todayStart.Add(24 * time.Hour)
 	trafficStore := l.svcCtx.Store.TrafficLog()
@@ -296,7 +297,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 }
 
 func (l *QueryServerTotalDataLogic) mockRevenueStatistics() *types.ServerTotalDataResponse {
-	now := time.Now()
+	now := timeutil.Now()
 
 	// Generate server traffic ranking data for today (top 10)
 	serverTrafficToday := make([]types.ServerTrafficData, 10)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/perfect-panel/server/pkg/device"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -37,7 +38,7 @@ func NewDeviceManager(srv *ServiceContext) *device.DeviceManager {
 		}
 
 		//当前时间为设备离线时间
-		currentTime := time.Now()
+		currentTime := timeutil.Now()
 		endTime := currentTime.Format("2006-01-02 00:00:00")
 		parseStart, _ := time.Parse(time.DateTime, endTime)
 		startTime := parseStart.Add(time.Hour * 24).Format(time.DateTime)

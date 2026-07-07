@@ -7,6 +7,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/payment/stripe"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/payment"
@@ -118,14 +119,14 @@ func (l *CloseOrderLogic) CloseOrder(req *types.CloseOrderRequest) error {
 				Amount:      orderInfo.GiftAmount,
 				Balance:     deduction,
 				Remark:      "Order cancellation refund",
-				Timestamp:   time.Now().UnixMilli(),
+				Timestamp:   timeutil.Now().UnixMilli(),
 			}
 			content, _ := giftLog.Marshal()
 
 			err = txStore.Log().Insert(l.ctx, &log.SystemLog{
 				Id:       0,
 				Type:     log.TypeGift.Uint8(),
-				Date:     time.Now().Format(time.DateOnly),
+				Date:     timeutil.Now().Format(time.DateOnly),
 				ObjectID: userInfo.Id,
 				Content:  string(content),
 			})

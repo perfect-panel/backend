@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
@@ -70,7 +71,7 @@ func (l *QueryUserSubscribeLogic) QueryUserSubscribe() (resp *types.QueryUserSub
 
 // 计算下次重置时间
 func calculateNextResetTime(sub *types.UserSubscribe) int64 {
-	now := time.Now()
+	now := timeutil.Now()
 	return calculateNextResetTimeAt(sub, now)
 }
 

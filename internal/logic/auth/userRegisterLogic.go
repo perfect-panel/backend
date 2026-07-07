@@ -16,6 +16,7 @@ import (
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/uuidx"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -157,7 +158,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 	// Generate token
 	token, err := jwt.NewJwtToken(
 		l.svcCtx.Config.JwtAuth.AccessSecret,
-		time.Now().Unix(),
+		timeutil.Now().Unix(),
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
@@ -180,13 +181,13 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
 				Success:   loginStatus,
-				Timestamp: time.Now().UnixMilli(),
+				Timestamp: timeutil.Now().UnixMilli(),
 			}
 			content, _ := loginLog.Marshal()
 			if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 				Id:       0,
 				Type:     log.TypeLogin.Uint8(),
-				Date:     time.Now().Format("2006-01-02"),
+				Date:     timeutil.Now().Format("2006-01-02"),
 				ObjectID: userInfo.Id,
 				Content:  string(content),
 			}); err != nil {
@@ -203,13 +204,13 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 				Identifier: req.Email,
 				RegisterIP: req.IP,
 				UserAgent:  req.UserAgent,
-				Timestamp:  time.Now().UnixMilli(),
+				Timestamp:  timeutil.Now().UnixMilli(),
 			}
 			content, _ = registerLog.Marshal()
 			if err = l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeRegister.Uint8(),
 				ObjectID: userInfo.Id,
-				Date:     time.Now().Format("2006-01-02"),
+				Date:     timeutil.Now().Format("2006-01-02"),
 				Content:  string(content),
 			}); err != nil {
 				l.Errorw("failed to insert login log",
@@ -233,8 +234,8 @@ func (l *UserRegisterLogic) activeTrial(store repository.Store, uid int64) (*use
 		UserId:      uid,
 		OrderId:     0,
 		SubscribeId: sub.Id,
-		StartTime:   time.Now(),
-		ExpireTime:  tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, time.Now()),
+		StartTime:   timeutil.Now(),
+		ExpireTime:  tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, timeutil.Now()),
 		Traffic:     sub.Traffic,
 		Download:    0,
 		Upload:      0,

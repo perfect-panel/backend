@@ -2,7 +2,6 @@ package user
 
 import (
 	"context"
-	"time"
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/model/user"
@@ -11,6 +10,7 @@ import (
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -46,7 +46,7 @@ func (l *CommissionWithdrawLogic) CommissionWithdraw(req *types.CommissionWithdr
 	logInfo := log.Commission{
 		Type:      log.CommissionTypeConvertBalance,
 		Amount:    req.Amount,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: timeutil.Now().UnixMilli(),
 	}
 	b, err := logInfo.Marshal()
 
@@ -65,10 +65,10 @@ func (l *CommissionWithdrawLogic) CommissionWithdraw(req *types.CommissionWithdr
 
 		if err = store.Log().Insert(l.ctx, &log.SystemLog{
 			Type:      log.TypeCommission.Uint8(),
-			Date:      time.Now().Format("2006-01-02"),
+			Date:      timeutil.Now().Format("2006-01-02"),
 			ObjectID:  u.Id,
 			Content:   string(b),
-			CreatedAt: time.Now(),
+			CreatedAt: timeutil.Now(),
 		}); err != nil {
 			l.Errorf("Failed to create commission log for user %d: %v", u.Id, err)
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "Failed to create commission log for user %d: %v", u.Id, err)
@@ -96,6 +96,6 @@ func (l *CommissionWithdrawLogic) CommissionWithdraw(req *types.CommissionWithdr
 		Content:   req.Content,
 		Status:    0,
 		Reason:    "",
-		CreatedAt: time.Now().UnixMilli(),
+		CreatedAt: timeutil.Now().UnixMilli(),
 	}, nil
 }

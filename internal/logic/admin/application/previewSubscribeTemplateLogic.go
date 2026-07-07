@@ -2,13 +2,13 @@ package application
 
 import (
 	"context"
-	"time"
 
 	"github.com/perfect-panel/server/adapter"
 	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -53,7 +53,7 @@ func (l *PreviewSubscribeTemplateLogic) PreviewSubscribeTemplate(req *types.Prev
 		adapter.WithOutputFormat(data.OutputFormat),
 		adapter.WithUserInfo(adapter.User{
 			Password:     "test-password",
-			ExpiredAt:    time.Now().AddDate(1, 0, 0),
+			ExpiredAt:    timeutil.Now().AddDate(1, 0, 0),
 			Download:     0,
 			Upload:       0,
 			Traffic:      1000,

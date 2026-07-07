@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/user"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -101,8 +101,8 @@ func (l *TelegramLogic) start(req *tgbotapi.Update) error {
 				AuthType:       "telegram",
 				AuthIdentifier: strconv.FormatInt(req.Message.Chat.ID, 10),
 				Verified:       true,
-				CreatedAt:      time.Now(),
-				UpdatedAt:      time.Now(),
+				CreatedAt:      timeutil.Now(),
+				UpdatedAt:      timeutil.Now(),
 			}); err != nil {
 				l.Errorw("TelegramLogic start InsertUserAuthMethod Error: ", logger.Field("error", err.Error()), logger.Field("userId", userId))
 				return l.sendMessage(l.svcCtx.TelegramBot, "Bind failed!", req.Message.Chat.ID)
@@ -124,7 +124,7 @@ func (l *TelegramLogic) start(req *tgbotapi.Update) error {
 
 		text, err := tool.RenderTemplateToString(BindNotify, map[string]string{
 			"Id":   strconv.FormatInt(userId, 10),
-			"Time": time.Now().Format("2006-01-02 15:04:05"),
+			"Time": timeutil.Now().Format("2006-01-02 15:04:05"),
 		})
 		if err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "render template failed")

@@ -7,6 +7,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -103,13 +104,13 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 				Amount:    balanceRefundAmount,
 				Type:      log.BalanceTypeRefund, // Type 4 represents refund transaction
 				Balance:   balance,
-				Timestamp: time.Now().UnixMilli(),
+				Timestamp: timeutil.Now().UnixMilli(),
 			}
 			content, _ := balanceLog.Marshal()
 
 			if err := store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeBalance.Uint8(),
-				Date:     time.Now().Format(time.DateOnly),
+				Date:     timeutil.Now().Format(time.DateOnly),
 				ObjectID: u.Id,
 				Content:  string(content),
 			}); err != nil {
@@ -132,7 +133,7 @@ func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
 
 			if err := store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
-				Date:     time.Now().Format(time.DateOnly),
+				Date:     timeutil.Now().Format(time.DateOnly),
 				ObjectID: u.Id,
 				Content:  string(content),
 			}); err != nil {

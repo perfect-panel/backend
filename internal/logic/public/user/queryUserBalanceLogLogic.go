@@ -38,7 +38,7 @@ func (l *QueryUserBalanceLogLogic) QueryUserBalanceLog() (resp *types.QueryUserB
 
 	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     1,
-		Size:     99999,
+		Size:     100,
 		Type:     log.TypeBalance.Uint8(),
 		ObjectID: u.Id,
 	})

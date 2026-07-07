@@ -8,6 +8,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/user"
@@ -167,7 +168,7 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 	// Generate token
 	token, err := jwt.NewJwtToken(
 		l.svcCtx.Config.JwtAuth.AccessSecret,
-		time.Now().Unix(),
+		timeutil.Now().Unix(),
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
@@ -189,13 +190,13 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
 				Success:   token != "",
-				Timestamp: time.Now().UnixMilli(),
+				Timestamp: timeutil.Now().UnixMilli(),
 			}
 			content, _ := loginLog.Marshal()
 			if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 				Id:       0,
 				Type:     log.TypeLogin.Uint8(),
-				Date:     time.Now().Format("2006-01-02"),
+				Date:     timeutil.Now().Format("2006-01-02"),
 				ObjectID: userInfo.Id,
 				Content:  string(content),
 			}); err != nil {
@@ -212,13 +213,13 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *types.TelephoneR
 				Identifier: phoneNumber,
 				RegisterIP: req.IP,
 				UserAgent:  req.UserAgent,
-				Timestamp:  time.Now().UnixMilli(),
+				Timestamp:  timeutil.Now().UnixMilli(),
 			}
 			content, _ = registerLog.Marshal()
 			if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeRegister.Uint8(),
 				ObjectID: userInfo.Id,
-				Date:     time.Now().Format("2006-01-02"),
+				Date:     timeutil.Now().Format("2006-01-02"),
 				Content:  string(content),
 			}); err != nil {
 				l.Errorw("failed to insert login log",
@@ -243,8 +244,8 @@ func (l *TelephoneUserRegisterLogic) activeTrial(store repository.Store, uid int
 		UserId:      uid,
 		OrderId:     0,
 		SubscribeId: sub.Id,
-		StartTime:   time.Now(),
-		ExpireTime:  tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, time.Now()),
+		StartTime:   timeutil.Now(),
+		ExpireTime:  tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, timeutil.Now()),
 		Traffic:     sub.Traffic,
 		Download:    0,
 		Upload:      0,

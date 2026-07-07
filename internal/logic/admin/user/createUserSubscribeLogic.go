@@ -10,6 +10,7 @@ import (
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/uuidx"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -57,12 +58,12 @@ func (l *CreateUserSubscribeLogic) CreateUserSubscribe(req *types.CreateUserSubs
 	userSub := user.Subscribe{
 		UserId:      req.UserId,
 		SubscribeId: req.SubscribeId,
-		StartTime:   time.Now(),
+		StartTime:   timeutil.Now(),
 		ExpireTime:  time.UnixMilli(req.ExpiredAt),
 		Traffic:     req.Traffic,
 		Download:    0,
 		Upload:      0,
-		Token:       uuidx.SubscribeToken(fmt.Sprintf("adminCreate:%d", time.Now().UnixMilli())),
+		Token:       uuidx.SubscribeToken(fmt.Sprintf("adminCreate:%d", timeutil.Now().UnixMilli())),
 		UUID:        uuid.New().String(),
 		Status:      1,
 	}

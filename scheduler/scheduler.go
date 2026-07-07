@@ -63,7 +63,11 @@ func (m *Service) Stop() {
 }
 
 func initService(svc *svc.ServiceContext) *asynq.Scheduler {
-	location, _ := time.LoadLocation("Asia/Shanghai")
+	location, err := time.LoadLocation(svc.Config.AppLocation)
+	if err != nil {
+		logger.Errorf("load timezone location %q failed: %v, falling back to Local", svc.Config.AppLocation, err)
+		location = time.Local
+	}
 	return asynq.NewScheduler(
 		asynq.RedisClientOpt{Addr: svc.Config.Redis.Host, Password: svc.Config.Redis.Pass, DB: 5},
 		&asynq.SchedulerOpts{

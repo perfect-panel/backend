@@ -8,6 +8,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/order"
 
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 
 	"github.com/perfect-panel/server/internal/config"
@@ -126,7 +127,7 @@ func (l *QueryPurchaseOrderLogic) generateSessionToken(userId int64) (string, er
 	sessionId := uuidx.NewUUID().String()
 	token, err := jwt.NewJwtToken(
 		l.svcCtx.Config.JwtAuth.AccessSecret,
-		time.Now().Unix(),
+		timeutil.Now().Unix(),
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userId),
 		jwt.WithOption("SessionId", sessionId),

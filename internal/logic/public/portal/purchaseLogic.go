@@ -13,6 +13,7 @@ import (
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	queue "github.com/perfect-panel/server/queue/types"
@@ -95,7 +96,7 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 		}
 		// Check expiration time
 		expireTime := time.Unix(couponInfo.ExpireTime, 0)
-		if time.Now().After(expireTime) {
+		if timeutil.Now().After(expireTime) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponExpired), "coupon expired")
 		}
 

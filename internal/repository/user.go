@@ -12,6 +12,7 @@ import (
 	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -898,9 +899,9 @@ func (m *userRepo) QueryUserSubscribe(ctx context.Context, userId int64, status 
 	key := fmt.Sprintf("%s%d", cacheUserSubscribeUserPrefix, userId)
 	err := m.QueryCtx(ctx, &list, key, func(conn *gorm.DB, v interface{}) error {
 		// 获取当前时间
-		now := time.Now()
+		now := timeutil.Now()
 		// 获取当前时间向前推 7 天
-		sevenDaysAgo := time.Now().Add(-7 * 24 * time.Hour)
+		sevenDaysAgo := timeutil.Now().Add(-7 * 24 * time.Hour)
 		// 基础条件查询
 		conn = conn.Model(&user.Subscribe{}).Where("user_id = ?", userId)
 		if len(status) > 0 {

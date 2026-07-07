@@ -7,6 +7,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
 
 	"github.com/hibiken/asynq"
@@ -112,13 +113,13 @@ func (l *ResetTrafficLogic) ResetTraffic(req *types.ResetTrafficOrderRequest) (r
 				Amount:      orderInfo.GiftAmount,
 				Balance:     u.GiftAmount,
 				Remark:      "Renewal order deduction",
-				Timestamp:   time.Now().UnixMilli(),
+				Timestamp:   timeutil.Now().UnixMilli(),
 			}
 			content, _ := giftLog.Marshal()
 
 			if err = txStore.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeGift.Uint8(),
-				Date:     time.Now().Format(time.DateOnly),
+				Date:     timeutil.Now().Format(time.DateOnly),
 				ObjectID: u.Id,
 				Content:  string(content),
 			}); err != nil {

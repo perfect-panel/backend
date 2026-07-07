@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
-	"time"
 
 	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/traffic"
@@ -77,7 +77,7 @@ func (l *TrafficStatisticsLogic) ProcessTask(ctx context.Context, task *asynq.Ta
 		ratio = float32(protocol.Ratio)
 	}
 
-	now := time.Now()
+	now := timeutil.Now()
 	realTimeMultiplier := l.svc.NodeMultiplierManager.GetMultiplier(now)
 	logger.Debugf("[TrafficStatisticsLogic] Current time traffic multiplier: %.2f", realTimeMultiplier)
 	for _, log := range payload.Logs {

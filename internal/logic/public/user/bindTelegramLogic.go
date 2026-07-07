@@ -9,6 +9,7 @@ import (
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -40,6 +41,6 @@ func (l *BindTelegramLogic) BindTelegram() (resp *types.BindTelegramResponse, er
 	}
 	return &types.BindTelegramResponse{
 		Url:       fmt.Sprintf("https://t.me/%s?start=%s", l.svcCtx.Config.Telegram.BotName, session),
-		ExpiredAt: time.Now().Add(300 * time.Second).UnixMilli(),
+		ExpiredAt: timeutil.Now().Add(300 * time.Second).UnixMilli(),
 	}, nil
 }

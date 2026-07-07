@@ -88,6 +88,8 @@ func (Group) TableName() string {
 	return "subscribe_group"
 }
 
+const MaxSubscribePageSize = 100
+
 // FilterParams subscribe 列表过滤参数
 type FilterParams struct {
 	Page            int      // Page Number
@@ -108,5 +110,8 @@ func (p *FilterParams) Normalize() {
 	}
 	if p.Size <= 0 {
 		p.Size = 10
+	}
+	if p.Size > MaxSubscribePageSize {
+		p.Size = MaxSubscribePageSize
 	}
 }

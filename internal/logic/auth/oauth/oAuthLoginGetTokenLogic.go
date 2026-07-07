@@ -18,6 +18,7 @@ import (
 	"github.com/perfect-panel/server/pkg/oauth/apple"
 	"github.com/perfect-panel/server/pkg/oauth/google"
 	"github.com/perfect-panel/server/pkg/oauth/telegram"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/uuidx"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -84,7 +85,7 @@ func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTok
 }
 
 func (l *OAuthLoginGetTokenLogic) google(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
-	startTime := time.Now()
+	startTime := timeutil.Now()
 	l.Infow("google oauth processing started",
 		logger.Field("request_id", requestID),
 		logger.Field("provider", OAuthGoogle),
@@ -162,7 +163,7 @@ func (l *OAuthLoginGetTokenLogic) google(req *types.OAuthLoginGetTokenRequest, r
 }
 
 func (l *OAuthLoginGetTokenLogic) apple(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
-	startTime := time.Now()
+	startTime := timeutil.Now()
 	l.Infow("apple oauth processing started",
 		logger.Field("request_id", requestID),
 		logger.Field("provider", OAuthApple),
@@ -262,7 +263,7 @@ func (l *OAuthLoginGetTokenLogic) apple(req *types.OAuthLoginGetTokenRequest, re
 }
 
 func (l *OAuthLoginGetTokenLogic) telegram(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
-	startTime := time.Now()
+	startTime := timeutil.Now()
 	l.Infow("telegram oauth processing started",
 		logger.Field("request_id", requestID),
 		logger.Field("provider", OAuthTelegram),
@@ -292,15 +293,15 @@ func (l *OAuthLoginGetTokenLogic) telegram(req *types.OAuthLoginGetTokenRequest,
 	l.Debugw("validating telegram auth date",
 		logger.Field("request_id", requestID),
 		logger.Field("auth_date", *callbackData.AuthDate),
-		logger.Field("current_time", time.Now().Unix()),
+		logger.Field("current_time", timeutil.Now().Unix()),
 	)
 
-	if time.Now().Unix()-*callbackData.AuthDate > AuthExpire {
+	if timeutil.Now().Unix()-*callbackData.AuthDate > AuthExpire {
 		l.Errorw("telegram auth date expired",
 			logger.Field("request_id", requestID),
 			logger.Field("provider", OAuthTelegram),
 			logger.Field("auth_date", *callbackData.AuthDate),
-			logger.Field("current_time", time.Now().Unix()),
+			logger.Field("current_time", timeutil.Now().Unix()),
 			logger.Field("expire_seconds", AuthExpire),
 		)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "auth date expired")
@@ -325,7 +326,7 @@ func (l *OAuthLoginGetTokenLogic) telegram(req *types.OAuthLoginGetTokenRequest,
 }
 
 func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, requestID, ip, userAgent string) (*user.User, error) {
-	startTime := time.Now()
+	startTime := timeutil.Now()
 	l.Infow("user registration started",
 		logger.Field("request_id", requestID),
 		logger.Field("auth_method", method),
@@ -435,13 +436,13 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 		Identifier: openid,
 		RegisterIP: ip,
 		UserAgent:  userAgent,
-		Timestamp:  time.Now().UnixMilli(),
+		Timestamp:  timeutil.Now().UnixMilli(),
 	}
 	content, _ := registerLog.Marshal()
 
 	err = l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 		Type:     log.TypeRegister.Uint8(),
-		Date:     time.Now().Format("2006-01-02"),
+		Date:     timeutil.Now().Format("2006-01-02"),
 		ObjectID: userInfo.Id,
 		Content:  string(content),
 	})
@@ -524,12 +525,12 @@ func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus bool, userInfo *
 			LoginIP:   ip,
 			UserAgent: userAgent,
 			Success:   loginStatus,
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: timeutil.Now().UnixMilli(),
 		}
 		content, _ := loginLog.Marshal()
 		if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 			Type:     log.TypeLogin.Uint8(),
-			Date:     time.Now().Format("2006-01-02"),
+			Date:     timeutil.Now().Format("2006-01-02"),
 			ObjectID: userInfo.Id,
 			Content:  string(content),
 		}); err != nil {
@@ -566,7 +567,7 @@ func (l *OAuthLoginGetTokenLogic) handleOAuthProvider(req *types.OAuthLoginGetTo
 }
 
 func (l *OAuthLoginGetTokenLogic) generateToken(userInfo *user.User, requestID string) (string, error) {
-	startTime := time.Now()
+	startTime := timeutil.Now()
 	sessionId := uuidx.NewUUID().String()
 
 	l.Debugw("generating jwt token",
@@ -577,7 +578,7 @@ func (l *OAuthLoginGetTokenLogic) generateToken(userInfo *user.User, requestID s
 
 	token, err := jwt.NewJwtToken(
 		l.svcCtx.Config.JwtAuth.AccessSecret,
-		time.Now().Unix(),
+		timeutil.Now().Unix(),
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
@@ -815,7 +816,7 @@ func (l *OAuthLoginGetTokenLogic) activeTrial(store repository.Store, uid int64,
 		return nil, err
 	}
 
-	startTime := time.Now()
+	startTime := timeutil.Now()
 	expireTime := tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, startTime)
 	subscribeToken := uuidx.SubscribeToken(fmt.Sprintf("Trial-%v-%s", uid, uuidx.NewUUID().String()))
 	subscribeUUID := uuidx.NewUUID().String()

@@ -13,6 +13,7 @@ import (
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/uuidx"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -50,12 +51,12 @@ func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *typ
 				LoginIP:   req.IP,
 				UserAgent: req.UserAgent,
 				Success:   loginStatus,
-				Timestamp: time.Now().UnixMilli(),
+				Timestamp: timeutil.Now().UnixMilli(),
 			}
 			content, _ := loginLog.Marshal()
 			if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 				Type:     log.TypeLogin.Uint8(),
-				Date:     time.Now().Format("2006-01-02"),
+				Date:     timeutil.Now().Format("2006-01-02"),
 				ObjectID: userInfo.Id,
 				Content:  string(content),
 			}); err != nil {
@@ -102,7 +103,7 @@ func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *typ
 	// Generate token
 	token, err := jwt.NewJwtToken(
 		l.svcCtx.Config.JwtAuth.AccessSecret,
-		time.Now().Unix(),
+		timeutil.Now().Unix(),
 		l.svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
@@ -229,13 +230,13 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) 
 		Identifier: req.Identifier,
 		RegisterIP: req.IP,
 		UserAgent:  req.UserAgent,
-		Timestamp:  time.Now().UnixMilli(),
+		Timestamp:  timeutil.Now().UnixMilli(),
 	}
 	content, _ := registerLog.Marshal()
 
 	if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
 		Type:     log.TypeRegister.Uint8(),
-		Date:     time.Now().Format("2006-01-02"),
+		Date:     timeutil.Now().Format("2006-01-02"),
 		ObjectID: userInfo.Id,
 		Content:  string(content),
 	}); err != nil {
@@ -260,7 +261,7 @@ func (l *DeviceLoginLogic) activeTrial(store repository.Store, userId int64) (*u
 		return nil, err
 	}
 
-	startTime := time.Now()
+	startTime := timeutil.Now()
 	expireTime := tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, startTime)
 	subscribeToken := uuidx.SubscribeToken(fmt.Sprintf("Trial-%v-%s", userId, uuidx.NewUUID().String()))
 	subscribeUUID := uuidx.NewUUID().String()

@@ -3,7 +3,6 @@ package subscribe
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/perfect-panel/server/internal/model/node"
 	"github.com/perfect-panel/server/internal/model/user"
@@ -11,6 +10,7 @@ import (
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -218,7 +218,7 @@ func (l *QueryUserSubscribeNodeListLogic) filterSubscribeNodes(nodeIds []int64, 
 }
 
 func (l *QueryUserSubscribeNodeListLogic) isSubscriptionExpired(userSub *user.Subscribe) bool {
-	return userSub.ExpireTime.Unix() < time.Now().Unix() && userSub.ExpireTime.Unix() != 0
+	return userSub.ExpireTime.Unix() < timeutil.Now().Unix() && userSub.ExpireTime.Unix() != 0
 }
 
 // isTrafficExhausted reports whether the subscription has used up its traffic

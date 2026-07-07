@@ -12,6 +12,7 @@ type Config struct {
 	Host          string          `yaml:"Host" default:"0.0.0.0"`
 	Port          int             `yaml:"Port" default:"8080"`
 	Debug         bool            `yaml:"Debug" default:"false"`
+	AppLocation   string          `yaml:"AppLocation" default:"Asia/Shanghai"`
 	Transport     TransportConfig `yaml:"Transport"`
 	TLS           TLS             `yaml:"TLS"`
 	JwtAuth       JwtAuth         `yaml:"JwtAuth"`

@@ -12,6 +12,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/log"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/google/uuid"
@@ -339,7 +340,7 @@ func (l *ActivateOrderLogic) getSubscribeInfo(ctx context.Context, subscribeId i
 
 // createUserSubscription creates a new user subscription record based on order and subscription plan details
 func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderInfo *order.Order, sub *subscribe.Subscribe) (*user.Subscribe, error) {
-	now := time.Now()
+	now := timeutil.Now()
 	userSub := &user.Subscribe{
 		UserId:      orderInfo.UserId,
 		OrderId:     orderInfo.Id,
@@ -430,7 +431,7 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 		content, _ := commissionLog.Marshal()
 		return store.Log().Insert(ctx, &log.SystemLog{
 			Type:     log.TypeCommission.Uint8(),
-			Date:     time.Now().Format("2006-01-02"),
+			Date:     timeutil.Now().Format("2006-01-02"),
 			ObjectID: referer.Id,
 			Content:  string(content),
 		})
@@ -556,11 +557,11 @@ func (l *ActivateOrderLogic) getUserSubscription(ctx context.Context, token stri
 // updateSubscriptionForRenewal updates subscription details for renewal including
 // expiration time extension and traffic reset if configured
 func (l *ActivateOrderLogic) updateSubscriptionForRenewal(ctx context.Context, userSub *user.Subscribe, sub *subscribe.Subscribe, orderInfo *order.Order) error {
-	now := time.Now()
+	now := timeutil.Now()
 	if userSub.ExpireTime.Before(now) {
 		userSub.ExpireTime = now
 	}
-	today := time.Now().Day()
+	today := timeutil.Now().Day()
 	resetDay := userSub.ExpireTime.Day()
 
 	// Reset traffic if enabled
@@ -635,13 +636,13 @@ func (l *ActivateOrderLogic) ResetTraffic(ctx context.Context, orderInfo *order.
 		Type:      log.ResetSubscribeTypePaid,
 		UserId:    userInfo.Id,
 		OrderNo:   orderInfo.OrderNo,
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: timeutil.Now().UnixMilli(),
 	}
 
 	content, _ := resetLog.Marshal()
 	if err = l.svc.Store.Log().Insert(ctx, &log.SystemLog{
 		Type:     log.TypeResetSubscribe.Uint8(),
-		Date:     time.Now().Format(time.DateOnly),
+		Date:     timeutil.Now().Format(time.DateOnly),
 		ObjectID: userSub.Id,
 		Content:  string(content),
 	}); err != nil {
@@ -674,13 +675,13 @@ func (l *ActivateOrderLogic) Recharge(ctx context.Context, orderInfo *order.Orde
 			Type:      log.BalanceTypeRecharge,
 			OrderNo:   orderInfo.OrderNo,
 			Balance:   userInfo.Balance,
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: timeutil.Now().UnixMilli(),
 		}
 		content, _ := balanceLog.Marshal()
 
 		return store.Log().Insert(ctx, &log.SystemLog{
 			Type:     log.TypeBalance.Uint8(),
-			Date:     time.Now().Format("2006-01-02"),
+			Date:     timeutil.Now().Format("2006-01-02"),
 			ObjectID: userInfo.Id,
 			Content:  string(content),
 		})
@@ -760,7 +761,7 @@ func (l *ActivateOrderLogic) buildUserNotificationData(orderInfo *order.Order, s
 
 	if userSub != nil {
 		data["ExpireTime"] = userSub.ExpireTime.Format("2006-01-02 15:04:05")
-		data["ResetTime"] = time.Now().Format("2006-01-02 15:04:05")
+		data["ResetTime"] = timeutil.Now().Format("2006-01-02 15:04:05")
 	}
 
 	return data
