@@ -28,16 +28,24 @@ func NewUpdateUserSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func (l *UpdateUserSubscribeLogic) UpdateUserSubscribe(req *types.UpdateUserSubscribeRequest) error {
+	if req.ExpiredAt < 0 {
+		l.Errorw("Invalid ExpiredAt: cannot be negative", logger.Field("expiredAt", req.ExpiredAt))
+		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "invalid expiration time: %d", req.ExpiredAt)
+	}
 	userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, req.UserSubscribeId)
 	if err != nil {
 		l.Errorw("FindOneUserSubscribe failed:", logger.Field("error", err.Error()), logger.Field("userSubscribeId", req.UserSubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneUserSubscribe failed: %v", err.Error())
 	}
-	expiredAt := time.UnixMilli(req.ExpiredAt)
-	if time.Since(expiredAt).Minutes() > 0 {
-		userSub.Status = 3
-	} else {
+	if req.ExpiredAt == 0 {
 		userSub.Status = 1
+	} else {
+		expiredAt := time.UnixMilli(req.ExpiredAt)
+		if time.Now().After(expiredAt) {
+			userSub.Status = 3
+		} else {
+			userSub.Status = 1
+		}
 	}
 
 	err = l.svcCtx.Store.User().UpdateSubscribe(l.ctx, &user.Subscribe{
