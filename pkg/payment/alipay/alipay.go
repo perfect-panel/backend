@@ -23,6 +23,7 @@ type Notification struct {
 	OrderNo string
 	Amount  int64
 	Status  Status
+	TradeNo string
 }
 
 type Status string
@@ -110,5 +111,6 @@ func (c *Client) DecodeNotification(form url.Values) (*Notification, error) {
 		OrderNo: notify.OutTradeNo,
 		Amount:  int64(tool.FormatStringToFloat(notify.TotalAmount) * 100),
 		Status:  Status(notify.TradeStatus),
+		TradeNo: notify.TradeNo,
 	}, nil
 }
