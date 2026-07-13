@@ -13,6 +13,7 @@ import (
 	"github.com/perfect-panel/server/pkg/uuidx"
 
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -42,9 +43,10 @@ func NewResetPasswordLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Res
 func (l *ResetPasswordLogic) ResetPassword(req *types.ResetPasswordRequest) (resp *types.LoginResponse, err error) {
 	var userInfo *user.User
 	loginStatus := false
+	email := authmethod.CanonicalEmail(req.Email)
 
 	defer func() {
-		if userInfo.Id != 0 && loginStatus {
+		if userInfo != nil && userInfo.Id != 0 && loginStatus {
 			loginLog := log.Login{
 				Method:    "email",
 				LoginIP:   req.IP,
@@ -69,25 +71,25 @@ func (l *ResetPasswordLogic) ResetPassword(req *types.ResetPasswordRequest) (res
 		}
 	}()
 
-	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.Security, req.Email)
+	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.Security, email)
 	// Check the verification code
 	if value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result(); err != nil {
-		l.Errorw("Verification code error", logger.Field("cacheKey", cacheKey), logger.Field("error", err.Error()))
+		l.Errorw("Verification code lookup failed", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "Verification code error")
 	} else {
 		var payload CacheKeyPayload
 		if err := json.Unmarshal([]byte(value), &payload); err != nil {
-			l.Errorw("Unmarshal errors", logger.Field("cacheKey", cacheKey), logger.Field("error", err.Error()), logger.Field("value", value))
+			l.Errorw("Verification code payload decode failed", logger.Field("error", err.Error()))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "Verification code error")
 		}
 		if payload.Code != req.Code {
-			l.Errorw("Verification code error", logger.Field("cacheKey", cacheKey), logger.Field("error", "Verification code error"), logger.Field("reqCode", req.Code), logger.Field("payloadCode", payload.Code))
+			l.Errorw("Verification code mismatch", logger.Field("error", "verification code mismatch"))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "Verification code error")
 		}
 	}
 
 	// Check user
-	authMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "email", req.Email)
+	authMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, authmethod.Email, email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email not exist: %v", req.Email)

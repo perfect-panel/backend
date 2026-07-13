@@ -13,6 +13,7 @@ import (
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -43,6 +44,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 
 	c := l.svcCtx.Config.Register
 	email := l.svcCtx.Config.Email
+	canonicalEmail := authmethod.CanonicalEmail(req.Email)
 	var referer *user.User
 	// Check if the registration is stopped
 	if c.StopRegister {
@@ -64,7 +66,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 
 	// if the email verification is enabled, the verification code is required
 	if email.EnableVerify {
-		cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.Register, req.Email)
+		cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.Register, canonicalEmail)
 		value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
 		if err != nil {
 			l.Errorw("Redis Error", logger.Field("error", err.Error()), logger.Field("cacheKey", cacheKey))
@@ -73,7 +75,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		var payload common.CacheKeyPayload
 		err = json.Unmarshal([]byte(value), &payload)
 		if err != nil {
-			l.Errorw("Unmarshal Error", logger.Field("error", err.Error()), logger.Field("value", value))
+			l.Errorw("Unmarshal Error", logger.Field("error", err.Error()))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 		}
 		if payload.Code != req.Code {
@@ -81,7 +83,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		}
 	}
 	// Check if the user exists
-	u, err := l.svcCtx.Store.User().FindOneByEmail(l.ctx, req.Email)
+	u, err := l.svcCtx.Store.User().FindOneByEmail(l.ctx, canonicalEmail)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("FindOneByEmail Error", logger.Field("error", err))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
@@ -116,8 +118,8 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 		// create user auth info
 		authInfo := &user.AuthMethods{
 			UserId:         userInfo.Id,
-			AuthType:       "email",
-			AuthIdentifier: req.Email,
+			AuthType:       authmethod.Email,
+			AuthIdentifier: canonicalEmail,
 			Verified:       email.EnableVerify,
 		}
 		if err = store.User().InsertUserAuthMethods(l.ctx, authInfo); err != nil {
@@ -201,7 +203,7 @@ func (l *UserRegisterLogic) UserRegister(req *types.UserRegisterRequest) (resp *
 			// Register log
 			registerLog := log.Register{
 				AuthMethod: "email",
-				Identifier: req.Email,
+				Identifier: canonicalEmail,
 				RegisterIP: req.IP,
 				UserAgent:  req.UserAgent,
 				Timestamp:  timeutil.Now().UnixMilli(),
