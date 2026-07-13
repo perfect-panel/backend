@@ -62,8 +62,8 @@ func (l *StripeNotifyLogic) StripeNotify(payload []byte, signature string) error
 		if orderInfo.Status == 5 {
 			return nil
 		}
-		// update order status
-		err = store.Order().UpdateOrderStatus(l.ctx, notify.OrderNo, 2)
+		// update order status and trade_no
+		err = store.Order().UpdateOrderStatusAndTradeNo(l.ctx, notify.OrderNo, 2, notify.TradeNo)
 		if err != nil {
 			return err
 		}

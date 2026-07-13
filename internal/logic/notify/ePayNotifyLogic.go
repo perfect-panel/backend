@@ -87,8 +87,8 @@ func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
 	if orderInfo.Status == 5 {
 		return nil
 	}
-	// Update order status
-	err = store.Order().UpdateOrderStatus(l.ctx, req.OutTradeNo, 2)
+	// Update order status and trade_no
+	err = store.Order().UpdateOrderStatusAndTradeNo(l.ctx, req.OutTradeNo, 2, req.TradeNo)
 	if err != nil {
 		l.Logger.Error("[EPayNotify] Update order status failed", logger.Field("error", err.Error()), logger.Field("orderNo", req.OutTradeNo))
 		return err

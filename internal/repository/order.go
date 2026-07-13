@@ -30,6 +30,7 @@ type OrderRepo interface {
 	Delete(ctx context.Context, id int64, tx ...*gorm.DB) error
 	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	UpdateOrderStatus(ctx context.Context, orderNo string, status uint8, tx ...*gorm.DB) error
+	UpdateOrderStatusAndTradeNo(ctx context.Context, orderNo string, status uint8, tradeNo string, tx ...*gorm.DB) error
 	CountUserCouponUsage(ctx context.Context, userID int64, coupon string) (int64, error)
 	QueryOrderListByPage(ctx context.Context, page, size int, status uint8, user, subscribe int64, search string) (int64, []*order.Details, error)
 	FindOneDetails(ctx context.Context, id int64) (*order.Details, error)
@@ -213,6 +214,23 @@ func (m *orderRepo) UpdateOrderStatus(ctx context.Context, orderNo string, statu
 			conn = tx[0]
 		}
 		return conn.Model(&order.Order{}).Where("order_no = ?", orderNo).Update("status", status).Error
+	}, m.getCacheKeys(orderInfo)...)
+}
+
+// UpdateOrderStatusAndTradeNo Update order status and trade number
+func (m *orderRepo) UpdateOrderStatusAndTradeNo(ctx context.Context, orderNo string, status uint8, tradeNo string, tx ...*gorm.DB) error {
+	orderInfo, err := m.FindOneByOrderNo(ctx, orderNo)
+	if err != nil {
+		return err
+	}
+	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		if len(tx) > 0 {
+			conn = tx[0]
+		}
+		return conn.Model(&order.Order{}).Where("order_no = ?", orderNo).Updates(map[string]interface{}{
+			"status":   status,
+			"trade_no": tradeNo,
+		}).Error
 	}, m.getCacheKeys(orderInfo)...)
 }
 

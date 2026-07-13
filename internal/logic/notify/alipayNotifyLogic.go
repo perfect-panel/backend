@@ -69,8 +69,8 @@ func (l *AlipayNotifyLogic) AlipayNotify(form url.Values) error {
 			return nil
 		}
 
-		// Update order status
-		err = store.Order().UpdateOrderStatus(l.ctx, notify.OrderNo, 2)
+		// Update order status and trade_no
+		err = store.Order().UpdateOrderStatusAndTradeNo(l.ctx, notify.OrderNo, 2, notify.TradeNo)
 		if err != nil {
 			l.Logger.Error("[AlipayNotify] Update order status failed", logger.Field("error", err.Error()), logger.Field("orderNo", notify.OrderNo))
 			return err
