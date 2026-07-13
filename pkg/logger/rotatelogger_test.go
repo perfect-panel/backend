@@ -54,10 +54,10 @@ func TestDailyRotateRuleOutdatedFiles(t *testing.T) {
 
 	t.Run("temp files", func(t *testing.T) {
 		boundary := time.Now().Add(-time.Hour * time.Duration(hoursPerDay) * 2).Format(dateFormat)
-		f1, err := os.CreateTemp(os.TempDir(), "go-zero-test-"+boundary)
+		f1, err := os.CreateTemp(os.TempDir(), "ppanel-logger-test-"+boundary)
 		assert.NoError(t, err)
 		_ = f1.Close()
-		f2, err := os.CreateTemp(os.TempDir(), "go-zero-test-"+boundary)
+		f2, err := os.CreateTemp(os.TempDir(), "ppanel-logger-test-"+boundary)
 		assert.NoError(t, err)
 		_ = f2.Close()
 		t.Cleanup(func() {
@@ -65,7 +65,7 @@ func TestDailyRotateRuleOutdatedFiles(t *testing.T) {
 			_ = os.Remove(f2.Name())
 		})
 		rule := DailyRotateRule{
-			filename: path.Join(os.TempDir(), "go-zero-test-"),
+			filename: path.Join(os.TempDir(), "ppanel-logger-test-"),
 			days:     1,
 		}
 		assert.NotEmpty(t, rule.OutdatedFiles())
@@ -119,12 +119,12 @@ func TestSizeLimitRotateRuleOutdatedFiles(t *testing.T) {
 
 	t.Run("temp files", func(t *testing.T) {
 		boundary := time.Now().Add(-time.Hour * time.Duration(hoursPerDay) * 2).Format(dateFormat)
-		f1, err := os.CreateTemp(os.TempDir(), "go-zero-test-"+boundary)
+		f1, err := os.CreateTemp(os.TempDir(), "ppanel-logger-test-"+boundary)
 		assert.NoError(t, err)
-		f2, err := os.CreateTemp(os.TempDir(), "go-zero-test-"+boundary)
+		f2, err := os.CreateTemp(os.TempDir(), "ppanel-logger-test-"+boundary)
 		assert.NoError(t, err)
 		boundary1 := time.Now().Add(time.Hour * time.Duration(hoursPerDay) * 2).Format(dateFormat)
-		f3, err := os.CreateTemp(os.TempDir(), "go-zero-test-"+boundary1)
+		f3, err := os.CreateTemp(os.TempDir(), "ppanel-logger-test-"+boundary1)
 		assert.NoError(t, err)
 		t.Cleanup(func() {
 			_ = f1.Close()
@@ -136,7 +136,7 @@ func TestSizeLimitRotateRuleOutdatedFiles(t *testing.T) {
 		})
 		rule := SizeLimitRotateRule{
 			DailyRotateRule: DailyRotateRule{
-				filename: path.Join(os.TempDir(), "go-zero-test-"),
+				filename: path.Join(os.TempDir(), "ppanel-logger-test-"),
 				days:     1,
 			},
 			maxBackups: 3,
@@ -146,12 +146,12 @@ func TestSizeLimitRotateRuleOutdatedFiles(t *testing.T) {
 
 	t.Run("no backups", func(t *testing.T) {
 		boundary := time.Now().Add(-time.Hour * time.Duration(hoursPerDay) * 2).Format(dateFormat)
-		f1, err := os.CreateTemp(os.TempDir(), "go-zero-test-"+boundary)
+		f1, err := os.CreateTemp(os.TempDir(), "ppanel-logger-test-"+boundary)
 		assert.NoError(t, err)
-		f2, err := os.CreateTemp(os.TempDir(), "go-zero-test-"+boundary)
+		f2, err := os.CreateTemp(os.TempDir(), "ppanel-logger-test-"+boundary)
 		assert.NoError(t, err)
 		boundary1 := time.Now().Add(time.Hour * time.Duration(hoursPerDay) * 2).Format(dateFormat)
-		f3, err := os.CreateTemp(os.TempDir(), "go-zero-test-"+boundary1)
+		f3, err := os.CreateTemp(os.TempDir(), "ppanel-logger-test-"+boundary1)
 		assert.NoError(t, err)
 		t.Cleanup(func() {
 			_ = f1.Close()
@@ -163,7 +163,7 @@ func TestSizeLimitRotateRuleOutdatedFiles(t *testing.T) {
 		})
 		rule := SizeLimitRotateRule{
 			DailyRotateRule: DailyRotateRule{
-				filename: path.Join(os.TempDir(), "go-zero-test-"),
+				filename: path.Join(os.TempDir(), "ppanel-logger-test-"),
 				days:     1,
 			},
 		}

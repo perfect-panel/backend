@@ -43,13 +43,13 @@ func TestPrettyCaller(t *testing.T) {
 		},
 		{
 			name: "long path",
-			file: "github.com/zeromicro/go-zero/core/logx/util_test.go",
+			file: "example.com/project/core/logx/util_test.go",
 			line: 12,
 			want: "logx/util_test.go:12",
 		},
 		{
 			name: "local path",
-			file: "/Users/kevin/go-zero/core/logx/util_test.go",
+			file: "/Users/kevin/example-framework/core/logx/util_test.go",
 			line: 1234,
 			want: "logx/util_test.go:1234",
 		},
