@@ -9,10 +9,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
-	"github.com/pkg/errors"
+	"github.com/perfect-panel/server/pkg/result"
 )
 
 func LoggerMiddleware(svc *svc.ServiceContext) app.HandlerFunc {
@@ -48,7 +46,7 @@ func LoggerMiddleware(svc *svc.ServiceContext) app.HandlerFunc {
 				Value: string(ctx.UserAgent()),
 			},
 		}
-		if errMessage := hertzxErrorMessage(ctx); errMessage != "" {
+		if errMessage := requestErrorMessage(ctx); errMessage != "" {
 			logs = append(logs, logger.Field("error", errMessage))
 		}
 		if shouldLogBody(method, path) {
@@ -78,16 +76,11 @@ func responseStatus(ctx *app.RequestContext) int {
 	return status
 }
 
-func hertzxErrorMessage(ctx *app.RequestContext) string {
-	c, ok := hertzx.ContextFromRequestContext(ctx)
-	if !ok || c.Errors.Last() == nil {
-		return ""
+func requestErrorMessage(ctx *app.RequestContext) string {
+	if err := result.ParamErrorFromRequestContext(ctx); err != nil {
+		return err.Error()
 	}
-	var e *xerr.CodeError
-	if errors.As(c.Errors.Last().Err, &e) {
-		return e.GetErrMsg()
-	}
-	return c.Errors.Last().Error()
+	return ""
 }
 
 func shouldLogBody(method, path string) bool {

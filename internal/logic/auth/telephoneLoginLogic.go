@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
@@ -39,7 +38,7 @@ func NewTelephoneLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Te
 	}
 }
 
-func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, r *http.Request, ip string) (resp *types.LoginResponse, err error) {
+func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, ip, userAgent string) (resp *types.LoginResponse, err error) {
 	phoneNumber, err := phone.FormatToE164(req.TelephoneAreaCode, req.Telephone)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TelephoneError), "Invalid phone number")
@@ -71,7 +70,7 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, r
 			loginLog := log.Login{
 				Method:    "mobile",
 				LoginIP:   ip,
-				UserAgent: r.UserAgent(),
+				UserAgent: userAgent,
 				Success:   loginStatus,
 				Timestamp: timeutil.Now().UnixMilli(),
 			}

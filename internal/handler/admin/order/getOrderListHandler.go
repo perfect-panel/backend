@@ -1,26 +1,29 @@
 package order
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/order"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Get order list
-func GetOrderListHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func GetOrderListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 		var req types.GetOrderListRequest
-		_ = c.ShouldBind(&req)
+		_ = httpx.ShouldBind(ctx, &req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
-			result.ParamErrorResult(c, validateErr)
+			result.ParamErrorResult(ctx, validateErr)
 			return
 		}
 
-		l := order.NewGetOrderListLogic(c.Request.Context(), svcCtx)
+		l := order.NewGetOrderListLogic(c, svcCtx)
 		resp, err := l.GetOrderList(&req)
-		result.HttpResult(c, resp, err)
+		result.HttpResult(ctx, resp, err)
 	}
 }

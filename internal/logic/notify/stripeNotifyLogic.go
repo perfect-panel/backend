@@ -3,8 +3,6 @@ package notify
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"net/http"
 
 	"github.com/perfect-panel/server/pkg/constant"
 
@@ -34,16 +32,8 @@ func NewStripeNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Stri
 	}
 }
 
-func (l *StripeNotifyLogic) StripeNotify(r *http.Request, w http.ResponseWriter) error {
+func (l *StripeNotifyLogic) StripeNotify(payload []byte, signature string) error {
 	store := l.svcCtx.Store
-	const MaxBodyBytes = int64(65536)
-	r.Body = http.MaxBytesReader(w, r.Body, MaxBodyBytes)
-	payload, err := io.ReadAll(r.Body)
-	if err != nil {
-		l.Errorw("[StripeNotify] error", logger.Field("errors", err.Error()))
-		return err
-	}
-	signature := r.Header.Get("Stripe-Signature")
 	stripeConfig, ok := l.ctx.Value(constant.CtxKeyPayment).(*payment.Payment)
 	if !ok {
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "payment config not found")

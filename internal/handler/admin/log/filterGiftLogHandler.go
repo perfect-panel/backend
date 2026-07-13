@@ -1,25 +1,28 @@
 package log
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/log"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Filter gift log
-func FilterGiftLogHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func FilterGiftLogHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(ctx context.Context, c *app.RequestContext) {
 		var req types.FilterGiftLogRequest
-		_ = c.ShouldBind(&req)
+		_ = httpx.ShouldBind(c, &req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
 			result.ParamErrorResult(c, validateErr)
 			return
 		}
 
-		l := log.NewFilterGiftLogLogic(c.Request.Context(), svcCtx)
+		l := log.NewFilterGiftLogLogic(ctx, svcCtx)
 		resp, err := l.FilterGiftLog(&req)
 		result.HttpResult(c, resp, err)
 	}

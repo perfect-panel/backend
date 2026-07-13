@@ -1,27 +1,31 @@
 package oauth
 
 import (
+	"context"
 	"net/http"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/auth/oauth"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Apple Login Callback
-func AppleLoginCallbackHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func AppleLoginCallbackHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 		var req types.AppleLoginCallbackRequest
-		if err := c.ShouldBind(&req); err != nil {
-			c.JSON(http.StatusBadRequest, hertzx.H{"error": "Invalid request data"})
+		if err := httpx.ShouldBind(ctx, &req); err != nil {
+			ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request data"})
 			return
 		}
 		l := oauth.NewAppleLoginCallbackLogic(c, svcCtx)
-		err := l.AppleLoginCallback(&req, c.Request, c.Writer)
+		redirect, err := l.AppleLoginCallback(&req)
 		if err != nil {
-			result.HttpResult(c, nil, err)
+			result.HttpResult(ctx, nil, err)
+			return
 		}
+		ctx.Redirect(redirect.StatusCode, []byte(redirect.Location))
 	}
 }

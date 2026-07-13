@@ -1,74 +1,99 @@
 package notify
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/perfect-panel/server/internal/logic/notify"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
+const maxStripePayloadSize = 65_536
+
+var errStripePayloadTooLarge = errors.New("http: request body too large")
+
 // PaymentNotifyHandler Payment Notify
-func PaymentNotifyHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
-		platform, ok := c.Request.Context().Value(constant.CtxKeyPlatform).(string)
+func PaymentNotifyHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
+		platform, ok := c.Value(constant.CtxKeyPlatform).(string)
 		if !ok {
-			logger.WithContext(c.Request.Context()).Errorf("platform not found")
-			result.HttpResult(c, nil, fmt.Errorf("platform not found"))
+			logger.WithContext(c).Errorf("platform not found")
+			result.HttpResult(ctx, nil, fmt.Errorf("platform not found"))
 			return
 		}
 
 		switch payment.ParsePlatform(platform) {
 		case payment.EPay, payment.CryptoSaaS:
 			req := &types.EPayNotifyRequest{}
-			if err := c.Request.ParseForm(); err != nil {
-				logger.WithContext(c.Request.Context()).Errorw("[PaymentNotifyHandler] ParseForm failed", logger.Field("error", err.Error()))
-				c.String(http.StatusBadRequest, "parse form failed")
+			if err := httpx.ShouldBind(ctx, req); err != nil {
+				logger.WithContext(c).Errorw("[PaymentNotifyHandler] ShouldBind failed", logger.Field("error", err.Error()))
+				ctx.String(consts.StatusBadRequest, "invalid request")
 				return
 			}
-			if err := c.ShouldBind(req); err != nil {
-				logger.WithContext(c.Request.Context()).Errorw("[PaymentNotifyHandler] ShouldBind failed", logger.Field("error", err.Error()))
-				c.String(http.StatusBadRequest, "%s", "invalid request")
-				return
-			}
-			l := notify.NewEPayNotifyLogic(c.Request.Context(), svcCtx, notify.EPayNotifyMeta{
-				Method: c.Request.Method,
-				Params: formValues(c.Request.Form),
+			l := notify.NewEPayNotifyLogic(c, svcCtx, notify.EPayNotifyMeta{
+				Method: string(ctx.Method()),
+				Params: formValues(nativeFormValues(ctx)),
 			})
 			if err := l.EPayNotify(req); err != nil {
-				logger.WithContext(c.Request.Context()).Errorf("EPayNotify failed: %v", err.Error())
-				c.String(http.StatusBadRequest, "%s", err.Error())
+				logger.WithContext(c).Errorf("EPayNotify failed: %v", err.Error())
+				ctx.String(consts.StatusBadRequest, err.Error())
 				return
 			}
-			c.String(http.StatusOK, "%s", "success")
+			ctx.String(consts.StatusOK, "success")
 		case payment.Stripe:
-			l := notify.NewStripeNotifyLogic(c.Request.Context(), svcCtx)
-			if err := l.StripeNotify(c.Request, c.Writer); err != nil {
-				result.HttpResult(c, nil, err)
+			payload, err := stripePayload(ctx.Request.Body())
+			if err != nil {
+				result.HttpResult(ctx, nil, err)
 				return
 			}
-			result.HttpResult(c, nil, nil)
+			l := notify.NewStripeNotifyLogic(c, svcCtx)
+			if err := l.StripeNotify(payload, string(ctx.GetHeader("Stripe-Signature"))); err != nil {
+				result.HttpResult(ctx, nil, err)
+				return
+			}
+			result.HttpResult(ctx, nil, nil)
 
 		case payment.AlipayF2F:
-			l := notify.NewAlipayNotifyLogic(c.Request.Context(), svcCtx)
-			if err := l.AlipayNotify(c.Request); err != nil {
-				result.HttpResult(c, nil, err)
+			l := notify.NewAlipayNotifyLogic(c, svcCtx)
+			if err := l.AlipayNotify(nativeFormValues(ctx)); err != nil {
+				result.HttpResult(ctx, nil, err)
 				return
 			}
 			// Return success to alipay
-			c.String(http.StatusOK, "%s", "success")
+			ctx.String(consts.StatusOK, "success")
 
 		default:
-			logger.WithContext(c.Request.Context()).Errorf("platform %s not support", platform)
+			logger.WithContext(c).Errorf("platform %s not support", platform)
 		}
 	}
+}
+
+func nativeFormValues(ctx *app.RequestContext) url.Values {
+	values := make(url.Values)
+	ctx.PostArgs().VisitAll(func(key, value []byte) {
+		values.Add(string(key), string(value))
+	})
+	ctx.QueryArgs().VisitAll(func(key, value []byte) {
+		values.Add(string(key), string(value))
+	})
+	return values
+}
+
+func stripePayload(payload []byte) ([]byte, error) {
+	if len(payload) > maxStripePayloadSize {
+		return nil, errStripePayloadTooLarge
+	}
+	return payload, nil
 }
 
 func formValues(values url.Values) map[string]string {

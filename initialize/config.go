@@ -1,6 +1,7 @@
 package initialize
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
@@ -9,12 +10,15 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/server"
+	hertzconfig "github.com/cloudwego/hertz/pkg/common/config"
+	"github.com/cloudwego/hertz/pkg/common/utils"
 	"github.com/google/uuid"
 	"github.com/perfect-panel/server/initialize/migrate"
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/pkg/conf"
-	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -28,11 +32,9 @@ var templateFS embed.FS
 var initStatus = make(chan bool)
 var configPath string
 
-func Config(path string) (chan bool, *http.Server) {
+func Config(path string) (chan bool, *server.Hertz) {
 	// Set the configuration file path
 	configPath = path
-	// Create a new Hertz-compatible instance.
-	r := hertzx.Default()
 	// get server port
 	port := 8080
 	host := "127.0.0.1"
@@ -54,39 +56,37 @@ func Config(path string) (chan bool, *http.Server) {
 		}
 		logger.Infof("module registered on port %d", port)
 	}
-	// Create a new HTTP server
-	server := &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", host, port),
-		Handler: r,
-	}
-	// Load templates
-	tmpl := template.Must(template.ParseFS(templateFS, "templates/*.html"))
-	r.SetHTMLTemplate(tmpl)
+	engine := newConfigServer(server.WithHostPorts(fmt.Sprintf("%s:%d", host, port)))
 
-	r.GET("/init", handleInit)
-	r.POST("/init/config", handleInitConfig)
-	r.POST("/init/database/test", HandleDatabaseTest)
-	r.POST("/init/mysql/test", HandleMySQLTest)
-	r.POST("/init/redis/test", HandleRedisTest)
-	// Handle 404
-	r.NoRoute(func(c *hertzx.Context) {
-		c.Redirect(http.StatusFound, "/init")
-	})
-
-	go func(server *http.Server) {
+	go func() {
 		// Start the server
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := engine.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Fatalf("listen: %s\n", err)
 		}
-	}(server)
+	}()
 
-	return initStatus, server
+	return initStatus, engine
 }
 
-func handleInit(c *hertzx.Context) {
-	c.HTML(http.StatusOK, "index.html", nil)
+func newConfigServer(opts ...hertzconfig.Option) *server.Hertz {
+	engine := server.Default(opts...)
+	engine.SetHTMLTemplate(template.Must(template.ParseFS(templateFS, "templates/*.html")))
+	engine.GET("/init", handleInit)
+	engine.POST("/init/config", handleInitConfig)
+	engine.POST("/init/database/test", HandleDatabaseTest)
+	engine.POST("/init/mysql/test", HandleMySQLTest)
+	engine.POST("/init/redis/test", HandleRedisTest)
+	engine.NoRoute(func(_ context.Context, ctx *app.RequestContext) {
+		ctx.Redirect(http.StatusFound, []byte("/init"))
+	})
+	return engine
 }
-func handleInitConfig(c *hertzx.Context) {
+
+func handleInit(_ context.Context, ctx *app.RequestContext) {
+	ctx.HTML(http.StatusOK, "index.html", nil)
+}
+
+func handleInitConfig(_ context.Context, ctx *app.RequestContext) {
 	// Load configuration file
 
 	var cfg config.File
@@ -106,13 +106,13 @@ func handleInitConfig(c *hertzx.Context) {
 		RedisPort     string `json:"redisPort"`
 		RedisPassword string `json:"redisPassword"`
 	}
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, hertzx.H{
+	if err := ctx.BindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.H{
 			"code": 400,
 			"msg":  "Invalid request",
 			"data": nil,
 		})
-		c.Abort()
+		ctx.Abort()
 		return
 	}
 	cfg.Debug = false
@@ -121,12 +121,12 @@ func handleInitConfig(c *hertzx.Context) {
 	// database
 	dbConfig, err := buildDatabaseConfig(request.DatabaseDriver, request.MysqlHost, request.MysqlPort, request.MysqlDatabase, request.MysqlUser, request.MysqlPassword)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, hertzx.H{
+		ctx.JSON(http.StatusBadRequest, utils.H{
 			"code": 400,
 			"msg":  err.Error(),
 			"data": nil,
 		})
-		c.Abort()
+		ctx.Abort()
 		return
 	}
 	cfg.SetDatabaseConfig(dbConfig)
@@ -137,12 +137,12 @@ func handleInitConfig(c *hertzx.Context) {
 	// save config
 	fileData, err := yaml.Marshal(cfg)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, hertzx.H{
+		ctx.JSON(http.StatusInternalServerError, utils.H{
 			"code": 500,
 			"msg":  "Configuration initialization failed",
 			"data": nil,
 		})
-		c.Abort()
+		ctx.Abort()
 		return
 	}
 
@@ -150,12 +150,12 @@ func handleInitConfig(c *hertzx.Context) {
 	dbClient := orm.Mysql{Config: dbConfig}
 	db, err := orm.ConnectDatabase(dbClient)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, hertzx.H{
+		ctx.JSON(http.StatusInternalServerError, utils.H{
 			"code": 500,
 			"msg":  "Database connection failed",
 			"data": nil,
 		})
-		c.Abort()
+		ctx.Abort()
 		return
 	}
 	sqlDB, err := db.DB()
@@ -165,39 +165,39 @@ func handleInitConfig(c *hertzx.Context) {
 	// migrate database
 	if err = migrate.Migrate(dbClient.Driver(), dbClient.MigrationDsn()).Up(); err != nil {
 		logger.Errorf("[Init Database] Migrate failed: %v", err.Error())
-		c.JSON(http.StatusOK, hertzx.H{
+		ctx.JSON(http.StatusOK, utils.H{
 			"code": 500,
 			"msg":  "Database migration failed",
 			"data": nil,
 		})
-		c.Abort()
+		ctx.Abort()
 		return
 	}
 
 	// create admin user
 	if err = migrate.CreateAdminUser(request.AdminEmail, request.AdminPassword, db); err != nil {
 		logger.Errorf("[Init Database] Create admin user failed: %v", err.Error())
-		c.JSON(http.StatusOK, hertzx.H{
+		ctx.JSON(http.StatusOK, utils.H{
 			"code": 500,
 			"msg":  "Admin user creation failed",
 			"data": nil,
 		})
-		c.Abort()
+		ctx.Abort()
 		return
 	}
 
 	// write to file
 	if err = os.WriteFile(configPath, fileData, 0644); err != nil {
-		c.JSON(http.StatusInternalServerError, hertzx.H{
+		ctx.JSON(http.StatusInternalServerError, utils.H{
 			"code": 500,
 			"msg":  "Configuration initialization failed",
 			"data": nil,
 		})
-		c.Abort()
+		ctx.Abort()
 		return
 	}
 
-	c.JSON(http.StatusOK, hertzx.H{
+	ctx.JSON(http.StatusOK, utils.H{
 		"code":   200,
 		"msg":    "Configuration initialized",
 		"status": true,
@@ -205,11 +205,11 @@ func handleInitConfig(c *hertzx.Context) {
 	initStatus <- true
 }
 
-func HandleMySQLTest(c *hertzx.Context) {
-	HandleDatabaseTest(c)
+func HandleMySQLTest(ctx context.Context, requestCtx *app.RequestContext) {
+	HandleDatabaseTest(ctx, requestCtx)
 }
 
-func HandleDatabaseTest(c *hertzx.Context) {
+func HandleDatabaseTest(_ context.Context, ctx *app.RequestContext) {
 	var request struct {
 		Driver   string `json:"driver"`
 		Host     string `json:"host"`
@@ -218,13 +218,13 @@ func HandleDatabaseTest(c *hertzx.Context) {
 		User     string `json:"user"`
 		Password string `json:"password"`
 	}
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, hertzx.H{
+	if err := ctx.BindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.H{
 			"code": 400,
 			"msg":  "Invalid request",
 			"data": nil,
 		})
-		c.Abort()
+		ctx.Abort()
 		return
 	}
 	var status = true
@@ -233,7 +233,7 @@ func HandleDatabaseTest(c *hertzx.Context) {
 	var tables []string
 	dbConfig, err := buildDatabaseConfig(request.Driver, request.Host, request.Port, request.Database, request.User, request.Password)
 	if err != nil {
-		c.JSON(http.StatusOK, hertzx.H{
+		ctx.JSON(http.StatusOK, utils.H{
 			"code":   200,
 			"msg":    err.Error(),
 			"status": false,
@@ -271,7 +271,7 @@ func HandleDatabaseTest(c *hertzx.Context) {
 	}
 
 result:
-	c.JSON(http.StatusOK, hertzx.H{
+	ctx.JSON(http.StatusOK, utils.H{
 		"code":   200,
 		"msg":    message,
 		"status": status,
@@ -303,30 +303,30 @@ func buildDatabaseConfig(driver, host, port, database, user, password string) (o
 	return cfg, nil
 }
 
-func HandleRedisTest(c *hertzx.Context) {
+func HandleRedisTest(_ context.Context, ctx *app.RequestContext) {
 	var request struct {
 		Host     string `json:"host"`
 		Port     string `json:"port"`
 		Password string `json:"password"`
 	}
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, hertzx.H{
+	if err := ctx.BindJSON(&request); err != nil {
+		ctx.JSON(http.StatusBadRequest, utils.H{
 			"code": 400,
 			"msg":  "Invalid request",
 			"data": nil,
 		})
-		c.Abort()
+		ctx.Abort()
 		return
 	}
 	if err := tool.RedisPing(fmt.Sprintf("%s:%s", request.Host, request.Port), request.Password, 0); err != nil {
-		c.JSON(http.StatusOK, hertzx.H{
+		ctx.JSON(http.StatusOK, utils.H{
 			"code":   200,
 			"msg":    nil,
 			"status": false,
 		})
 		return
 	}
-	c.JSON(http.StatusOK, hertzx.H{
+	ctx.JSON(http.StatusOK, utils.H{
 		"code":   200,
 		"msg":    nil,
 		"status": true,

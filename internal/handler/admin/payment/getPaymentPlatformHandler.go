@@ -1,18 +1,20 @@
 package payment
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/payment"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Get supported payment platform
-func GetPaymentPlatformHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func GetPaymentPlatformHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 
-		l := payment.NewGetPaymentPlatformLogic(c.Request.Context(), svcCtx)
+		l := payment.NewGetPaymentPlatformLogic(c, svcCtx)
 		resp, err := l.GetPaymentPlatform()
-		result.HttpResult(c, resp, err)
+		result.HttpResult(ctx, resp, err)
 	}
 }

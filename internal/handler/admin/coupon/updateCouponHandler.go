@@ -1,25 +1,28 @@
 package coupon
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/coupon"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Update coupon
-func UpdateCouponHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func UpdateCouponHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(ctx context.Context, c *app.RequestContext) {
 		var req types.UpdateCouponRequest
-		_ = c.ShouldBind(&req)
+		_ = httpx.ShouldBind(c, &req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
 			result.ParamErrorResult(c, validateErr)
 			return
 		}
 
-		l := coupon.NewUpdateCouponLogic(c.Request.Context(), svcCtx)
+		l := coupon.NewUpdateCouponLogic(ctx, svcCtx)
 		err := l.UpdateCoupon(&req)
 		result.HttpResult(c, nil, err)
 	}

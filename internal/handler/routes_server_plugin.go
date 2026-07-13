@@ -6,10 +6,9 @@ import (
 	serverHandler "github.com/perfect-panel/server/internal/handler/server"
 	"github.com/perfect-panel/server/internal/middleware"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
-func RegisterNativeHandlers(router *server.Hertz, serverCtx *svc.ServiceContext) {
+func registerServerPluginRoutes(router *server.Hertz, serverCtx *svc.ServiceContext) {
 	subscribePath := serverCtx.Config.Subscribe.SubscribePath
 	if subscribePath == "" {
 		subscribePath = "/v1/subscribe/config"
@@ -28,9 +27,8 @@ func RegisterNativeHandlers(router *server.Hertz, serverCtx *svc.ServiceContext)
 
 	router.GET("/v2/server/:server_id", serverHandler.QueryServerProtocolConfigHandler(serverCtx))
 
-	// Plugin admin routes
 	pluginGroup := router.Group("/v1/admin/plugin")
-	pluginGroup.Use(hertzx.Wrap(middleware.AuthMiddleware(serverCtx)))
+	pluginGroup.Use(middleware.AuthMiddleware(serverCtx))
 	{
 		pluginGroup.GET("/list", pluginHandler.ListHandler(serverCtx))
 		pluginGroup.GET("/detail", pluginHandler.DetailHandler(serverCtx))
@@ -40,7 +38,7 @@ func RegisterNativeHandlers(router *server.Hertz, serverCtx *svc.ServiceContext)
 	}
 
 	pluginsGroup := router.Group("/v1/admin/plugins")
-	pluginsGroup.Use(hertzx.Wrap(middleware.AuthMiddleware(serverCtx)))
+	pluginsGroup.Use(middleware.AuthMiddleware(serverCtx))
 	{
 		pluginsGroup.GET("", pluginHandler.InstalledListHandler(serverCtx))
 		pluginsGroup.GET("/", pluginHandler.InstalledListHandler(serverCtx))

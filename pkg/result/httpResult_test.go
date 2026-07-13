@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -86,5 +87,41 @@ func TestBuildParamErrorResult(t *testing.T) {
 	}
 	if body.Msg != "bad param" {
 		t.Fatalf("expected param message, got %q", body.Msg)
+	}
+}
+
+func TestHttpResult_writesSuccessEnvelope_whenGivenNativeRequestContext(t *testing.T) {
+	// Given
+	ctx := app.NewContext(0)
+
+	// When
+	HttpResult(ctx, map[string]string{"status": "ok"}, nil)
+
+	// Then
+	if ctx.Response.StatusCode() != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, ctx.Response.StatusCode())
+	}
+	if got, want := string(ctx.Response.Body()), `{"code":200,"msg":"success","data":{"status":"ok"}}`; got != want {
+		t.Fatalf("expected response %q, got %q", want, got)
+	}
+}
+
+func TestParamErrorResult_recordsErrorAndWritesEnvelope_whenGivenNativeRequestContext(t *testing.T) {
+	// Given
+	ctx := app.NewContext(0)
+	err := stderrors.New("bad param")
+
+	// When
+	ParamErrorResult(ctx, err)
+
+	// Then
+	if ctx.Response.StatusCode() != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, ctx.Response.StatusCode())
+	}
+	if got, want := string(ctx.Response.Body()), `{"code":400,"msg":"bad param"}`; got != want {
+		t.Fatalf("expected response %q, got %q", want, got)
+	}
+	if got := ParamErrorFromRequestContext(ctx); got == nil || got.Error() != err.Error() {
+		t.Fatalf("expected recorded parameter error %q, got %v", err, got)
 	}
 }

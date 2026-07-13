@@ -1,25 +1,28 @@
 package log
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/log"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Filter server traffic log
-func FilterServerTrafficLogHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func FilterServerTrafficLogHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(ctx context.Context, c *app.RequestContext) {
 		var req types.FilterServerTrafficLogRequest
-		_ = c.ShouldBind(&req)
+		_ = httpx.ShouldBind(c, &req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
 			result.ParamErrorResult(c, validateErr)
 			return
 		}
 
-		l := log.NewFilterServerTrafficLogLogic(c.Request.Context(), svcCtx)
+		l := log.NewFilterServerTrafficLogLogic(ctx, svcCtx)
 		resp, err := l.FilterServerTrafficLog(&req)
 		result.HttpResult(c, resp, err)
 	}

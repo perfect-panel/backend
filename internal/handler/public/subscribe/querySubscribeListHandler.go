@@ -1,26 +1,29 @@
 package subscribe
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/public/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // QuerySubscribeListHandler Get subscribe list
-func QuerySubscribeListHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func QuerySubscribeListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 		var req types.QuerySubscribeListRequest
-		_ = c.ShouldBind(&req)
+		_ = httpx.ShouldBind(ctx, &req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
-			result.ParamErrorResult(c, validateErr)
+			result.ParamErrorResult(ctx, validateErr)
 			return
 		}
 
-		l := subscribe.NewQuerySubscribeListLogic(c.Request.Context(), svcCtx)
+		l := subscribe.NewQuerySubscribeListLogic(c, svcCtx)
 		resp, err := l.QuerySubscribeList(&req)
-		result.HttpResult(c, resp, err)
+		result.HttpResult(ctx, resp, err)
 	}
 }

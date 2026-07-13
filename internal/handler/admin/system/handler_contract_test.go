@@ -1,0 +1,31 @@
+package system
+
+import "github.com/cloudwego/hertz/pkg/app"
+
+var (
+	_ app.HandlerFunc = GetNodeConfigHandler(nil)
+	_ app.HandlerFunc = GetCurrencyConfigHandler(nil)
+	_ app.HandlerFunc = GetRegisterConfigHandler(nil)
+	_ app.HandlerFunc = GetModuleConfigHandler(nil)
+	_ app.HandlerFunc = GetTosConfigHandler(nil)
+	_ app.HandlerFunc = GetInviteConfigHandler(nil)
+	_ app.HandlerFunc = GetVerifyCodeConfigHandler(nil)
+	_ app.HandlerFunc = GetSubscribeConfigHandler(nil)
+	_ app.HandlerFunc = GetPrivacyPolicyConfigHandler(nil)
+	_ app.HandlerFunc = GetSiteConfigHandler(nil)
+	_ app.HandlerFunc = SettingTelegramBotHandler(nil)
+	_ app.HandlerFunc = PreViewNodeMultiplierHandler(nil)
+	_ app.HandlerFunc = GetNodeMultiplierHandler(nil)
+	_ app.HandlerFunc = GetVerifyConfigHandler(nil)
+	_ app.HandlerFunc = UpdateCurrencyConfigHandler(nil)
+	_ app.HandlerFunc = UpdateVerifyCodeConfigHandler(nil)
+	_ app.HandlerFunc = UpdateRegisterConfigHandler(nil)
+	_ app.HandlerFunc = UpdateInviteConfigHandler(nil)
+	_ app.HandlerFunc = UpdateSiteConfigHandler(nil)
+	_ app.HandlerFunc = UpdateNodeConfigHandler(nil)
+	_ app.HandlerFunc = UpdateSubscribeConfigHandler(nil)
+	_ app.HandlerFunc = UpdateVerifyConfigHandler(nil)
+	_ app.HandlerFunc = UpdatePrivacyPolicyConfigHandler(nil)
+	_ app.HandlerFunc = UpdateTosConfigHandler(nil)
+	_ app.HandlerFunc = SetNodeMultiplierHandler(nil)
+)

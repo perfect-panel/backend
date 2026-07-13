@@ -1,18 +1,20 @@
 package subscribe
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Get subscribe group list
-func GetSubscribeGroupListHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func GetSubscribeGroupListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 
-		l := subscribe.NewGetSubscribeGroupListLogic(c.Request.Context(), svcCtx)
+		l := subscribe.NewGetSubscribeGroupListLogic(c, svcCtx)
 		resp, err := l.GetSubscribeGroupList()
-		result.HttpResult(c, resp, err)
+		result.HttpResult(ctx, resp, err)
 	}
 }

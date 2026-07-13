@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"net/url"
 
 	"github.com/perfect-panel/server/pkg/constant"
 
@@ -34,7 +34,7 @@ func NewAlipayNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Alip
 	}
 }
 
-func (l *AlipayNotifyLogic) AlipayNotify(r *http.Request) error {
+func (l *AlipayNotifyLogic) AlipayNotify(form url.Values) error {
 	store := l.svcCtx.Store
 	data, ok := l.ctx.Value(constant.CtxKeyPayment).(*payment.Payment)
 	if !ok {
@@ -45,10 +45,6 @@ func (l *AlipayNotifyLogic) AlipayNotify(r *http.Request) error {
 		l.Logger.Error("[AlipayNotify] Unmarshal config failed", logger.Field("error", err.Error()))
 		return err
 	}
-	if err := r.ParseForm(); err != nil {
-		l.Logger.Error("[AlipayNotify] Parse form failed", logger.Field("error", err.Error()))
-		return err
-	}
 	client := alipay.NewClient(alipay.Config{
 		AppId:       config.AppId,
 		PrivateKey:  config.PrivateKey,
@@ -57,7 +53,7 @@ func (l *AlipayNotifyLogic) AlipayNotify(r *http.Request) error {
 		NotifyURL:   data.Domain + "/v1/payment/alipay/notify",
 		Sandbox:     config.Sandbox,
 	})
-	notify, err := client.DecodeNotification(r.Form)
+	notify, err := client.DecodeNotification(form)
 	if err != nil {
 		l.Logger.Error("[AlipayNotify] Decode notification failed", logger.Field("error", err.Error()))
 		return err

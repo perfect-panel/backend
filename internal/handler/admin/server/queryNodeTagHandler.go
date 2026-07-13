@@ -1,18 +1,20 @@
 package server
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/server"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Query all node tags
-func QueryNodeTagHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func QueryNodeTagHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 
-		l := server.NewQueryNodeTagLogic(c.Request.Context(), svcCtx)
+		l := server.NewQueryNodeTagLogic(c, svcCtx)
 		resp, err := l.QueryNodeTag()
-		result.HttpResult(c, resp, err)
+		result.HttpResult(ctx, resp, err)
 	}
 }

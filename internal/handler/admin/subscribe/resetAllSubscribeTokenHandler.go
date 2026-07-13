@@ -1,18 +1,20 @@
 package subscribe
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Reset all subscribe tokens
-func ResetAllSubscribeTokenHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func ResetAllSubscribeTokenHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 
-		l := subscribe.NewResetAllSubscribeTokenLogic(c.Request.Context(), svcCtx)
+		l := subscribe.NewResetAllSubscribeTokenLogic(c, svcCtx)
 		resp, err := l.ResetAllSubscribeToken()
-		result.HttpResult(c, resp, err)
+		result.HttpResult(ctx, resp, err)
 	}
 }

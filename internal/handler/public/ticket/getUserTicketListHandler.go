@@ -1,26 +1,29 @@
 package ticket
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/public/ticket"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Get ticket list
-func GetUserTicketListHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func GetUserTicketListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 		var req types.GetUserTicketListRequest
-		_ = c.ShouldBind(&req)
+		_ = httpx.ShouldBind(ctx, &req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
-			result.ParamErrorResult(c, validateErr)
+			result.ParamErrorResult(ctx, validateErr)
 			return
 		}
 
-		l := ticket.NewGetUserTicketListLogic(c.Request.Context(), svcCtx)
+		l := ticket.NewGetUserTicketListLogic(c, svcCtx)
 		resp, err := l.GetUserTicketList(&req)
-		result.HttpResult(c, resp, err)
+		result.HttpResult(ctx, resp, err)
 	}
 }

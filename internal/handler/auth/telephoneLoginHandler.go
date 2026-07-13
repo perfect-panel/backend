@@ -1,12 +1,14 @@
 package auth
 
 import (
+	"context"
 	"time"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/auth"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 	"github.com/perfect-panel/server/pkg/turnstile"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -14,17 +16,17 @@ import (
 )
 
 // User Telephone login
-func TelephoneLoginHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func TelephoneLoginHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 		var req types.TelephoneLoginRequest
-		_ = c.ShouldBind(&req)
+		_ = httpx.ShouldBind(ctx, &req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
-			result.ParamErrorResult(c, validateErr)
+			result.ParamErrorResult(ctx, validateErr)
 			return
 		}
 		// get client ip
-		req.IP = c.ClientIP()
+		req.IP = ctx.ClientIP()
 		if svcCtx.Config.Verify.LoginVerify {
 			verifyTurns := turnstile.New(turnstile.Config{
 				Secret:  svcCtx.Config.Verify.TurnstileSecret,
@@ -32,12 +34,12 @@ func TelephoneLoginHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
 			})
 			if verify, err := verifyTurns.Verify(c, req.CfToken, req.IP); err != nil || !verify {
 				err = errors.Wrapf(xerr.NewErrCode(xerr.TooManyRequests), "error: %v, verify: %v", err, verify)
-				result.HttpResult(c, nil, err)
+				result.HttpResult(ctx, nil, err)
 				return
 			}
 		}
 		l := auth.NewTelephoneLoginLogic(c, svcCtx)
-		resp, err := l.TelephoneLogin(&req, c.Request, c.ClientIP())
-		result.HttpResult(c, resp, err)
+		resp, err := l.TelephoneLogin(&req, ctx.ClientIP(), string(ctx.UserAgent()))
+		result.HttpResult(ctx, resp, err)
 	}
 }

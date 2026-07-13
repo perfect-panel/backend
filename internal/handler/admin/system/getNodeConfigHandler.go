@@ -1,17 +1,19 @@
 package system
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/system"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // Get node config
-func GetNodeConfigHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func GetNodeConfigHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(ctx context.Context, c *app.RequestContext) {
 
-		l := system.NewGetNodeConfigLogic(c.Request.Context(), svcCtx)
+		l := system.NewGetNodeConfigLogic(ctx, svcCtx)
 		resp, err := l.GetNodeConfig()
 		result.HttpResult(c, resp, err)
 	}

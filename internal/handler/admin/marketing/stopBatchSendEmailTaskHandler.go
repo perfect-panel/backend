@@ -1,26 +1,29 @@
 package marketing
 
 import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/marketing"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/internal/types"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
 // StopBatchSendEmailTaskHandler Stop a batch send email task
-func StopBatchSendEmailTaskHandler(svcCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func StopBatchSendEmailTaskHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(c context.Context, ctx *app.RequestContext) {
 		var req types.StopBatchSendEmailTaskRequest
-		_ = c.ShouldBind(&req)
+		_ = httpx.ShouldBind(ctx, &req)
 		validateErr := svcCtx.Validate(&req)
 		if validateErr != nil {
-			result.ParamErrorResult(c, validateErr)
+			result.ParamErrorResult(ctx, validateErr)
 			return
 		}
 
-		l := marketing.NewStopBatchSendEmailTaskLogic(c.Request.Context(), svcCtx)
+		l := marketing.NewStopBatchSendEmailTaskLogic(c, svcCtx)
 		err := l.StopBatchSendEmailTask(&req)
-		result.HttpResult(c, nil, err)
+		result.HttpResult(ctx, nil, err)
 	}
 }

@@ -17,6 +17,11 @@ type AppleLoginCallbackLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
+type AppleLoginRedirect struct {
+	StatusCode int
+	Location   string
+}
+
 // Apple Login Callback
 func NewAppleLoginCallbackLogic(ctx context.Context, svcCtx *svc.ServiceContext) *AppleLoginCallbackLogic {
 	return &AppleLoginCallbackLogic{
@@ -26,15 +31,36 @@ func NewAppleLoginCallbackLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *AppleLoginCallbackLogic) AppleLoginCallback(req *types.AppleLoginCallbackRequest, r *http.Request, w http.ResponseWriter) error {
+func (l *AppleLoginCallbackLogic) AppleLoginCallback(req *types.AppleLoginCallbackRequest) (*AppleLoginRedirect, error) {
 	// validate the state code
 	result, err := l.svcCtx.Redis.Get(l.ctx, fmt.Sprintf("apple:%s", req.State)).Result()
 	if err != nil {
 		l.Errorw("get apple state code from redis failed", logger.Field("error", err.Error()), logger.Field("code", req.State))
-		http.Redirect(w, r, l.svcCtx.Config.Site.Host, http.StatusTemporaryRedirect)
-		return nil
+		return appleLoginRedirect(l.svcCtx.Config.Site.Host, req, http.StatusTemporaryRedirect), nil
 	}
-	http.Redirect(w, r, fmt.Sprintf("%s?method=apple&code=%s&state=%s", result, req.Code, req.State), http.StatusFound)
-	l.Infow("redirect to apple login page", logger.Field("url", fmt.Sprintf("%s?method=apple&code=%s&state=%s", result, url.QueryEscape(req.Code), req.State)))
-	return nil
+	redirect := appleLoginRedirect(result, req, http.StatusFound)
+	l.Infow("redirect to apple login page", logger.Field("url", redirect.Location))
+	return redirect, nil
+}
+
+func appleLoginRedirect(location string, req *types.AppleLoginCallbackRequest, statusCode int) *AppleLoginRedirect {
+	if statusCode == http.StatusTemporaryRedirect {
+		return &AppleLoginRedirect{StatusCode: statusCode, Location: location}
+	}
+
+	parsedLocation, err := url.Parse(location)
+	if err != nil {
+		return &AppleLoginRedirect{StatusCode: statusCode, Location: location}
+	}
+
+	query := parsedLocation.Query()
+	query.Set("method", "apple")
+	query.Set("code", req.Code)
+	query.Set("state", req.State)
+	parsedLocation.RawQuery = query.Encode()
+
+	return &AppleLoginRedirect{
+		StatusCode: statusCode,
+		Location:   parsedLocation.String(),
+	}
 }

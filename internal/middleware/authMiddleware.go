@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
-	"github.com/perfect-panel/server/pkg/hertzx"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/result"
@@ -17,16 +17,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-func AuthMiddleware(svc *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
-		ctx, err := AuthenticateRequest(c.Request.Context(), svc, c.GetHeader("Authorization"), c.Request.URL.Path)
+func AuthMiddleware(svc *svc.ServiceContext) app.HandlerFunc {
+	return func(ctx context.Context, requestCtx *app.RequestContext) {
+		ctx, err := AuthenticateRequest(ctx, svc, string(requestCtx.GetHeader("Authorization")), string(requestCtx.Path()))
 		if err != nil {
-			result.HttpResult(c, nil, err)
-			c.Abort()
+			result.HttpResult(requestCtx, nil, err)
+			requestCtx.Abort()
 			return
 		}
-		c.Request = c.Request.WithContext(ctx)
-		c.Next()
+		requestCtx.Next(ctx)
 	}
 }
 

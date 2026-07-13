@@ -1,15 +1,9 @@
 package middleware
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net"
-	"net/http"
-	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/svc"
@@ -18,296 +12,114 @@ import (
 	"github.com/perfect-panel/server/pkg/result"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
-
-	"github.com/perfect-panel/server/pkg/hertzx"
 )
 
-const (
-	noWritten     = -1
-	defaultStatus = http.StatusOK
-)
-
-func DeviceMiddleware(srvCtx *svc.ServiceContext) func(c *hertzx.Context) {
-	return func(c *hertzx.Context) {
+func DeviceMiddleware(srvCtx *svc.ServiceContext) app.HandlerFunc {
+	return func(ctx context.Context, requestCtx *app.RequestContext) {
 
 		if !srvCtx.Config.Device.Enable {
-			c.Next()
+			requestCtx.Next(ctx)
 			return
 		}
 
 		if srvCtx.Config.Device.SecuritySecret == "" {
-			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.SecretIsEmpty), "Secret is empty"))
-			c.Abort()
+			result.HttpResult(requestCtx, nil, errors.Wrapf(xerr.NewErrCode(xerr.SecretIsEmpty), "Secret is empty"))
+			requestCtx.Abort()
 			return
 		}
 
-		ctx := c.Request.Context()
-		if ctx.Value(constant.CtxKeyUser) == nil && c.GetHeader("Login-Type") != "" {
-			ctx = context.WithValue(ctx, constant.LoginType, c.GetHeader("Login-Type"))
-			c.Request = c.Request.WithContext(ctx)
+		if ctx.Value(constant.CtxKeyUser) == nil && string(requestCtx.GetHeader("Login-Type")) != "" {
+			ctx = context.WithValue(ctx, constant.LoginType, string(requestCtx.GetHeader("Login-Type")))
 		}
 
 		loginType, ok := ctx.Value(constant.LoginType).(string)
 		if !ok || loginType != "device" {
-			c.Next()
+			requestCtx.Next(ctx)
 			return
 		}
 
-		rw := NewResponseWriter(c, srvCtx)
-		if !rw.Decrypt() {
-			result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidCiphertext), "Invalid ciphertext"))
-			c.Abort()
+		if !DecryptDeviceRequest(requestCtx, srvCtx.Config.Device.SecuritySecret) {
+			result.HttpResult(requestCtx, nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidCiphertext), "Invalid ciphertext"))
+			requestCtx.Abort()
 			return
 		}
-		hertzx.SyncRequestURI(c)
-		hertzx.SyncRequestBody(c)
-		c.Writer = rw
-		c.Next()
-		rw.FlushAbort()
+		requestCtx.Next(ctx)
+		EncryptDeviceResponse(requestCtx, srvCtx.Config.Device.SecuritySecret)
+		requestCtx.Abort()
 	}
 }
 
-func NewResponseWriter(c *hertzx.Context, srvCtx *svc.ServiceContext) (rw *ResponseWriter) {
-	rw = &ResponseWriter{
-		c:              c,
-		body:           new(bytes.Buffer),
-		ResponseWriter: c.Writer,
-		size:           noWritten,
-		status:         defaultStatus,
-	}
-	rw.encryptionKey = srvCtx.Config.Device.SecuritySecret
-	rw.encryptionMethod = "AES"
-	rw.encryption = true
-	return rw
-}
-
-func (rw *ResponseWriter) Encrypt() {
-	if !rw.encryption {
-		return
-	}
-	buf := rw.body.Bytes()
-	params := map[string]interface{}{}
-	err := json.Unmarshal(buf, &params)
-	if err != nil {
-		return
-	}
-	data := params["data"]
-	if data != nil {
-		var jsonData []byte
-		str, ok := data.(string)
-		if ok {
-			jsonData = []byte(str)
-		} else {
-			jsonData, _ = json.Marshal(data)
-		}
-		encrypt, iv, err := pkgaes.Encrypt(jsonData, rw.encryptionKey)
-		if err != nil {
-			return
-		}
-		params["data"] = map[string]interface{}{
-			"data": encrypt,
-			"time": iv,
-		}
-
-	}
-	marshal, _ := json.Marshal(params)
-	rw.body.Reset()
-	rw.body.Write(marshal)
-}
-
-func (rw *ResponseWriter) Decrypt() bool {
-	if !rw.encryption {
-		return true
-	}
-
-	//判断url链接中是否存在data和iv数据，存在就进行解密并设置回去
-	query := rw.c.Request.URL.Query()
-	dataStr := query.Get("data")
-	timeStr := query.Get("time")
-	if dataStr != "" && timeStr != "" {
-		decrypt, err := pkgaes.Decrypt(dataStr, rw.encryptionKey, timeStr)
+// DecryptDeviceRequest decrypts device-login query and request-body payloads in place.
+func DecryptDeviceRequest(ctx *app.RequestContext, encryptionKey string) bool {
+	query := ctx.QueryArgs()
+	data := string(query.Peek("data"))
+	iv := string(query.Peek("time"))
+	if data != "" && iv != "" {
+		plainText, err := pkgaes.Decrypt(data, encryptionKey, iv)
 		if err == nil {
 			params := map[string]interface{}{}
-			err = json.Unmarshal([]byte(decrypt), &params)
-			if err == nil {
-				for k, v := range params {
-					query.Set(k, fmt.Sprintf("%v", v))
+			if err := json.Unmarshal([]byte(plainText), &params); err == nil {
+				for key, value := range params {
+					query.Set(key, fmt.Sprint(value))
 				}
 				query.Del("data")
 				query.Del("time")
-				rw.c.Request.RequestURI = fmt.Sprintf("%s?%s", rw.c.Request.RequestURI[:strings.Index(rw.c.Request.RequestURI, "?")], query.Encode())
-				rw.c.Request.URL.RawQuery = query.Encode()
+				ctx.URI().SetQueryString(string(query.QueryString()))
 			}
 		}
 	}
 
-	//判断body是否存在数据，存在就尝试解密，并设置回去
-	body, err := io.ReadAll(rw.c.Request.Body)
-	if err != nil {
-		return true
-	}
-
+	body := ctx.Request.Body()
 	if len(body) == 0 {
 		return true
 	}
 
 	params := map[string]interface{}{}
-	err = json.Unmarshal(body, &params)
-	data := params["data"]
-	nonce := params["time"]
-	if err != nil || data == nil {
+	if err := json.Unmarshal(body, &params); err != nil {
 		return false
 	}
-
-	str, ok := data.(string)
+	data, ok := params["data"].(string)
 	if !ok {
 		return false
 	}
-	iv, ok := nonce.(string)
+	iv, ok = params["time"].(string)
 	if !ok {
 		return false
 	}
-
-	decrypt, err := pkgaes.Decrypt(str, rw.encryptionKey, iv)
+	plainText, err := pkgaes.Decrypt(data, encryptionKey, iv)
 	if err != nil {
 		return false
 	}
-	rw.c.Request.Body = io.NopCloser(bytes.NewBuffer([]byte(decrypt)))
+	ctx.Request.SetBody([]byte(plainText))
 	return true
 }
 
-func (rw *ResponseWriter) FlushAbort() {
-	defer rw.c.Abort()
-	rw.flush = true
-	if rw.encryption {
-		rw.Encrypt()
+// EncryptDeviceResponse encrypts the top-level data field of a device-login response in place.
+func EncryptDeviceResponse(ctx *app.RequestContext, encryptionKey string) {
+	params := map[string]interface{}{}
+	if err := json.Unmarshal(ctx.Response.Body(), &params); err != nil {
+		return
 	}
-	_, err := rw.Write(rw.body.Bytes())
+	data, ok := params["data"]
+	if !ok || data == nil {
+		return
+	}
+
+	plainText, err := json.Marshal(data)
 	if err != nil {
 		return
 	}
-}
-
-type ResponseWriter struct {
-	http.ResponseWriter
-	size             int
-	status           int
-	flush            bool
-	body             *bytes.Buffer
-	c                *hertzx.Context
-	encryption       bool
-	encryptionKey    string
-	encryptionMethod string
-}
-
-func (rw *ResponseWriter) Unwrap() http.ResponseWriter {
-	return rw.ResponseWriter
-}
-
-//nolint:unused
-func (rw *ResponseWriter) reset(writer http.ResponseWriter) {
-	rw.ResponseWriter = writer
-	rw.size = noWritten
-	rw.status = defaultStatus
-}
-
-func (rw *ResponseWriter) WriteHeader(code int) {
-	if code > 0 && rw.status != code {
-		if rw.Written() {
-			return
-		}
-		rw.status = code
+	if stringData, ok := data.(string); ok {
+		plainText = []byte(stringData)
 	}
-}
-
-func (rw *ResponseWriter) WriteHeaderNow() {
-	if !rw.Written() {
-		rw.size = 0
-		rw.ResponseWriter.WriteHeader(rw.status)
+	cipherText, iv, err := pkgaes.Encrypt(plainText, encryptionKey)
+	if err != nil {
+		return
 	}
-}
-
-func (rw *ResponseWriter) Write(data []byte) (n int, err error) {
-	if rw.flush {
-		rw.WriteHeaderNow()
-		n, err = rw.ResponseWriter.Write(data)
-		rw.size += n
-	} else {
-		rw.body.Write(data)
+	params["data"] = map[string]string{"data": cipherText, "time": iv}
+	response, err := json.Marshal(params)
+	if err != nil {
+		return
 	}
-	return
-}
-
-func (rw *ResponseWriter) WriteString(s string) (n int, err error) {
-	if rw.flush {
-		rw.WriteHeaderNow()
-		n, err = rw.ResponseWriter.Write([]byte(s))
-		rw.size += n
-	} else {
-		rw.body.Write([]byte(s))
-	}
-	return
-}
-
-func (rw *ResponseWriter) Status() int {
-	return rw.status
-}
-
-func (rw *ResponseWriter) Size() int {
-	return rw.size
-}
-
-func (rw *ResponseWriter) Written() bool {
-	return rw.size != noWritten
-}
-
-func (rw *ResponseWriter) SyncFromHertz(ctx *app.RequestContext) {
-	if writer, ok := rw.ResponseWriter.(interface {
-		SyncFromHertz(*app.RequestContext)
-	}); ok {
-		writer.SyncFromHertz(ctx)
-	}
-	status := ctx.Response.StatusCode()
-	if status != 0 {
-		rw.status = status
-	}
-	if size := len(ctx.Response.Body()); size > 0 {
-		rw.size = size
-	}
-}
-
-// Hijack implements the http.Hijacker interface.
-func (rw *ResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	if rw.size < 0 {
-		rw.size = 0
-	}
-	return rw.ResponseWriter.(http.Hijacker).Hijack()
-}
-
-// CloseNotify implements the http.CloseNotifier interface.
-func (rw *ResponseWriter) CloseNotify() <-chan bool {
-	// 通过 r.Context().Done() 来监听请求的取消
-	done := rw.c.Request.Context().Done()
-	closed := make(chan bool)
-
-	// 当上下文被取消时，通过 closed channel 发送通知
-	go func() {
-		<-done
-		closed <- true
-	}()
-
-	return closed
-}
-
-// Flush implements the http.Flusher interface.
-func (rw *ResponseWriter) Flush() {
-	rw.WriteHeaderNow()
-	rw.ResponseWriter.(http.Flusher).Flush()
-}
-
-func (rw *ResponseWriter) Pusher() (pusher http.Pusher) {
-	if pusher, ok := rw.ResponseWriter.(http.Pusher); ok {
-		return pusher
-	}
-	return nil
+	ctx.Response.SetBody(response)
 }

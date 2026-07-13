@@ -9,7 +9,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
-	"github.com/perfect-panel/server/pkg/hertzx"
+	"github.com/perfect-panel/server/pkg/result"
 	"github.com/perfect-panel/server/pkg/trace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -107,13 +107,15 @@ func TraceMiddleware(_ *svc.ServiceContext) app.HandlerFunc {
 		if status > 0 {
 			span.SetAttributes(semconv.HTTPResponseStatusCodeKey.Int(status))
 		}
-		if hxCtx, ok := hertzx.ContextFromRequestContext(ctx); ok && len(hxCtx.Errors) > 0 {
-			span.SetStatus(codes.Error, hxCtx.Errors.String())
-			for _, err := range hxCtx.Errors {
-				span.RecordError(err.Err)
-			}
+		if err := requestError(ctx); err != nil {
+			span.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
 		}
 
 		span.SetAttributes(semconv.HTTPResponseBodySizeKey.Int(len(ctx.Response.Body())))
 	}
+}
+
+func requestError(ctx *app.RequestContext) error {
+	return result.ParamErrorFromRequestContext(ctx)
 }

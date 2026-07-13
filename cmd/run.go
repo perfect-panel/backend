@@ -12,7 +12,6 @@ import (
 	"syscall"
 
 	"github.com/google/uuid"
-	"github.com/perfect-panel/server/pkg/hertzx"
 
 	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal"
@@ -76,9 +75,9 @@ func getServers() *service.Group {
 	}
 	// check config file is empty, if empty, start init web server
 	if initConfig(&c) {
-		status, server := initialize.Config(startConfigPath)
+		status, engine := initialize.Config(startConfigPath)
 		<-status
-		if err := server.Shutdown(context.TODO()); err != nil {
+		if err := engine.Shutdown(context.TODO()); err != nil {
 			log.Printf("Init Server Shutdown: %s\n", err.Error())
 		}
 	}
@@ -86,9 +85,6 @@ func getServers() *service.Group {
 	// Initialize application timezone
 	if err := timeutil.LoadLocation(c.AppLocation); err != nil {
 		logger.Errorf("load app timezone %q failed: %v, falling back to Local", c.AppLocation, err)
-	}
-	if !c.Debug {
-		hertzx.SetMode(hertzx.ReleaseMode)
 	}
 	// init logger
 	if err := logger.SetUp(c.Logger); err != nil {
