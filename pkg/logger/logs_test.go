@@ -34,51 +34,41 @@ type mockWriter struct {
 }
 
 func (mw *mockWriter) Alert(v any) {
-	mw.lock.Lock()
-	defer mw.lock.Unlock()
-	output(&mw.builder, levelAlert, v)
+	mw.write(levelAlert, v)
 }
 
 func (mw *mockWriter) Debug(v any, fields ...LogField) {
-	mw.lock.Lock()
-	defer mw.lock.Unlock()
-	output(&mw.builder, levelDebug, v, fields...)
+	mw.write(levelDebug, v, fields...)
 }
 
 func (mw *mockWriter) Error(v any, fields ...LogField) {
-	mw.lock.Lock()
-	defer mw.lock.Unlock()
-	output(&mw.builder, levelError, v, fields...)
+	mw.write(levelError, v, fields...)
 }
 
 func (mw *mockWriter) Info(v any, fields ...LogField) {
-	mw.lock.Lock()
-	defer mw.lock.Unlock()
-	output(&mw.builder, levelInfo, v, fields...)
+	mw.write(levelInfo, v, fields...)
 }
 
 func (mw *mockWriter) Severe(v any) {
-	mw.lock.Lock()
-	defer mw.lock.Unlock()
-	output(&mw.builder, levelSevere, v)
+	mw.write(levelSevere, v)
 }
 
 func (mw *mockWriter) Slow(v any, fields ...LogField) {
-	mw.lock.Lock()
-	defer mw.lock.Unlock()
-	output(&mw.builder, levelSlow, v, fields...)
+	mw.write(levelSlow, v, fields...)
 }
 
 func (mw *mockWriter) Stack(v any) {
-	mw.lock.Lock()
-	defer mw.lock.Unlock()
-	output(&mw.builder, levelError, v)
+	mw.write(levelError, v)
 }
 
 func (mw *mockWriter) Stat(v any, fields ...LogField) {
+	mw.write(levelStat, v, fields...)
+}
+
+func (mw *mockWriter) write(level string, v any, fields ...LogField) {
 	mw.lock.Lock()
 	defer mw.lock.Unlock()
-	output(&mw.builder, levelStat, v, fields...)
+	output(&mw.builder, level, v, fields...)
 }
 
 func (mw *mockWriter) Close() error {
@@ -548,7 +538,10 @@ func TestStructedLogWithDuration(t *testing.T) {
 }
 
 func TestSetLevel(t *testing.T) {
-	SetLevel(ErrorLevel)
+	oldLevel := atomic.SwapUint32(&logLevel, ErrorLevel)
+	t.Cleanup(func() {
+		atomic.StoreUint32(&logLevel, oldLevel)
+	})
 	const message = "hello there"
 	w := new(mockWriter)
 	old := writer.Swap(w)
@@ -559,14 +552,26 @@ func TestSetLevel(t *testing.T) {
 }
 
 func TestSetLevelTwiceWithMode(t *testing.T) {
+	oldWriter := writer.Swap(nil)
+	oldLevel := atomic.LoadUint32(&logLevel)
+	oldEncoding := atomic.LoadUint32(&encoding)
+	oldDisableStat := atomic.LoadUint32(&disableStat)
+	setupOnce = sync.Once{}
+	t.Cleanup(func() {
+		writer.Store(oldWriter)
+		atomic.StoreUint32(&logLevel, oldLevel)
+		atomic.StoreUint32(&encoding, oldEncoding)
+		atomic.StoreUint32(&disableStat, oldDisableStat)
+		setupOnce = sync.Once{}
+	})
+
 	testModes := []string{
 		"console",
 		"volumn",
 		"mode",
 	}
 	w := new(mockWriter)
-	old := writer.Swap(w)
-	defer writer.Store(old)
+	writer.Store(w)
 
 	for _, mode := range testModes {
 		testSetLevelTwiceWithMode(t, mode, w)
@@ -574,7 +579,10 @@ func TestSetLevelTwiceWithMode(t *testing.T) {
 }
 
 func TestSetLevelWithDuration(t *testing.T) {
-	SetLevel(ErrorLevel)
+	oldLevel := atomic.SwapUint32(&logLevel, ErrorLevel)
+	t.Cleanup(func() {
+		atomic.StoreUint32(&logLevel, oldLevel)
+	})
 	const message = "hello there"
 	w := new(mockWriter)
 	old := writer.Swap(w)
@@ -585,7 +593,10 @@ func TestSetLevelWithDuration(t *testing.T) {
 }
 
 func TestErrorfWithWrappedError(t *testing.T) {
-	SetLevel(ErrorLevel)
+	oldLevel := atomic.SwapUint32(&logLevel, ErrorLevel)
+	t.Cleanup(func() {
+		atomic.StoreUint32(&logLevel, oldLevel)
+	})
 	const message = "there"
 	w := new(mockWriter)
 	old := writer.Swap(w)
@@ -600,10 +611,23 @@ func TestMustNil(t *testing.T) {
 }
 
 func TestSetup(t *testing.T) {
-	defer func() {
-		SetLevel(InfoLevel)
-		atomic.StoreUint32(&encoding, jsonEncodingType)
-	}()
+	oldWriter := writer.Load()
+	oldLevel := atomic.LoadUint32(&logLevel)
+	oldEncoding := atomic.LoadUint32(&encoding)
+	oldDisableStat := atomic.LoadUint32(&disableStat)
+	oldMaxContentLength := atomic.LoadUint32(&maxContentLength)
+	oldTimeFormat := timeFormat
+	oldFileTimeFormat := fileTimeFormat
+	t.Cleanup(func() {
+		writer.Store(oldWriter)
+		atomic.StoreUint32(&logLevel, oldLevel)
+		atomic.StoreUint32(&encoding, oldEncoding)
+		atomic.StoreUint32(&disableStat, oldDisableStat)
+		atomic.StoreUint32(&maxContentLength, oldMaxContentLength)
+		timeFormat = oldTimeFormat
+		fileTimeFormat = oldFileTimeFormat
+		setupOnce = sync.Once{}
+	})
 
 	setupOnce = sync.Once{}
 	MustSetup(LogConf{
@@ -678,11 +702,15 @@ func TestSetup(t *testing.T) {
 }
 
 func TestDisable(t *testing.T) {
+	oldWriter := writer.Load()
+	oldLevel := atomic.LoadUint32(&logLevel)
+	oldEncoding := atomic.LoadUint32(&encoding)
 	Disable()
-	defer func() {
-		SetLevel(InfoLevel)
-		atomic.StoreUint32(&encoding, jsonEncodingType)
-	}()
+	t.Cleanup(func() {
+		writer.Store(oldWriter)
+		atomic.StoreUint32(&logLevel, oldLevel)
+		atomic.StoreUint32(&encoding, oldEncoding)
+	})
 
 	var opt logOptions
 	WithKeepDays(1)(&opt)
@@ -695,7 +723,10 @@ func TestDisable(t *testing.T) {
 }
 
 func TestDisableStat(t *testing.T) {
-	DisableStat()
+	oldDisableStat := atomic.SwapUint32(&disableStat, 1)
+	t.Cleanup(func() {
+		atomic.StoreUint32(&disableStat, oldDisableStat)
+	})
 
 	const message = "hello there"
 	w := new(mockWriter)
@@ -706,6 +737,11 @@ func TestDisableStat(t *testing.T) {
 }
 
 func TestAddWriter(t *testing.T) {
+	oldWriter := writer.Load()
+	t.Cleanup(func() {
+		writer.Store(oldWriter)
+	})
+
 	const message = "hello there"
 	w := new(mockWriter)
 	AddWriter(w)
@@ -717,8 +753,12 @@ func TestAddWriter(t *testing.T) {
 }
 
 func TestSetWriter(t *testing.T) {
-	atomic.StoreUint32(&logLevel, 0)
-	Reset()
+	oldLevel := atomic.SwapUint32(&logLevel, 0)
+	oldWriter := Reset()
+	t.Cleanup(func() {
+		atomic.StoreUint32(&logLevel, oldLevel)
+		writer.Store(oldWriter)
+	})
 	SetWriter(nopWriter{})
 	assert.NotNil(t, writer.Load())
 	assert.True(t, writer.Load() == nopWriter{})
@@ -827,6 +867,8 @@ func put(b []byte) {
 }
 
 func doTestStructedLog(t *testing.T, level string, w *mockWriter, write func(...any)) {
+	setTestLogState(t, jsonEncodingType)
+
 	const message = "hello there"
 	write(message)
 
@@ -842,9 +884,22 @@ func doTestStructedLog(t *testing.T, level string, w *mockWriter, write func(...
 }
 
 func doTestStructedLogConsole(t *testing.T, w *mockWriter, write func(...any)) {
+	setTestLogState(t, plainEncodingType)
+
 	const message = "hello there"
 	write(message)
 	assert.True(t, strings.Contains(w.String(), message))
+}
+
+func setTestLogState(t *testing.T, outputEncoding uint32) {
+	oldLevel := atomic.SwapUint32(&logLevel, DebugLevel)
+	oldEncoding := atomic.SwapUint32(&encoding, outputEncoding)
+	oldDisableStat := atomic.SwapUint32(&disableStat, 0)
+	t.Cleanup(func() {
+		atomic.StoreUint32(&logLevel, oldLevel)
+		atomic.StoreUint32(&encoding, oldEncoding)
+		atomic.StoreUint32(&disableStat, oldDisableStat)
+	})
 }
 
 func testSetLevelTwiceWithMode(t *testing.T, mode string, w *mockWriter) {

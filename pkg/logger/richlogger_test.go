@@ -16,7 +16,7 @@ import (
 )
 
 func TestTraceLog(t *testing.T) {
-	SetLevel(InfoLevel)
+	setRichLoggerTestLevel(t, InfoLevel)
 	w := new(mockWriter)
 	old := writer.Swap(w)
 	writer.lock.RLock()
@@ -55,7 +55,7 @@ func TestTraceDebug(t *testing.T) {
 	defer span.End()
 
 	l := WithContext(ctx)
-	SetLevel(DebugLevel)
+	setRichLoggerTestLevel(t, DebugLevel)
 	l.WithDuration(time.Second).Debug(testlog)
 	assert.True(t, strings.Contains(w.String(), traceKey))
 	assert.True(t, strings.Contains(w.String(), spanKey))
@@ -96,7 +96,7 @@ func TestTraceError(t *testing.T) {
 	l := WithContext(context.Background())
 	l = l.WithContext(nilCtx)
 	l = l.WithContext(ctx)
-	SetLevel(ErrorLevel)
+	setRichLoggerTestLevel(t, ErrorLevel)
 	l.WithDuration(time.Second).Error(testlog)
 	validate(t, w.String(), true, true)
 	w.Reset()
@@ -132,7 +132,7 @@ func TestTraceInfo(t *testing.T) {
 	ctx, span := tp.Tracer("trace-id").Start(context.Background(), "span-id")
 	defer span.End()
 
-	SetLevel(InfoLevel)
+	setRichLoggerTestLevel(t, InfoLevel)
 	l := WithContext(ctx)
 	l.WithDuration(time.Second).Info(testlog)
 	validate(t, w.String(), true, true)
@@ -173,7 +173,7 @@ func TestTraceInfoConsole(t *testing.T) {
 	defer span.End()
 
 	l := WithContext(ctx)
-	SetLevel(InfoLevel)
+	setRichLoggerTestLevel(t, InfoLevel)
 	l.WithDuration(time.Second).Info(testlog)
 	validate(t, w.String(), true, true)
 	w.Reset()
@@ -205,7 +205,7 @@ func TestTraceSlow(t *testing.T) {
 	defer span.End()
 
 	l := WithContext(ctx)
-	SetLevel(InfoLevel)
+	setRichLoggerTestLevel(t, InfoLevel)
 	l.WithDuration(time.Second).Slow(testlog)
 	assert.True(t, strings.Contains(w.String(), traceKey))
 	assert.True(t, strings.Contains(w.String(), spanKey))
@@ -235,7 +235,7 @@ func TestTraceWithoutContext(t *testing.T) {
 	}()
 
 	l := WithContext(context.Background())
-	SetLevel(InfoLevel)
+	setRichLoggerTestLevel(t, InfoLevel)
 	l.WithDuration(time.Second).Info(testlog)
 	validate(t, w.String(), false, false)
 	w.Reset()
@@ -254,7 +254,7 @@ func TestLogWithFields(t *testing.T) {
 
 	ctx := ContextWithFields(context.Background(), Field("foo", "bar"))
 	l := WithContext(ctx)
-	SetLevel(InfoLevel)
+	setRichLoggerTestLevel(t, InfoLevel)
 	l.Infow(testlog)
 
 	var val mockValue
@@ -263,6 +263,8 @@ func TestLogWithFields(t *testing.T) {
 }
 
 func TestLogWithCallerSkip(t *testing.T) {
+	setRichLoggerTestLevel(t, InfoLevel)
+
 	w := new(mockWriter)
 	old := writer.Swap(w)
 	writer.lock.RLock()
@@ -309,6 +311,8 @@ func TestLogWithContextCopy(t *testing.T) {
 }
 
 func TestLogWithDurationCopy(t *testing.T) {
+	setRichLoggerTestLevel(t, InfoLevel)
+
 	log1 := WithContext(context.Background())
 	log2 := log1.WithDuration(time.Second)
 	assert.Empty(t, log1.(*richLogger).fields)
@@ -322,6 +326,8 @@ func TestLogWithDurationCopy(t *testing.T) {
 }
 
 func TestLogWithFieldsCopy(t *testing.T) {
+	setRichLoggerTestLevel(t, InfoLevel)
+
 	log1 := WithContext(context.Background())
 	log2 := log1.WithFields(Field("foo", "bar"))
 	log3 := log1.WithFields()
@@ -339,6 +345,8 @@ func TestLogWithFieldsCopy(t *testing.T) {
 }
 
 func TestLoggerWithFields(t *testing.T) {
+	setRichLoggerTestLevel(t, InfoLevel)
+
 	w := new(mockWriter)
 	old := writer.Swap(w)
 	writer.lock.RLock()
@@ -353,6 +361,13 @@ func TestLoggerWithFields(t *testing.T) {
 	var val mockValue
 	assert.Nil(t, json.Unmarshal([]byte(w.String()), &val))
 	assert.Equal(t, "bar", val.Foo)
+}
+
+func setRichLoggerTestLevel(t *testing.T, level uint32) {
+	oldLevel := atomic.SwapUint32(&logLevel, level)
+	t.Cleanup(func() {
+		atomic.StoreUint32(&logLevel, oldLevel)
+	})
 }
 
 func validate(t *testing.T, body string, expectedTrace, expectedSpan bool) {

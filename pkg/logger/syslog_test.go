@@ -15,6 +15,11 @@ const testlog = "Stay hungry, stay foolish."
 var testobj = map[string]any{"foo": "bar"}
 
 func TestCollectSysLog(t *testing.T) {
+	oldOutput := log.Writer()
+	t.Cleanup(func() {
+		log.SetOutput(oldOutput)
+	})
+
 	CollectSysLog()
 	content := getContent(captureOutput(func() {
 		log.Print(testlog)

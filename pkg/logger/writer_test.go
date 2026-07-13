@@ -130,8 +130,12 @@ func TestNopWriter(t *testing.T) {
 }
 
 func TestWriteJson(t *testing.T) {
+	oldOutput := log.Writer()
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
+	t.Cleanup(func() {
+		log.SetOutput(oldOutput)
+	})
 	writeJson(nil, "foo")
 	assert.Contains(t, buf.String(), "foo")
 
@@ -154,8 +158,12 @@ func TestWriteJson(t *testing.T) {
 }
 
 func TestWritePlainAny(t *testing.T) {
+	oldOutput := log.Writer()
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
+	t.Cleanup(func() {
+		log.SetOutput(oldOutput)
+	})
 	writePlainAny(nil, levelInfo, "foo")
 	assert.Contains(t, buf.String(), "foo")
 
