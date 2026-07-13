@@ -218,7 +218,7 @@ func (m *orderRepo) UpdateOrderStatus(ctx context.Context, orderNo string, statu
 }
 
 // UpdateOrderStatusAndTradeNo Update order status and trade number
-func (m *customOrderModel) UpdateOrderStatusAndTradeNo(ctx context.Context, orderNo string, status uint8, tradeNo string, tx ...*gorm.DB) error {
+func (m *orderRepo) UpdateOrderStatusAndTradeNo(ctx context.Context, orderNo string, status uint8, tradeNo string, tx ...*gorm.DB) error {
 	orderInfo, err := m.FindOneByOrderNo(ctx, orderNo)
 	if err != nil {
 		return err
@@ -227,7 +227,7 @@ func (m *customOrderModel) UpdateOrderStatusAndTradeNo(ctx context.Context, orde
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
-		return conn.Model(&Order{}).Where("order_no = ?", orderNo).Updates(map[string]interface{}{
+		return conn.Model(&order.Order{}).Where("order_no = ?", orderNo).Updates(map[string]interface{}{
 			"status":   status,
 			"trade_no": tradeNo,
 		}).Error
