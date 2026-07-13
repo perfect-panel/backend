@@ -87,6 +87,9 @@ func (m *Service) Start() {
 
 	serverAddr := fmt.Sprintf("%v:%d", host, port)
 	initialize.StartInitSystemConfig(m.svc)
+	if err := m.svc.Store.User().ValidateEmailIdentityUniqueness(context.Background()); err != nil {
+		panic(err.Error())
+	}
 	m.server = newTransportServer(m.svc, serverAddr)
 	if m.server == nil {
 		return
