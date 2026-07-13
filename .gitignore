@@ -25,6 +25,7 @@ agents.md
 CLAUDE.md
 claude.md
 BRANCH_STRATEGY.md
+/.omo/
 
 # Plugin WASM binaries (built elsewhere)
 plugins/**/*.wasm
