@@ -34,7 +34,8 @@ func NewCheckVerificationCodeLogic(ctx context.Context, svcCtx *svc.ServiceConte
 func (l *CheckVerificationCodeLogic) CheckVerificationCode(req *types.CheckVerificationCodeRequest) (resp *types.CheckVerificationCodeRespone, err error) {
 	resp = &types.CheckVerificationCodeRespone{}
 	if req.Method == authmethod.Email {
-		cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.ParseVerifyType(req.Type), req.Account)
+		email := authmethod.CanonicalEmail(req.Account)
+		cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.ParseVerifyType(req.Type), email)
 		value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
 		if err != nil {
 			return resp, nil
