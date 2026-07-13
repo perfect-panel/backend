@@ -47,4 +47,7 @@ func runMigration(t *testing.T, driver, dsn string) {
 	if err := CreateAdminUser(fmt.Sprintf("admin-%s@example.com", driver), "password", db); err != nil {
 		t.Fatalf("%s create admin failed: %v", driver, err)
 	}
+	if err := CreateAdminUser("", "password", db); err != nil {
+		t.Fatalf("%s existing admin must skip email validation: %v", driver, err)
+	}
 }

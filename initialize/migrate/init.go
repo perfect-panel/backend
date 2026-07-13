@@ -1,14 +1,26 @@
 package migrate
 
 import (
+	"errors"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/uuidx"
 	"gorm.io/gorm"
 )
+
+var errInvalidAdminEmail = errors.New("invalid admin email")
+
+func canonicalAdminEmail(email string) (string, error) {
+	canonicalEmail := authmethod.CanonicalEmail(email)
+	if canonicalEmail == "" {
+		return "", errInvalidAdminEmail
+	}
+	return canonicalEmail, nil
+}
 
 // CreateAdminUser create admin user
 func CreateAdminUser(email, password string, tx *gorm.DB) error {
@@ -18,6 +30,10 @@ func CreateAdminUser(email, password string, tx *gorm.DB) error {
 		if tx.Model(&user.User{}).Find(&user.User{}).RowsAffected != 0 {
 			logger.Info("User already exists, skip creating administrator account")
 			return nil
+		}
+		canonicalEmail, err := canonicalAdminEmail(email)
+		if err != nil {
+			return err
 		}
 
 		u := user.User{
@@ -30,8 +46,8 @@ func CreateAdminUser(email, password string, tx *gorm.DB) error {
 		}
 		method := user.AuthMethods{
 			UserId:         u.Id,
-			AuthType:       "email",
-			AuthIdentifier: email,
+			AuthType:       authmethod.Email,
+			AuthIdentifier: canonicalEmail,
 			Verified:       true,
 		}
 		if err := tx.Model(&user.AuthMethods{}).Save(&method).Error; err != nil {
