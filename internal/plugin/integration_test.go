@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,9 +20,12 @@ import (
 // Mock Redis for the test
 type mockRedis struct {
 	data map[string]string
+	mu   sync.RWMutex
 }
 
 func (m *mockRedis) Get(key string) (string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	if val, ok := m.data[key]; ok {
 		return val, nil
 	}
@@ -29,6 +33,8 @@ func (m *mockRedis) Get(key string) (string, error) {
 }
 
 func (m *mockRedis) Set(key, value string, ttlSeconds int64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.data[key] = value
 	return nil
 }
@@ -49,6 +55,8 @@ func (m *mockStore) Query(model string, operation string, conditions map[string]
 }
 
 func (m *mockRedis) Del(keys ...string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	for _, k := range keys {
 		delete(m.data, k)
 	}
@@ -141,7 +149,9 @@ func TestDemoPluginIntegration(t *testing.T) {
 		res, err = mgr.CallPlugin(ctx, "demo-plugin", "handle_redis_counter", req)
 		require.NoError(t, err)
 		assert.Contains(t, string(res.Body), `"counter":2`)
-		assert.Equal(t, "2", mockRds.data["plugin:demo-plugin:counter"])
+		counter, err := mockRds.Get("plugin:demo-plugin:counter")
+		require.NoError(t, err)
+		assert.Equal(t, "2", counter)
 	})
 
 	t.Run("AsyncRedisHandlerUsesHostGoroutinePool", func(t *testing.T) {
@@ -154,7 +164,9 @@ func TestDemoPluginIntegration(t *testing.T) {
 		assert.Equal(t, int32(200), res.Status)
 		assert.Contains(t, string(res.Body), `"async":true`)
 		assert.Contains(t, string(res.Body), `"value":"hello from async"`)
-		assert.Equal(t, "hello from async", mockRds.data["plugin:demo-plugin:async_message"])
+		asyncMessage, err := mockRds.Get("plugin:demo-plugin:async_message")
+		require.NoError(t, err)
+		assert.Equal(t, "hello from async", asyncMessage)
 	})
 
 	t.Run("DBHandlerQueriesActiveUsers", func(t *testing.T) {
@@ -194,7 +206,8 @@ func TestDemoPluginIntegration(t *testing.T) {
 
 		mgr.EventBus().Publish("demo.ping", payload)
 		require.Eventually(t, func() bool {
-			return mockRds.data["plugin:demo-plugin:last_event"] == "pong"
+			lastEvent, err := mockRds.Get("plugin:demo-plugin:last_event")
+			return err == nil && lastEvent == "pong"
 		}, time.Second, 10*time.Millisecond)
 	})
 }
