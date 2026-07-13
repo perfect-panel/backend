@@ -3,12 +3,14 @@ package user
 import (
 	"context"
 	"fmt"
+
+	"github.com/perfect-panel/server/pkg/authmethod"
 )
 
 // Cache key prefixes used across the user domain cache.
 const (
 	cacheUserIdPrefix             = "cache:user:id:"
-	cacheUserEmailPrefix          = "cache:user:email:"
+	cacheUserEmailPrefix          = "cache:user:email:v2:"
 	cacheUserSubscribeTokenPrefix = "cache:user:subscribe:token:"
 	cacheUserSubscribeUserPrefix  = "cache:user:subscribe:user:"
 	cacheUserSubscribeIdPrefix    = "cache:user:subscribe:id:"
@@ -36,8 +38,8 @@ func (u *User) GetCacheKeys() []string {
 	}
 
 	for _, auth := range u.AuthMethods {
-		if auth.AuthType == "email" {
-			keys = append(keys, fmt.Sprintf("%s%s", cacheUserEmailPrefix, auth.AuthIdentifier))
+		if auth.AuthType == authmethod.Email {
+			keys = append(keys, fmt.Sprintf("%s%s", cacheUserEmailPrefix, authmethod.CanonicalEmail(auth.AuthIdentifier)))
 			break
 		}
 	}
@@ -86,8 +88,8 @@ func (a *AuthMethods) GetCacheKeys() []string {
 	if a.UserId != 0 {
 		keys = append(keys, fmt.Sprintf("%s%d", cacheUserIdPrefix, a.UserId))
 	}
-	if a.AuthType == "email" && a.AuthIdentifier != "" {
-		keys = append(keys, fmt.Sprintf("%s%s", cacheUserEmailPrefix, a.AuthIdentifier))
+	if a.AuthType == authmethod.Email && a.AuthIdentifier != "" {
+		keys = append(keys, fmt.Sprintf("%s%s", cacheUserEmailPrefix, authmethod.CanonicalEmail(a.AuthIdentifier)))
 	}
 	return keys
 }

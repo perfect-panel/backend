@@ -9,6 +9,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/order"
 	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/orm"
@@ -20,7 +21,7 @@ import (
 
 var (
 	cacheUserIdPrefix             = "cache:user:id:"
-	cacheUserEmailPrefix          = "cache:user:email:"
+	cacheUserEmailPrefix          = "cache:user:email:v2:"
 	cacheUserSubscribeTokenPrefix = "cache:user:subscribe:token:"
 	cacheUserSubscribeUserPrefix  = "cache:user:subscribe:user:"
 	cacheUserSubscribeIdPrefix    = "cache:user:subscribe:id:"
@@ -56,6 +57,7 @@ type UserRepo interface {
 	// auth methods
 	FindUserAuthMethods(ctx context.Context, userId int64) ([]*user.AuthMethods, error)
 	FindUserAuthMethodByOpenID(ctx context.Context, method, openID string) (*user.AuthMethods, error)
+	ValidateEmailIdentityUniqueness(ctx context.Context) error
 	FindUserAuthMethodByPlatform(ctx context.Context, userId int64, platform string) (*user.AuthMethods, error)
 	FindUserAuthMethodByUserId(ctx context.Context, method string, userId int64) (*user.AuthMethods, error)
 	InsertUserAuthMethods(ctx context.Context, data *user.AuthMethods, tx ...*gorm.DB) error
@@ -155,10 +157,14 @@ func (m *userRepo) batchGetCacheKeys(users ...*user.User) []string {
 
 func (m *userRepo) FindOneByEmail(ctx context.Context, email string) (*user.User, error) {
 	var u user.User
-	key := fmt.Sprintf("%s%v", cacheUserEmailPrefix, email)
-	err := m.QueryCtx(ctx, &u, key, func(conn *gorm.DB, v interface{}) error {
-		var data user.AuthMethods
-		if err := conn.Model(&user.AuthMethods{}).Where("auth_type = 'email' AND auth_identifier = ?", email).First(&data).Error; err != nil {
+	canonicalEmail, err := canonicalAuthIdentifier(authmethod.Email, email)
+	if err != nil {
+		return &u, err
+	}
+	key := fmt.Sprintf("%s%v", cacheUserEmailPrefix, canonicalEmail)
+	err = m.QueryCtx(ctx, &u, key, func(conn *gorm.DB, v interface{}) error {
+		data, err := findUserAuthMethodByIdentifier(conn, authmethod.Email, canonicalEmail)
+		if err != nil {
 			return err
 		}
 		return conn.Model(&user.User{}).Unscoped().Where("id = ?", data.UserId).Preload("UserDevices").Preload("AuthMethods").First(v).Error
@@ -167,9 +173,21 @@ func (m *userRepo) FindOneByEmail(ctx context.Context, email string) (*user.User
 }
 
 func (m *userRepo) Insert(ctx context.Context, data *user.User, tx ...*gorm.DB) error {
+	for index := range data.AuthMethods {
+		identifier, err := canonicalAuthIdentifier(data.AuthMethods[index].AuthType, data.AuthMethods[index].AuthIdentifier)
+		if err != nil {
+			return err
+		}
+		data.AuthMethods[index].AuthIdentifier = identifier
+	}
 	err := m.ExecCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
+		}
+		for index := range data.AuthMethods {
+			if err := guardEmailIdentityWrite(conn, &data.AuthMethods[index]); err != nil {
+				return err
+			}
 		}
 		return conn.Create(&data).Error
 	}, m.getCacheKeys(data)...)
@@ -640,7 +658,12 @@ func (m *userRepo) FindUserAuthMethods(ctx context.Context, userId int64) ([]*us
 func (m *userRepo) FindUserAuthMethodByOpenID(ctx context.Context, method, openID string) (*user.AuthMethods, error) {
 	var data user.AuthMethods
 	err := m.QueryNoCacheCtx(ctx, &data, func(conn *gorm.DB, v interface{}) error {
-		return conn.Model(&user.AuthMethods{}).Where("auth_type = ? AND auth_identifier = ?", method, openID).First(&data).Error
+		resolved, err := findUserAuthMethodByIdentifier(conn, method, openID)
+		if err != nil {
+			return err
+		}
+		data = *resolved
+		return nil
 	})
 	return &data, err
 }
@@ -654,6 +677,11 @@ func (m *userRepo) FindUserAuthMethodByPlatform(ctx context.Context, userId int6
 }
 
 func (m *userRepo) InsertUserAuthMethods(ctx context.Context, data *user.AuthMethods, tx ...*gorm.DB) error {
+	identifier, err := canonicalAuthIdentifier(data.AuthType, data.AuthIdentifier)
+	if err != nil {
+		return err
+	}
+	data.AuthIdentifier = identifier
 	u, err := m.FindOne(ctx, data.UserId)
 	if err != nil {
 		return err
@@ -662,6 +690,9 @@ func (m *userRepo) InsertUserAuthMethods(ctx context.Context, data *user.AuthMet
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
+		}
+		if err = guardEmailIdentityWrite(conn, data); err != nil {
+			return err
 		}
 		if err = conn.Model(&user.AuthMethods{}).Create(data).Error; err != nil {
 			return err
@@ -671,6 +702,11 @@ func (m *userRepo) InsertUserAuthMethods(ctx context.Context, data *user.AuthMet
 }
 
 func (m *userRepo) UpdateUserAuthMethods(ctx context.Context, data *user.AuthMethods, tx ...*gorm.DB) error {
+	identifier, err := canonicalAuthIdentifier(data.AuthType, data.AuthIdentifier)
+	if err != nil {
+		return err
+	}
+	data.AuthIdentifier = identifier
 	u, err := m.FindOne(ctx, data.UserId)
 	if err != nil {
 		return err
@@ -679,6 +715,9 @@ func (m *userRepo) UpdateUserAuthMethods(ctx context.Context, data *user.AuthMet
 	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
+		}
+		if err = guardEmailIdentityWrite(conn, data); err != nil {
+			return err
 		}
 		err = conn.Model(&user.AuthMethods{}).Where("user_id = ? AND auth_type = ?", data.UserId, data.AuthType).Save(data).Error
 		if err != nil {
@@ -729,7 +768,7 @@ func (m *userRepo) UpdateUserAuthMethodOwner(ctx context.Context, authType, iden
 			conn = tx[0]
 		}
 		return conn.Model(&user.AuthMethods{}).
-			Where("auth_type = ? AND auth_identifier = ?", authType, identifier).
+			Where("id = ?", authMethod.Id).
 			Update("user_id", userId).Error
 	})
 }
@@ -756,7 +795,7 @@ func (m *userRepo) DeleteUserAuthMethodByIdentifier(ctx context.Context, authTyp
 			conn = tx[0]
 		}
 		return conn.Model(&user.AuthMethods{}).
-			Where("auth_type = ? AND auth_identifier = ?", authType, identifier).
+			Where("id = ?", authMethod.Id).
 			Delete(&user.AuthMethods{}).Error
 	})
 }
