@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"

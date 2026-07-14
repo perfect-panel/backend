@@ -10,8 +10,8 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -30,7 +30,7 @@ func NewResetAllSubscribeTokenLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *ResetAllSubscribeTokenLogic) ResetAllSubscribeToken() (resp *types.ResetAllSubscribeTokenResponse, err error) {
+func (l *ResetAllSubscribeTokenLogic) ResetAllSubscribeToken() (resp *dto.ResetAllSubscribeTokenResponse, err error) {
 	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// select all active and Finished subscriptions
 		list, err := store.User().FindUserSubscribesByStatus(l.ctx, 1, 2)
@@ -49,12 +49,12 @@ func (l *ResetAllSubscribeTokenLogic) ResetAllSubscribeToken() (resp *types.Rese
 		return nil
 	})
 	if err != nil {
-		return &types.ResetAllSubscribeTokenResponse{
+		return &dto.ResetAllSubscribeTokenResponse{
 			Success: false,
 		}, err
 	}
 
-	return &types.ResetAllSubscribeTokenResponse{
+	return &dto.ResetAllSubscribeTokenResponse{
 		Success: true,
 	}, nil
 }

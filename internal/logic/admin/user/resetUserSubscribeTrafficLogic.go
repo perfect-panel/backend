@@ -3,8 +3,8 @@ package user
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewResetUserSubscribeTrafficLogic(ctx context.Context, svcCtx *svc.ServiceC
 	}
 }
 
-func (l *ResetUserSubscribeTrafficLogic) ResetUserSubscribeTraffic(req *types.ResetUserSubscribeTrafficRequest) error {
+func (l *ResetUserSubscribeTrafficLogic) ResetUserSubscribeTraffic(req *dto.ResetUserSubscribeTrafficRequest) error {
 	userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, req.UserSubscribeId)
 	if err != nil {
 		l.Errorw("FindOneSubscribe error", logger.Field("error", err.Error()), logger.Field("userSubscribeId", req.UserSubscribeId))

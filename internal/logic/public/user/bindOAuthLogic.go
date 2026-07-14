@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/auth"
+	"github.com/perfect-panel/server/internal/model/entity/auth"
 	githuboauth "github.com/perfect-panel/server/pkg/oauth/github"
 	"github.com/perfect-panel/server/pkg/oauth/google"
 	"github.com/perfect-panel/server/pkg/oauth/telegram"
@@ -14,8 +14,8 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -34,7 +34,7 @@ func NewBindOAuthLogic(ctx context.Context, svcCtx *svc.ServiceContext) *BindOAu
 	}
 }
 
-func (l *BindOAuthLogic) BindOAuth(req *types.BindOAuthRequest) (resp *types.BindOAuthResponse, err error) {
+func (l *BindOAuthLogic) BindOAuth(req *dto.BindOAuthRequest) (resp *dto.BindOAuthResponse, err error) {
 	var uri string
 	switch req.Method {
 	case "google":
@@ -55,12 +55,12 @@ func (l *BindOAuthLogic) BindOAuth(req *types.BindOAuthRequest) (resp *types.Bin
 		l.Errorw("error bind oauth", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "error bind oauth: %v", err.Error())
 	}
-	return &types.BindOAuthResponse{
+	return &dto.BindOAuthResponse{
 		Redirect: uri,
 	}, nil
 }
 
-func (l *BindOAuthLogic) google(req *types.BindOAuthRequest) (string, error) {
+func (l *BindOAuthLogic) google(req *dto.BindOAuthRequest) (string, error) {
 	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "google")
 	if err != nil {
 		return "", err
@@ -90,7 +90,7 @@ func (l *BindOAuthLogic) google(req *types.BindOAuthRequest) (string, error) {
 func (l *BindOAuthLogic) facebook() (string, error) {
 	return "", nil
 }
-func (l *BindOAuthLogic) apple(req *types.BindOAuthRequest) (string, error) {
+func (l *BindOAuthLogic) apple(req *dto.BindOAuthRequest) (string, error) {
 	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "apple")
 	if err != nil {
 		return "", err
@@ -111,7 +111,7 @@ func (l *BindOAuthLogic) apple(req *types.BindOAuthRequest) (string, error) {
 	}
 	return fmt.Sprintf(uri, cfg.ClientId, fmt.Sprintf("%s/v1/auth/oauth/callback/apple", cfg.RedirectURL), code), nil
 }
-func (l *BindOAuthLogic) github(req *types.BindOAuthRequest) (string, error) {
+func (l *BindOAuthLogic) github(req *dto.BindOAuthRequest) (string, error) {
 	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "github")
 	if err != nil {
 		return "", err
@@ -138,7 +138,7 @@ func (l *BindOAuthLogic) github(req *types.BindOAuthRequest) (string, error) {
 	return uri, nil
 }
 
-func (l *BindOAuthLogic) telegram(req *types.BindOAuthRequest) (string, error) {
+func (l *BindOAuthLogic) telegram(req *dto.BindOAuthRequest) (string, error) {
 	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "telegram")
 	if err != nil {
 		return "", err

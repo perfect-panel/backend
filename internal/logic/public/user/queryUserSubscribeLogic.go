@@ -8,9 +8,9 @@ import (
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/timeutil"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -32,7 +32,7 @@ func NewQueryUserSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *QueryUserSubscribeLogic) QueryUserSubscribe() (resp *types.QueryUserSubscribeListResponse, err error) {
+func (l *QueryUserSubscribeLogic) QueryUserSubscribe() (resp *dto.QueryUserSubscribeListResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -44,18 +44,18 @@ func (l *QueryUserSubscribeLogic) QueryUserSubscribe() (resp *types.QueryUserSub
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Subscribe Error")
 	}
 
-	resp = &types.QueryUserSubscribeListResponse{
-		List:  make([]types.UserSubscribe, 0),
+	resp = &dto.QueryUserSubscribeListResponse{
+		List:  make([]dto.UserSubscribe, 0),
 		Total: int64(len(data)),
 	}
 
 	for _, item := range data {
-		var sub types.UserSubscribe
+		var sub dto.UserSubscribe
 		tool.DeepCopy(&sub, item)
 
 		// 解析Discount字段 避免在续订时只能续订一个月
 		if item.Subscribe != nil && item.Subscribe.Discount != "" {
-			var discounts []types.SubscribeDiscount
+			var discounts []dto.SubscribeDiscount
 			if err := json.Unmarshal([]byte(item.Subscribe.Discount), &discounts); err == nil {
 				sub.Subscribe.Discount = discounts
 			}
@@ -70,12 +70,12 @@ func (l *QueryUserSubscribeLogic) QueryUserSubscribe() (resp *types.QueryUserSub
 }
 
 // 计算下次重置时间
-func calculateNextResetTime(sub *types.UserSubscribe) int64 {
+func calculateNextResetTime(sub *dto.UserSubscribe) int64 {
 	now := timeutil.Now()
 	return calculateNextResetTimeAt(sub, now)
 }
 
-func calculateNextResetTimeAt(sub *types.UserSubscribe, now time.Time) int64 {
+func calculateNextResetTimeAt(sub *dto.UserSubscribe, now time.Time) int64 {
 	switch sub.Subscribe.ResetCycle {
 	case 0:
 		return 0
@@ -100,7 +100,7 @@ func calculateNextResetTimeAt(sub *types.UserSubscribe, now time.Time) int64 {
 	}
 }
 
-func resetBaseTime(sub *types.UserSubscribe) time.Time {
+func resetBaseTime(sub *dto.UserSubscribe) time.Time {
 	if sub.StartTime > 0 {
 		return time.UnixMilli(sub.StartTime)
 	}

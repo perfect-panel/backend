@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -33,10 +33,10 @@ func NewGetStatLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetStatLo
 	}
 }
 
-func (l *GetStatLogic) GetStat() (resp *types.GetStatResponse, err error) {
+func (l *GetStatLogic) GetStat() (resp *dto.GetStatResponse, err error) {
 	respJson, err := l.svcCtx.Redis.Get(l.ctx, config.CommonStatCacheKey).Result()
 	if err == nil {
-		cachedResp := &types.GetStatResponse{}
+		cachedResp := &dto.GetStatResponse{}
 		err = json.Unmarshal([]byte(respJson), cachedResp)
 		if err == nil {
 			return cachedResp, nil
@@ -128,7 +128,7 @@ func (l *GetStatLogic) GetStat() (resp *types.GetStatResponse, err error) {
 	for p := range protocolDict {
 		protocol = append(protocol, p)
 	}
-	resp = &types.GetStatResponse{
+	resp = &dto.GetStatResponse{
 		User:     u,
 		Node:     n,
 		Country:  int64(len(country)),

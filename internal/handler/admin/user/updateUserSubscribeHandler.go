@@ -5,8 +5,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/user"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
@@ -14,7 +14,7 @@ import (
 // Update user subcribe
 func UpdateUserSubscribeHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
-		var req types.UpdateUserSubscribeRequest
+		var req dto.UpdateUserSubscribeRequest
 		if err := httpx.ShouldBind(c, &req); err != nil {
 			result.ParamErrorResult(c, err)
 			return

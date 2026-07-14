@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/traffic"
+	"github.com/perfect-panel/server/internal/model/entity/traffic"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/queue/types"
 )

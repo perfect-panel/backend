@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/initialize"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -26,8 +26,8 @@ func NewGetVerifyConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 	}
 }
 
-func (l *GetVerifyConfigLogic) GetVerifyConfig() (*types.VerifyConfig, error) {
-	resp := &types.VerifyConfig{}
+func (l *GetVerifyConfigLogic) GetVerifyConfig() (*dto.VerifyConfig, error) {
+	resp := &dto.VerifyConfig{}
 	// get verify config from db
 	verifyConfigs, err := l.svcCtx.Store.System().GetVerifyConfig(l.ctx)
 	if err != nil {

@@ -3,9 +3,9 @@ package user
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewGetUserSubscribeResetTrafficLogsLogic(ctx context.Context, svcCtx *svc.S
 	}
 }
 
-func (l *GetUserSubscribeResetTrafficLogsLogic) GetUserSubscribeResetTrafficLogs(req *types.GetUserSubscribeResetTrafficLogsRequest) (resp *types.GetUserSubscribeResetTrafficLogsResponse, err error) {
+func (l *GetUserSubscribeResetTrafficLogsLogic) GetUserSubscribeResetTrafficLogs(req *dto.GetUserSubscribeResetTrafficLogsRequest) (resp *dto.GetUserSubscribeResetTrafficLogsResponse, err error) {
 	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
@@ -38,7 +38,7 @@ func (l *GetUserSubscribeResetTrafficLogsLogic) GetUserSubscribeResetTrafficLogs
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FilterSystemLog failed, err: %v", err)
 	}
 
-	var list []types.ResetSubscribeTrafficLog
+	var list []dto.ResetSubscribeTrafficLog
 
 	for _, item := range data {
 		var content log.ResetSubscribe
@@ -46,7 +46,7 @@ func (l *GetUserSubscribeResetTrafficLogsLogic) GetUserSubscribeResetTrafficLogs
 			l.Errorf("[ResetSubscribeTrafficLog] failed to unmarshal log: %v", err)
 			continue
 		}
-		list = append(list, types.ResetSubscribeTrafficLog{
+		list = append(list, dto.ResetSubscribeTrafficLog{
 			Id:              item.Id,
 			Type:            content.Type,
 			OrderNo:         content.OrderNo,
@@ -55,7 +55,7 @@ func (l *GetUserSubscribeResetTrafficLogsLogic) GetUserSubscribeResetTrafficLogs
 		})
 	}
 
-	return &types.GetUserSubscribeResetTrafficLogsResponse{
+	return &dto.GetUserSubscribeResetTrafficLogsResponse{
 		Total: total,
 		List:  list,
 	}, nil

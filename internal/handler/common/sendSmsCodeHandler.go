@@ -5,8 +5,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/common"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
@@ -14,7 +14,7 @@ import (
 // Get sms verification code
 func SendSmsCodeHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
-		var req types.SendSmsCodeRequest
+		var req dto.SendSmsCodeRequest
 		if err := httpx.ShouldBind(c, &req); err != nil {
 			result.ParamErrorResult(c, err)
 			return

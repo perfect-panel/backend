@@ -7,8 +7,8 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -27,7 +27,7 @@ func NewGetSystemLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetS
 	}
 }
 
-func (l *GetSystemLogLogic) GetSystemLog() (resp *types.LogResponse, err error) {
+func (l *GetSystemLogLogic) GetSystemLog() (resp *dto.LogResponse, err error) {
 	lines, err := logger.ReadLastNLines(l.svcCtx.Config.Logger.Path, 50)
 	if err != nil {
 		l.Error(err)
@@ -43,7 +43,7 @@ func (l *GetSystemLogLogic) GetSystemLog() (resp *types.LogResponse, err error) 
 		list = append(list, log)
 	}
 
-	return &types.LogResponse{
+	return &dto.LogResponse{
 		List: list,
 	}, nil
 }

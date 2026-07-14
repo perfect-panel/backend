@@ -3,8 +3,8 @@ package marketing
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/email"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -25,7 +25,7 @@ func NewStopBatchSendEmailTaskLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *StopBatchSendEmailTaskLogic) StopBatchSendEmailTask(req *types.StopBatchSendEmailTaskRequest) (err error) {
+func (l *StopBatchSendEmailTaskLogic) StopBatchSendEmailTask(req *dto.StopBatchSendEmailTaskRequest) (err error) {
 	if email.Manager != nil {
 		email.Manager.RemoveWorker(req.Id)
 	} else {

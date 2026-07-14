@@ -3,9 +3,9 @@ package application
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/client"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/client"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewCreateSubscribeApplicationLogic(ctx context.Context, svcCtx *svc.Service
 	}
 }
 
-func (l *CreateSubscribeApplicationLogic) CreateSubscribeApplication(req *types.CreateSubscribeApplicationRequest) (resp *types.SubscribeApplication, err error) {
+func (l *CreateSubscribeApplicationLogic) CreateSubscribeApplication(req *dto.CreateSubscribeApplicationRequest) (resp *dto.SubscribeApplication, err error) {
 	var link client.DownloadLink
 	tool.DeepCopy(&link, req.DownloadLink)
 	linkData, err := link.Marshal()
@@ -53,7 +53,7 @@ func (l *CreateSubscribeApplicationLogic) CreateSubscribeApplication(req *types.
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.DatabaseInsertError), "Failed to create subscribe application")
 	}
 
-	resp = &types.SubscribeApplication{}
+	resp = &dto.SubscribeApplication{}
 	tool.DeepCopy(resp, data)
 	resp.DownloadLink = req.DownloadLink
 

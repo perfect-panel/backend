@@ -5,8 +5,8 @@ import (
 
 	"github.com/perfect-panel/server/pkg/sms"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -25,8 +25,8 @@ func NewGetSmsPlatformLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Ge
 	}
 }
 
-func (l *GetSmsPlatformLogic) GetSmsPlatform() (resp *types.PlatformResponse, err error) {
-	return &types.PlatformResponse{
+func (l *GetSmsPlatformLogic) GetSmsPlatform() (resp *dto.PlatformResponse, err error) {
+	return &dto.PlatformResponse{
 		List: sms.GetSupportedPlatforms(),
 	}, nil
 }

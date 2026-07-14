@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -28,7 +28,7 @@ func NewFilterNodeListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fi
 	}
 }
 
-func (l *FilterNodeListLogic) FilterNodeList(req *types.FilterNodeListRequest) (resp *types.FilterNodeListResponse, err error) {
+func (l *FilterNodeListLogic) FilterNodeList(req *dto.FilterNodeListRequest) (resp *dto.FilterNodeListResponse, err error) {
 	total, data, err := l.svcCtx.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
 		Page:   req.Page,
 		Size:   req.Size,
@@ -40,9 +40,9 @@ func (l *FilterNodeListLogic) FilterNodeList(req *types.FilterNodeListRequest) (
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "[FilterNodeList] Query Database Error")
 	}
 
-	list := make([]types.Node, 0)
+	list := make([]dto.Node, 0)
 	for _, datum := range data {
-		list = append(list, types.Node{
+		list = append(list, dto.Node{
 			Id:        datum.Id,
 			Name:      datum.Name,
 			Tags:      tool.RemoveDuplicateElements(strings.Split(datum.Tags, ",")...),
@@ -57,7 +57,7 @@ func (l *FilterNodeListLogic) FilterNodeList(req *types.FilterNodeListRequest) (
 		})
 	}
 
-	return &types.FilterNodeListResponse{
+	return &dto.FilterNodeListResponse{
 		List:  list,
 		Total: total,
 	}, nil

@@ -3,9 +3,9 @@ package common
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/ads"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/ads"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 )
@@ -25,7 +25,7 @@ func NewGetAdsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetAdsLogi
 	}
 }
 
-func (l *GetAdsLogic) GetAds(req *types.GetAdsRequest) (resp *types.GetAdsResponse, err error) {
+func (l *GetAdsLogic) GetAds(req *dto.GetAdsRequest) (resp *dto.GetAdsResponse, err error) {
 	// todo: add ads position and device
 	status := 1
 	_, data, err := l.svcCtx.Store.Ads().GetAdsListByPage(l.ctx, 1, 200, ads.Filter{
@@ -34,8 +34,8 @@ func (l *GetAdsLogic) GetAds(req *types.GetAdsRequest) (resp *types.GetAdsRespon
 	if err != nil {
 		return nil, err
 	}
-	resp = &types.GetAdsResponse{
-		List: make([]types.Ads, len(data)),
+	resp = &dto.GetAdsResponse{
+		List: make([]dto.Ads, len(data)),
 	}
 	tool.DeepCopy(&resp.List, data)
 	return

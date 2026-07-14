@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/task"
+	"github.com/perfect-panel/server/internal/model/entity/task"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 )
@@ -18,7 +18,7 @@ type ErrorInfo struct {
 
 type Worker struct {
 	id     int64           // 任务ID
-	tasks  TaskStore // task repository
+	tasks  TaskStore       // task repository
 	ctx    context.Context // 上下文
 	sender Sender          // 邮件发送器接口
 	status uint8           // 任务状态，0 表示未运行，1 表示运行中 2 表示已完成

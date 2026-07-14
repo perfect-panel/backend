@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/uuidx"
@@ -31,7 +31,7 @@ func NewCreateUserSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *CreateUserSubscribeLogic) CreateUserSubscribe(req *types.CreateUserSubscribeRequest) error {
+func (l *CreateUserSubscribeLogic) CreateUserSubscribe(req *dto.CreateUserSubscribeRequest) error {
 	// validate user
 	userInfo, err := l.svcCtx.Store.User().FindOne(l.ctx, req.UserId)
 	if err != nil {

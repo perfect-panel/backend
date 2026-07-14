@@ -3,8 +3,8 @@ package ticket
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -26,13 +26,13 @@ func NewGetTicketLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetTick
 	}
 }
 
-func (l *GetTicketLogic) GetTicket(req *types.GetTicketRequest) (resp *types.Ticket, err error) {
+func (l *GetTicketLogic) GetTicket(req *dto.GetTicketRequest) (resp *dto.Ticket, err error) {
 	data, err := l.svcCtx.Store.Ticket().QueryTicketDetail(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[GetTicket] Query Database Error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get ticket detail failed: %v", err.Error())
 	}
-	resp = &types.Ticket{}
+	resp = &dto.Ticket{}
 	tool.DeepCopy(resp, data)
 	return
 }

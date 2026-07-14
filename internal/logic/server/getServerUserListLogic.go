@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/node"
-	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
+	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/uuidx"
@@ -39,9 +39,9 @@ func (l *GetServerUserListLogic) ResponseMeta() ResponseMeta {
 	return l.response
 }
 
-func placeholderServerUser(serverID int64, protocol, secret string) types.ServerUser {
+func placeholderServerUser(serverID int64, protocol, secret string) dto.ServerUser {
 	name := fmt.Sprintf("ppanel:server-user-placeholder:%d:%s:%s", serverID, strings.TrimSpace(protocol), secret)
-	return types.ServerUser{
+	return dto.ServerUser{
 		Id:   1,
 		UUID: uuidx.NewDeterministicUUID(name).String(),
 	}
@@ -95,12 +95,12 @@ func (l *GetServerUserListLogic) queryMatchedSubscribes(nodeIds []int64, nodeTag
 	return mergeSubscribeLists(lists...), nil
 }
 
-func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListRequest) (resp *types.GetServerUserListResponse, err error) {
+func (l *GetServerUserListLogic) GetServerUserList(req *dto.GetServerUserListRequest) (resp *dto.GetServerUserListResponse, err error) {
 	cacheKey := fmt.Sprintf("%s%d:%s", node.ServerUserListCacheKey, req.ServerId, req.Protocol)
 	cache, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
 	if cache != "" {
 		etag := tool.GenerateETag([]byte(cache))
-		resp = &types.GetServerUserListResponse{}
+		resp = &dto.GetServerUserListResponse{}
 		//  Check If-None-Match header
 		if match := l.request.IfNoneMatch; match == etag {
 			return nil, xerr.StatusNotModified
@@ -143,11 +143,11 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 		return nil, err
 	}
 	if len(subs) == 0 {
-		return &types.GetServerUserListResponse{
-			Users: []types.ServerUser{placeholderServerUser(req.ServerId, req.Protocol, l.svcCtx.Config.Node.NodeSecret)},
+		return &dto.GetServerUserListResponse{
+			Users: []dto.ServerUser{placeholderServerUser(req.ServerId, req.Protocol, l.svcCtx.Config.Node.NodeSecret)},
 		}, nil
 	}
-	users := make([]types.ServerUser, 0)
+	users := make([]dto.ServerUser, 0)
 	for _, sub := range subs {
 		if err := l.svcCtx.Store.User().ActivatePendingSubscribesBySubscribeId(l.ctx, sub.Id); err != nil {
 			return nil, err
@@ -157,7 +157,7 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 			return nil, err
 		}
 		for _, datum := range data {
-			users = append(users, types.ServerUser{
+			users = append(users, dto.ServerUser{
 				Id:          datum.Id,
 				UUID:        datum.UUID,
 				SpeedLimit:  sub.SpeedLimit,
@@ -168,7 +168,7 @@ func (l *GetServerUserListLogic) GetServerUserList(req *types.GetServerUserListR
 	if len(users) == 0 {
 		users = append(users, placeholderServerUser(req.ServerId, req.Protocol, l.svcCtx.Config.Node.NodeSecret))
 	}
-	resp = &types.GetServerUserListResponse{
+	resp = &dto.GetServerUserListResponse{
 		Users: users,
 	}
 	val, _ := json.Marshal(resp)

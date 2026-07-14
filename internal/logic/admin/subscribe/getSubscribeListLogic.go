@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -29,7 +29,7 @@ func NewGetSubscribeListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 	}
 }
 
-func (l *GetSubscribeListLogic) GetSubscribeList(req *types.GetSubscribeListRequest) (resp *types.GetSubscribeListResponse, err error) {
+func (l *GetSubscribeListLogic) GetSubscribeList(req *dto.GetSubscribeListRequest) (resp *dto.GetSubscribeListResponse, err error) {
 	total, list, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
 		Page:     int(req.Page),
 		Size:     int(req.Size),
@@ -42,11 +42,11 @@ func (l *GetSubscribeListLogic) GetSubscribeList(req *types.GetSubscribeListRequ
 	}
 	var (
 		subscribeIdList = make([]int64, 0, len(list))
-		resultList      = make([]types.SubscribeItem, 0, len(list))
+		resultList      = make([]dto.SubscribeItem, 0, len(list))
 	)
 	for _, item := range list {
 		subscribeIdList = append(subscribeIdList, item.Id)
-		var sub types.SubscribeItem
+		var sub dto.SubscribeItem
 		tool.DeepCopy(&sub, item)
 		if item.Discount != "" {
 			err = json.Unmarshal([]byte(item.Discount), &sub.Discount)
@@ -54,7 +54,7 @@ func (l *GetSubscribeListLogic) GetSubscribeList(req *types.GetSubscribeListRequ
 				l.Logger.Error("[GetSubscribeListLogic] JSON unmarshal failed: ", logger.Field("error", err.Error()), logger.Field("discount", item.Discount))
 			}
 		}
-		sub.Nodes = types.StringInt64Slice(tool.StringToInt64Slice(item.Nodes))
+		sub.Nodes = dto.StringInt64Slice(tool.StringToInt64Slice(item.Nodes))
 		sub.NodeTags = strings.Split(item.NodeTags, ",")
 		resultList = append(resultList, sub)
 	}
@@ -71,7 +71,7 @@ func (l *GetSubscribeListLogic) GetSubscribeList(req *types.GetSubscribeListRequ
 		}
 	}
 
-	resp = &types.GetSubscribeListResponse{
+	resp = &dto.GetSubscribeListResponse{
 		Total: total,
 		List:  resultList,
 	}

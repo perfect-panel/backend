@@ -3,9 +3,9 @@ package ticket
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/ticket"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/ticket"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewCreateTicketFollowLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *CreateTicketFollowLogic) CreateTicketFollow(req *types.CreateTicketFollowRequest) (err error) {
+func (l *CreateTicketFollowLogic) CreateTicketFollow(req *dto.CreateTicketFollowRequest) (err error) {
 	// find ticket
 	_, err = l.svcCtx.Store.Ticket().FindOne(l.ctx, req.TicketId)
 	if err != nil {

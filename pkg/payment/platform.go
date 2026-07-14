@@ -1,6 +1,6 @@
 package payment
 
-import "github.com/perfect-panel/server/internal/types"
+import "github.com/perfect-panel/server/internal/model/dto"
 
 type Platform int
 
@@ -38,8 +38,8 @@ func ParsePlatform(s string) Platform {
 	return UNSUPPORTED
 }
 
-func GetSupportedPlatforms() []types.PlatformInfo {
-	return []types.PlatformInfo{
+func GetSupportedPlatforms() []dto.PlatformInfo {
+	return []dto.PlatformInfo{
 		{
 			Platform:    Stripe.String(),
 			PlatformUrl: "https://stripe.com",

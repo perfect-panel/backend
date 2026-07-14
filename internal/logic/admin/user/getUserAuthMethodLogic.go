@@ -3,8 +3,8 @@ package user
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -26,16 +26,16 @@ func NewGetUserAuthMethodLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 	}
 }
 
-func (l *GetUserAuthMethodLogic) GetUserAuthMethod(req *types.GetUserAuthMethodRequest) (resp *types.GetUserAuthMethodResponse, err error) {
+func (l *GetUserAuthMethodLogic) GetUserAuthMethod(req *dto.GetUserAuthMethodRequest) (resp *dto.GetUserAuthMethodResponse, err error) {
 	methods, err := l.svcCtx.Store.User().FindUserAuthMethods(l.ctx, req.UserId)
 	if err != nil {
 		l.Errorw("[GetUserAuthMethodLogic] Get User Auth Method Error:", logger.Field("err", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Get User Auth Method Error")
 	}
-	list := make([]types.UserAuthMethod, 0)
+	list := make([]dto.UserAuthMethod, 0)
 	tool.DeepCopy(&list, methods)
 
-	return &types.GetUserAuthMethodResponse{
+	return &dto.GetUserAuthMethodResponse{
 		AuthMethods: list,
 	}, nil
 }

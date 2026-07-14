@@ -5,8 +5,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/admin/tool"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/result"
 )
@@ -14,7 +14,7 @@ import (
 // QueryIPLocationHandler Query IP Location
 func QueryIPLocationHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
-		var req types.QueryIPLocationRequest
+		var req dto.QueryIPLocationRequest
 		if err := httpx.ShouldBind(c, &req); err != nil {
 			result.ParamErrorResult(c, err)
 			return

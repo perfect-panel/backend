@@ -5,24 +5,24 @@ import (
 	"strings"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/node"
-	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/pkg/errors"
 )
 
-func GlobalValues(c config.NodeConfig) types.ServerNodeConfigValues {
-	dns := make([]types.NodeDNS, 0, len(c.DNS))
+func GlobalValues(c config.NodeConfig) dto.ServerNodeConfigValues {
+	dns := make([]dto.NodeDNS, 0, len(c.DNS))
 	for _, d := range c.DNS {
-		dns = append(dns, types.NodeDNS{
+		dns = append(dns, dto.NodeDNS{
 			Proto:   d.Proto,
 			Address: d.Address,
 			Domains: normalizeStrings(d.Domains),
 		})
 	}
 
-	outbound := make([]types.NodeOutbound, 0, len(c.Outbound))
+	outbound := make([]dto.NodeOutbound, 0, len(c.Outbound))
 	for _, o := range c.Outbound {
-		outbound = append(outbound, types.NodeOutbound{
+		outbound = append(outbound, dto.NodeOutbound{
 			Name:                 o.Name,
 			Protocol:             o.Protocol,
 			Address:              o.Address,
@@ -55,7 +55,7 @@ func GlobalValues(c config.NodeConfig) types.ServerNodeConfigValues {
 		})
 	}
 
-	return types.ServerNodeConfigValues{
+	return dto.ServerNodeConfigValues{
 		IPStrategy: c.IPStrategy,
 		DNS:        ensureDNS(dns),
 		Block:      normalizeStrings(c.Block),
@@ -63,7 +63,7 @@ func GlobalValues(c config.NodeConfig) types.ServerNodeConfigValues {
 	}
 }
 
-func ApplyOverride(values *types.ServerNodeConfigValues, override *node.ServerConfigOverride) error {
+func ApplyOverride(values *dto.ServerNodeConfigValues, override *node.ServerConfigOverride) error {
 	if values == nil || override == nil || override.Id == 0 {
 		return nil
 	}
@@ -72,7 +72,7 @@ func ApplyOverride(values *types.ServerNodeConfigValues, override *node.ServerCo
 		values.IPStrategy = *override.IPStrategy
 	}
 	if override.DNS != nil {
-		var dns []types.NodeDNS
+		var dns []dto.NodeDNS
 		if err := unmarshalJSONField(*override.DNS, &dns, "dns"); err != nil {
 			return err
 		}
@@ -86,7 +86,7 @@ func ApplyOverride(values *types.ServerNodeConfigValues, override *node.ServerCo
 		values.Block = normalizeStrings(block)
 	}
 	if override.Outbound != nil {
-		var outbound []types.NodeOutbound
+		var outbound []dto.NodeOutbound
 		if err := unmarshalJSONField(*override.Outbound, &outbound, "outbound"); err != nil {
 			return err
 		}
@@ -95,15 +95,15 @@ func ApplyOverride(values *types.ServerNodeConfigValues, override *node.ServerCo
 	return nil
 }
 
-func OverrideResponse(override *node.ServerConfigOverride) (types.ServerNodeConfigOverride, error) {
-	resp := types.ServerNodeConfigOverride{
+func OverrideResponse(override *node.ServerConfigOverride) (dto.ServerNodeConfigOverride, error) {
+	resp := dto.ServerNodeConfigOverride{
 		InheritIPStrategy: true,
 		InheritDNS:        true,
 		InheritBlock:      true,
 		InheritOutbound:   true,
-		DNS:               []types.NodeDNS{},
+		DNS:               []dto.NodeDNS{},
 		Block:             []string{},
-		Outbound:          []types.NodeOutbound{},
+		Outbound:          []dto.NodeOutbound{},
 	}
 	if override == nil || override.Id == 0 {
 		return resp, nil
@@ -115,7 +115,7 @@ func OverrideResponse(override *node.ServerConfigOverride) (types.ServerNodeConf
 	}
 	if override.DNS != nil {
 		resp.InheritDNS = false
-		var dns []types.NodeDNS
+		var dns []dto.NodeDNS
 		if err := unmarshalJSONField(*override.DNS, &dns, "dns"); err != nil {
 			return resp, err
 		}
@@ -131,7 +131,7 @@ func OverrideResponse(override *node.ServerConfigOverride) (types.ServerNodeConf
 	}
 	if override.Outbound != nil {
 		resp.InheritOutbound = false
-		var outbound []types.NodeOutbound
+		var outbound []dto.NodeOutbound
 		if err := unmarshalJSONField(*override.Outbound, &outbound, "outbound"); err != nil {
 			return resp, err
 		}
@@ -141,7 +141,7 @@ func OverrideResponse(override *node.ServerConfigOverride) (types.ServerNodeConf
 	return resp, nil
 }
 
-func OverrideModel(serverID int64, req types.ServerNodeConfigOverride) (*node.ServerConfigOverride, bool, error) {
+func OverrideModel(serverID int64, req dto.ServerNodeConfigOverride) (*node.ServerConfigOverride, bool, error) {
 	data := &node.ServerConfigOverride{
 		ServerId: serverID,
 	}
@@ -175,19 +175,19 @@ func OverrideModel(serverID int64, req types.ServerNodeConfigOverride) (*node.Se
 	return data, allInherited, nil
 }
 
-func CloneValues(values types.ServerNodeConfigValues) types.ServerNodeConfigValues {
-	dns := make([]types.NodeDNS, 0, len(values.DNS))
+func CloneValues(values dto.ServerNodeConfigValues) dto.ServerNodeConfigValues {
+	dns := make([]dto.NodeDNS, 0, len(values.DNS))
 	for _, d := range values.DNS {
-		dns = append(dns, types.NodeDNS{
+		dns = append(dns, dto.NodeDNS{
 			Proto:   d.Proto,
 			Address: d.Address,
 			Domains: normalizeStrings(d.Domains),
 		})
 	}
 
-	outbound := make([]types.NodeOutbound, 0, len(values.Outbound))
+	outbound := make([]dto.NodeOutbound, 0, len(values.Outbound))
 	for _, o := range values.Outbound {
-		outbound = append(outbound, types.NodeOutbound{
+		outbound = append(outbound, dto.NodeOutbound{
 			Name:                 o.Name,
 			Protocol:             o.Protocol,
 			Address:              o.Address,
@@ -220,7 +220,7 @@ func CloneValues(values types.ServerNodeConfigValues) types.ServerNodeConfigValu
 		})
 	}
 
-	return types.ServerNodeConfigValues{
+	return dto.ServerNodeConfigValues{
 		IPStrategy: values.IPStrategy,
 		DNS:        ensureDNS(dns),
 		Block:      normalizeStrings(values.Block),
@@ -266,18 +266,18 @@ func normalizeStrings(values []string) []string {
 	return result
 }
 
-func ensureDNS(values []types.NodeDNS) []types.NodeDNS {
+func ensureDNS(values []dto.NodeDNS) []dto.NodeDNS {
 	if values == nil {
-		return []types.NodeDNS{}
+		return []dto.NodeDNS{}
 	}
-	result := make([]types.NodeDNS, 0, len(values))
+	result := make([]dto.NodeDNS, 0, len(values))
 	for _, item := range values {
 		proto := strings.TrimSpace(item.Proto)
 		address := strings.TrimSpace(item.Address)
 		if proto == "" || address == "" {
 			continue
 		}
-		result = append(result, types.NodeDNS{
+		result = append(result, dto.NodeDNS{
 			Proto:   proto,
 			Address: address,
 			Domains: normalizeStrings(item.Domains),
@@ -286,11 +286,11 @@ func ensureDNS(values []types.NodeDNS) []types.NodeDNS {
 	return result
 }
 
-func ensureOutbound(values []types.NodeOutbound) []types.NodeOutbound {
+func ensureOutbound(values []dto.NodeOutbound) []dto.NodeOutbound {
 	if values == nil {
-		return []types.NodeOutbound{}
+		return []dto.NodeOutbound{}
 	}
-	result := make([]types.NodeOutbound, 0, len(values))
+	result := make([]dto.NodeOutbound, 0, len(values))
 	for _, item := range values {
 		name := strings.TrimSpace(item.Name)
 		protocol := strings.TrimSpace(item.Protocol)
@@ -298,7 +298,7 @@ func ensureOutbound(values []types.NodeOutbound) []types.NodeOutbound {
 		if name == "" || protocol == "" {
 			continue
 		}
-		result = append(result, types.NodeOutbound{
+		result = append(result, dto.NodeOutbound{
 			Name:                 name,
 			Protocol:             protocol,
 			Address:              strings.TrimSpace(item.Address),

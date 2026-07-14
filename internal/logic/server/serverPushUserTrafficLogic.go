@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 
 	"github.com/hibiken/asynq"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -30,7 +30,7 @@ func NewServerPushUserTrafficLogic(ctx context.Context, svcCtx *svc.ServiceConte
 	}
 }
 
-func (l *ServerPushUserTrafficLogic) ServerPushUserTraffic(req *types.ServerPushUserTrafficRequest) error {
+func (l *ServerPushUserTrafficLogic) ServerPushUserTraffic(req *dto.ServerPushUserTrafficRequest) error {
 	// Find server info
 	serverInfo, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.ServerId)
 	if err != nil {

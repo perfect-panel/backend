@@ -1,6 +1,6 @@
 package sms
 
-import "github.com/perfect-panel/server/internal/types"
+import "github.com/perfect-panel/server/internal/model/dto"
 
 type Platform int
 
@@ -36,8 +36,8 @@ func parsePlatform(s string) Platform {
 	return unsupported
 }
 
-func GetSupportedPlatforms() []types.PlatformInfo {
-	return []types.PlatformInfo{
+func GetSupportedPlatforms() []dto.PlatformInfo {
+	return []dto.PlatformInfo{
 		{
 			Platform:    AlibabaCloud.String(),
 			PlatformUrl: "https://www.alibabacloud.com",

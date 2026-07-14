@@ -3,9 +3,9 @@ package log
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewFilterGiftLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fil
 	}
 }
 
-func (l *FilterGiftLogLogic) FilterGiftLog(req *types.FilterGiftLogRequest) (resp *types.FilterGiftLogResponse, err error) {
+func (l *FilterGiftLogLogic) FilterGiftLog(req *dto.FilterGiftLogRequest) (resp *dto.FilterGiftLogResponse, err error) {
 	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
@@ -41,7 +41,7 @@ func (l *FilterGiftLogLogic) FilterGiftLog(req *types.FilterGiftLogRequest) (res
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter system log: %v", err.Error())
 	}
 
-	var list []types.GiftLog
+	var list []dto.GiftLog
 	for _, datum := range data {
 		var content log.Gift
 		err = content.Unmarshal([]byte(datum.Content))
@@ -49,7 +49,7 @@ func (l *FilterGiftLogLogic) FilterGiftLog(req *types.FilterGiftLogRequest) (res
 			l.Errorf("[FilterGiftLog] failed to unmarshal content: %v", err.Error())
 			continue
 		}
-		list = append(list, types.GiftLog{
+		list = append(list, dto.GiftLog{
 			Type:        content.Type,
 			UserId:      datum.ObjectID,
 			OrderNo:     content.OrderNo,
@@ -61,7 +61,7 @@ func (l *FilterGiftLogLogic) FilterGiftLog(req *types.FilterGiftLogRequest) (res
 		})
 	}
 
-	return &types.FilterGiftLogResponse{
+	return &dto.FilterGiftLogResponse{
 		Total: total,
 		List:  list,
 	}, nil

@@ -3,8 +3,8 @@ package document
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewBatchDeleteDocumentLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *BatchDeleteDocumentLogic) BatchDeleteDocument(req *types.BatchDeleteDocumentRequest) error {
+func (l *BatchDeleteDocumentLogic) BatchDeleteDocument(req *dto.BatchDeleteDocumentRequest) error {
 	for _, id := range req.Ids {
 		if err := l.svcCtx.Store.Document().Delete(l.ctx, id); err != nil {
 			l.Errorw("[BatchDeleteDocument] Database Error", logger.Field("error", err.Error()))

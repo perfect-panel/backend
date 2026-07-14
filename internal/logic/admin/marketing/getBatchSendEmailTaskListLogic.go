@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/task"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/task"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 )
@@ -26,7 +26,7 @@ func NewGetBatchSendEmailTaskListLogic(ctx context.Context, svcCtx *svc.ServiceC
 	}
 }
 
-func (l *GetBatchSendEmailTaskListLogic) GetBatchSendEmailTaskList(req *types.GetBatchSendEmailTaskListRequest) (resp *types.GetBatchSendEmailTaskListResponse, err error) {
+func (l *GetBatchSendEmailTaskListLogic) GetBatchSendEmailTaskList(req *dto.GetBatchSendEmailTaskListRequest) (resp *dto.GetBatchSendEmailTaskListResponse, err error) {
 
 	if req.Page == 0 {
 		req.Page = 1
@@ -46,7 +46,7 @@ func (l *GetBatchSendEmailTaskListLogic) GetBatchSendEmailTaskList(req *types.Ge
 		return nil, xerr.NewErrCode(xerr.DatabaseQueryError)
 	}
 
-	list := make([]types.BatchSendEmailTask, 0)
+	list := make([]dto.BatchSendEmailTask, 0)
 
 	for _, t := range tasks {
 		var scopeInfo task.EmailScope
@@ -60,7 +60,7 @@ func (l *GetBatchSendEmailTaskListLogic) GetBatchSendEmailTaskList(req *types.Ge
 			continue
 		}
 
-		list = append(list, types.BatchSendEmailTask{
+		list = append(list, dto.BatchSendEmailTask{
 			Id:                t.Id,
 			Subject:           contentInfo.Subject,
 			Content:           contentInfo.Content,
@@ -81,7 +81,7 @@ func (l *GetBatchSendEmailTaskListLogic) GetBatchSendEmailTaskList(req *types.Ge
 		})
 	}
 
-	return &types.GetBatchSendEmailTaskListResponse{
+	return &dto.GetBatchSendEmailTaskListResponse{
 		Total: total,
 		List:  list,
 	}, nil

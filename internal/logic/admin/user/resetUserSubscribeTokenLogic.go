@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/uuidx"
@@ -28,7 +28,7 @@ func NewResetUserSubscribeTokenLogic(ctx context.Context, svcCtx *svc.ServiceCon
 	}
 }
 
-func (l *ResetUserSubscribeTokenLogic) ResetUserSubscribeToken(req *types.ResetUserSubscribeTokenRequest) error {
+func (l *ResetUserSubscribeTokenLogic) ResetUserSubscribeToken(req *dto.ResetUserSubscribeTokenRequest) error {
 	userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, req.UserSubscribeId)
 	if err != nil {
 		logger.Errorf("[ResetUserSubscribeToken] FindOneSubscribe error: %v", err.Error())

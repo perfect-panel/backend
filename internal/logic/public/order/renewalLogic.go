@@ -5,16 +5,16 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/order"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/order"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -40,7 +40,7 @@ func NewRenewalLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RenewalLo
 
 // Renewal processes subscription renewal orders including discount calculation,
 // coupon validation, gift amount deduction, fee calculation, and order creation
-func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.RenewalOrderResponse, err error) {
+func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalOrderResponse, err error) {
 	store := l.svcCtx.Store
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
@@ -76,7 +76,7 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 	}
 	var discount float64 = 1
 	if sub.Discount != "" {
-		var dis []types.SubscribeDiscount
+		var dis []dto.SubscribeDiscount
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
 	}
@@ -235,7 +235,7 @@ func (l *RenewalLogic) Renewal(req *types.RenewalOrderRequest) (resp *types.Rene
 	} else {
 		l.Infow("[Renewal] Enqueue task success", logger.Field("TaskID", taskInfo.ID))
 	}
-	return &types.RenewalOrderResponse{
+	return &dto.RenewalOrderResponse{
 		OrderNo: orderInfo.OrderNo,
 	}, nil
 }

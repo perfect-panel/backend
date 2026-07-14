@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -37,7 +37,7 @@ func (l *GetServerConfigLogic) ResponseMeta() ResponseMeta {
 	return l.response
 }
 
-func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest) (resp *types.GetServerConfigResponse, err error) {
+func (l *GetServerConfigLogic) GetServerConfig(req *dto.GetServerConfigRequest) (resp *dto.GetServerConfigResponse, err error) {
 	cacheKey := fmt.Sprintf("%s%d:%s", node.ServerConfigCacheKey, req.ServerId, req.Protocol)
 	cache, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
 	if err == nil {
@@ -49,7 +49,7 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 				return nil, xerr.StatusNotModified
 			}
 			l.response.SetHeader("ETag", etag)
-			resp = &types.GetServerConfigResponse{}
+			resp = &dto.GetServerConfigResponse{}
 			err = json.Unmarshal([]byte(cache), resp)
 			if err != nil {
 				l.Errorw("[ServerConfigCacheKey] json unmarshal error", logger.Field("error", err.Error()))
@@ -86,8 +86,8 @@ func (l *GetServerConfigLogic) GetServerConfig(req *types.GetServerConfigRequest
 		return nil, fmt.Errorf("protocol %s not found or disabled", req.Protocol)
 	}
 
-	resp = &types.GetServerConfigResponse{
-		Basic: types.ServerBasic{
+	resp = &dto.GetServerConfigResponse{
+		Basic: dto.ServerBasic{
 			PullInterval: l.svcCtx.Config.Node.NodePullInterval,
 			PushInterval: l.svcCtx.Config.Node.NodePushInterval,
 		},

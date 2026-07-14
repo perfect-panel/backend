@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"

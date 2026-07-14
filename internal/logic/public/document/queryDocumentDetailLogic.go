@@ -4,9 +4,9 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -37,14 +37,14 @@ func NewQueryDocumentDetailLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *QueryDocumentDetailLogic) QueryDocumentDetail(req *types.QueryDocumentDetailRequest) (resp *types.Document, err error) {
+func (l *QueryDocumentDetailLogic) QueryDocumentDetail(req *dto.QueryDocumentDetailRequest) (resp *dto.Document, err error) {
 	// find document
 	data, err := l.svcCtx.Store.Document().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[QueryDocumentDetailLogic] FindOne error", logger.Field("id", req.Id), logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOne error: %s", err.Error())
 	}
-	resp = &types.Document{}
+	resp = &dto.Document{}
 	tool.DeepCopy(resp, data)
 	resp.Content = l.renderConditional(resp.Content)
 	return

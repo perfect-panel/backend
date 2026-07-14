@@ -8,8 +8,8 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -28,7 +28,7 @@ func NewUpdateCurrencyConfigLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *UpdateCurrencyConfigLogic) UpdateCurrencyConfig(req *types.CurrencyConfig) error {
+func (l *UpdateCurrencyConfigLogic) UpdateCurrencyConfig(req *dto.CurrencyConfig) error {
 	err := updateConfigFields(l.ctx, l.svcCtx, "currency", convertedConfigFields(*req), config.CurrencyConfigKey, config.GlobalConfigKey)
 	initialize.Currency(l.svcCtx)
 	if err != nil {

@@ -9,8 +9,8 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	queue "github.com/perfect-panel/server/queue/types"
 )
@@ -30,7 +30,7 @@ func NewUpdateOrderStatusLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 	}
 }
 
-func (l *UpdateOrderStatusLogic) UpdateOrderStatus(req *types.UpdateOrderStatusRequest) error {
+func (l *UpdateOrderStatusLogic) UpdateOrderStatus(req *dto.UpdateOrderStatusRequest) error {
 	store := l.svcCtx.Store
 	info, err := store.Order().FindOne(l.ctx, req.Id)
 	if err != nil {

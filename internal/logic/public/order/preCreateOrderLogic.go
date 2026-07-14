@@ -8,9 +8,9 @@ import (
 
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -36,7 +36,7 @@ func NewPreCreateOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Pr
 // PreCreateOrder calculates order pricing preview including discounts, coupons, gift amounts, and fees
 // without actually creating an order. It validates subscription plans, coupons, and payment methods
 // to provide accurate pricing information for the frontend order preview.
-func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (resp *types.PreOrderResponse, err error) {
+func (l *PreCreateOrderLogic) PreCreateOrder(req *dto.PurchaseOrderRequest) (resp *dto.PreOrderResponse, err error) {
 	store := l.svcCtx.Store
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
@@ -69,7 +69,7 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 
 	var discount float64 = 1
 	if sub.Discount != "" {
-		var dis []types.SubscribeDiscount
+		var dis []dto.SubscribeDiscount
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
 	}
@@ -136,7 +136,7 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *types.PurchaseOrderRequest) (r
 		}
 	}
 
-	resp = &types.PreOrderResponse{
+	resp = &dto.PreOrderResponse{
 		Price:          price,
 		Amount:         amount,
 		Discount:       discountAmount,

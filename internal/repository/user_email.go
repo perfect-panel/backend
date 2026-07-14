@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/pkg/authmethod"
 	"gorm.io/gorm"
 )

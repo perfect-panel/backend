@@ -95,9 +95,9 @@ func TestParseInt64(t *testing.T) {
 		{"0", 0, false},
 		{"3600", 3600, false},
 		{"1234567890", 1234567890, false},
-		{"-1", 0, true},     // no sign handling
+		{"-1", 0, true}, // no sign handling
 		{"abc", 0, true},
-		{"12a", 12, true},   // parse stops at 'a'
+		{"12a", 12, true}, // parse stops at 'a'
 	}
 
 	for _, tt := range tests {

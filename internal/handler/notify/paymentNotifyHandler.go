@@ -9,8 +9,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/perfect-panel/server/internal/logic/notify"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -34,7 +34,7 @@ func PaymentNotifyHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 
 		switch payment.ParsePlatform(platform) {
 		case payment.EPay, payment.CryptoSaaS:
-			req := &types.EPayNotifyRequest{}
+			req := &dto.EPayNotifyRequest{}
 			if err := httpx.ShouldBind(ctx, req); err != nil {
 				logger.WithContext(c).Errorw("[PaymentNotifyHandler] ShouldBind failed", logger.Field("error", err.Error()))
 				ctx.String(consts.StatusBadRequest, "invalid request")

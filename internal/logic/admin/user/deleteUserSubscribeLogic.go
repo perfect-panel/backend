@@ -3,8 +3,8 @@ package user
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewDeleteUserSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *DeleteUserSubscribeLogic) DeleteUserSubscribe(req *types.DeleteUserSubscribeRequest) error {
+func (l *DeleteUserSubscribeLogic) DeleteUserSubscribe(req *dto.DeleteUserSubscribeRequest) error {
 	// find user subscribe by ID
 	userSubscribe, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, req.UserSubscribeId)
 	if err != nil {

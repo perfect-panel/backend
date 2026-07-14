@@ -3,8 +3,8 @@ package system
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -25,8 +25,8 @@ func NewGetSiteConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Get
 	}
 }
 
-func (l *GetSiteConfigLogic) GetSiteConfig() (resp *types.SiteConfig, err error) {
-	resp = &types.SiteConfig{}
+func (l *GetSiteConfigLogic) GetSiteConfig() (resp *dto.SiteConfig, err error) {
+	resp = &dto.SiteConfig{}
 	// get site config from db
 	siteConfigs, err := l.svcCtx.Store.System().GetSiteConfig(l.ctx)
 	if err != nil {

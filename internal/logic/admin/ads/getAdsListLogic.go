@@ -3,9 +3,9 @@ package ads
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/ads"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/ads"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewGetAdsListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetAds
 	}
 }
 
-func (l *GetAdsListLogic) GetAdsList(req *types.GetAdsListRequest) (resp *types.GetAdsListResponse, err error) {
+func (l *GetAdsListLogic) GetAdsList(req *dto.GetAdsListRequest) (resp *dto.GetAdsListResponse, err error) {
 	total, data, err := l.svcCtx.Store.Ads().GetAdsListByPage(l.ctx, req.Page, req.Size, ads.Filter{
 		Search: req.Search,
 		Status: req.Status,
@@ -36,9 +36,9 @@ func (l *GetAdsListLogic) GetAdsList(req *types.GetAdsListRequest) (resp *types.
 		l.Errorw("get ads list error", logger.Field("error", err.Error()), logger.Field("req", req))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get ads list error: %v", err.Error())
 	}
-	resp = &types.GetAdsListResponse{
+	resp = &dto.GetAdsListResponse{
 		Total: total,
-		List:  make([]types.Ads, len(data)),
+		List:  make([]dto.Ads, len(data)),
 	}
 	tool.DeepCopy(&resp.List, data)
 	return

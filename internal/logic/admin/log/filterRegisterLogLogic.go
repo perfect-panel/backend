@@ -3,9 +3,9 @@ package log
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewFilterRegisterLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 	}
 }
 
-func (l *FilterRegisterLogLogic) FilterRegisterLog(req *types.FilterRegisterLogRequest) (resp *types.FilterRegisterLogResponse, err error) {
+func (l *FilterRegisterLogLogic) FilterRegisterLog(req *dto.FilterRegisterLogRequest) (resp *dto.FilterRegisterLogResponse, err error) {
 	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
@@ -41,7 +41,7 @@ func (l *FilterRegisterLogLogic) FilterRegisterLog(req *types.FilterRegisterLogR
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter system log: %v", err.Error())
 	}
 
-	var list []types.RegisterLog
+	var list []dto.RegisterLog
 	for _, datum := range data {
 		var item log.Register
 		err = item.Unmarshal([]byte(datum.Content))
@@ -49,7 +49,7 @@ func (l *FilterRegisterLogLogic) FilterRegisterLog(req *types.FilterRegisterLogR
 			l.Errorf("[FilterLoginLog] failed to unmarshal content: %v", err.Error())
 			continue
 		}
-		list = append(list, types.RegisterLog{
+		list = append(list, dto.RegisterLog{
 			UserId:     datum.ObjectID,
 			AuthMethod: item.AuthMethod,
 			Identifier: item.Identifier,
@@ -59,7 +59,7 @@ func (l *FilterRegisterLogLogic) FilterRegisterLog(req *types.FilterRegisterLogR
 		})
 	}
 
-	return &types.FilterRegisterLogResponse{
+	return &dto.FilterRegisterLogResponse{
 		List:  list,
 		Total: total,
 	}, nil

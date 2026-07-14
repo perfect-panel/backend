@@ -3,8 +3,8 @@ package user
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -26,7 +26,7 @@ func NewUpdateUserNotifySettingLogic(ctx context.Context, svcCtx *svc.ServiceCon
 	}
 }
 
-func (l *UpdateUserNotifySettingLogic) UpdateUserNotifySetting(req *types.UpdateUserNotifySettingRequest) error {
+func (l *UpdateUserNotifySettingLogic) UpdateUserNotifySetting(req *dto.UpdateUserNotifySettingRequest) error {
 	userInfo, err := l.svcCtx.Store.User().FindOne(l.ctx, req.UserId)
 	if err != nil {
 		l.Errorw("[UpdateUserNotifySettingLogic] Find User Error:", logger.Field("err", err.Error()), logger.Field("userId", req.UserId))

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	paymentModel "github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/model/dto"
+	paymentModel "github.com/perfect-panel/server/internal/model/entity/payment"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment"
 	"github.com/perfect-panel/server/pkg/payment/stripe"
@@ -34,7 +34,7 @@ func NewCreatePaymentMethodLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *types.CreatePaymentMethodRequest) (resp *types.PaymentConfig, err error) {
+func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *dto.CreatePaymentMethodRequest) (resp *dto.PaymentConfig, err error) {
 	if payment.ParsePlatform(req.Platform) == payment.UNSUPPORTED {
 		l.Errorw("unsupported payment platform", logger.Field("mark", req.Platform))
 		return nil, errors.Wrapf(xerr.NewErrCodeMsg(400, "UNSUPPORTED_PAYMENT_PLATFORM"), "unsupported payment platform: %s", req.Platform)
@@ -90,7 +90,7 @@ func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *types.CreatePaymentM
 		return nil, err
 	}
 
-	resp = &types.PaymentConfig{}
+	resp = &dto.PaymentConfig{}
 	tool.DeepCopy(resp, paymentMethod)
 	var configMap map[string]interface{}
 	_ = json.Unmarshal([]byte(paymentMethod.Config), &configMap)

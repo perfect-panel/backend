@@ -96,7 +96,7 @@ func (l *AlipayF2FConfig) Unmarshal(data []byte) error {
 	if err := json.Unmarshal(data, &rawMap); err != nil {
 		return err
 	}
-	
+
 	// Convert sandbox field if it's a string
 	if sandboxVal, ok := rawMap["sandbox"]; ok {
 		switch v := sandboxVal.(type) {
@@ -106,7 +106,7 @@ func (l *AlipayF2FConfig) Unmarshal(data []byte) error {
 			// Already a bool, no conversion needed
 		}
 	}
-	
+
 	// Re-marshal and unmarshal into the struct
 	convertedData, err := json.Marshal(rawMap)
 	if err != nil {
@@ -115,7 +115,6 @@ func (l *AlipayF2FConfig) Unmarshal(data []byte) error {
 	type Alias AlipayF2FConfig
 	return json.Unmarshal(convertedData, (*Alias)(l))
 }
-
 
 type EPayConfig struct {
 	Pid  string `json:"pid"`

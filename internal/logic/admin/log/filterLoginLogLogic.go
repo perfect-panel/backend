@@ -3,9 +3,9 @@ package log
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewFilterLoginLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Fi
 	}
 }
 
-func (l *FilterLoginLogLogic) FilterLoginLog(req *types.FilterLoginLogRequest) (resp *types.FilterLoginLogResponse, err error) {
+func (l *FilterLoginLogLogic) FilterLoginLog(req *dto.FilterLoginLogRequest) (resp *dto.FilterLoginLogResponse, err error) {
 	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
@@ -40,7 +40,7 @@ func (l *FilterLoginLogLogic) FilterLoginLog(req *types.FilterLoginLogRequest) (
 		l.Errorf("[FilterLoginLog] failed to filter system log: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter system log: %v", err.Error())
 	}
-	var list []types.LoginLog
+	var list []dto.LoginLog
 	for _, datum := range data {
 		var item log.Login
 		err = item.Unmarshal([]byte(datum.Content))
@@ -48,7 +48,7 @@ func (l *FilterLoginLogLogic) FilterLoginLog(req *types.FilterLoginLogRequest) (
 			l.Errorf("[FilterLoginLog] failed to unmarshal content: %v", err.Error())
 			continue
 		}
-		list = append(list, types.LoginLog{
+		list = append(list, dto.LoginLog{
 			UserId:    datum.ObjectID,
 			Method:    item.Method,
 			LoginIP:   item.LoginIP,
@@ -58,7 +58,7 @@ func (l *FilterLoginLogLogic) FilterLoginLog(req *types.FilterLoginLogRequest) (
 		})
 	}
 
-	return &types.FilterLoginLogResponse{
+	return &dto.FilterLoginLogResponse{
 		Total: total,
 		List:  list,
 	}, nil

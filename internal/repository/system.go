@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/system"
+	"github.com/perfect-panel/server/internal/model/entity/system"
 	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -272,7 +272,7 @@ func (m *systemRepo) GetLogConfig(ctx context.Context) ([]*system.System, error)
 }
 
 // systemWhereKey returns a GORM scope filtering by the "key" column.
-// Migrated from internal/model/system/scope.go (renamed with the system prefix
+// Migrated from internal/model/entity/system/scope.go (renamed with the system prefix
 // to avoid colliding with other domain scopes inside the flat repository package).
 func systemWhereKey(key string) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
@@ -284,7 +284,7 @@ func systemWhereKey(key string) func(db *gorm.DB) *gorm.DB {
 }
 
 // systemWhereCategoryKey returns a GORM scope filtering by both "category" and "key".
-// Migrated from internal/model/system/scope.go (renamed with the system prefix
+// Migrated from internal/model/entity/system/scope.go (renamed with the system prefix
 // to avoid colliding with other domain scopes inside the flat repository package).
 func systemWhereCategoryKey(category, key string) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {

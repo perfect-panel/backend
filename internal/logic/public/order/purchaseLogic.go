@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/order"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/entity/order"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -19,8 +19,8 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -47,7 +47,7 @@ func NewPurchaseLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Purchase
 // Purchase processes new subscription purchase orders including validation, discount calculation,
 // coupon processing, gift amount deduction, fee calculation, and order creation with database transaction.
 // It handles the complete purchase workflow from user validation to order creation and task scheduling.
-func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.PurchaseOrderResponse, err error) {
+func (l *PurchaseLogic) Purchase(req *dto.PurchaseOrderRequest) (resp *dto.PurchaseOrderResponse, err error) {
 	store := l.svcCtx.Store
 
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
@@ -111,7 +111,7 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 
 	var discount float64 = 1
 	if sub.Discount != "" {
-		var dis []types.SubscribeDiscount
+		var dis []dto.SubscribeDiscount
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
 	}
@@ -305,7 +305,7 @@ func (l *PurchaseLogic) Purchase(req *types.PurchaseOrderRequest) (resp *types.P
 		l.Infow("[Purchase] Enqueue task success", logger.Field("TaskID", taskInfo.ID))
 	}
 
-	return &types.PurchaseOrderResponse{
+	return &dto.PurchaseOrderResponse{
 		OrderNo: orderInfo.OrderNo,
 	}, nil
 }

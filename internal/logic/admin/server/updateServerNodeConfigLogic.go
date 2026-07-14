@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/logic/nodeconfig"
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewUpdateServerNodeConfigLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *UpdateServerNodeConfigLogic) UpdateServerNodeConfig(req *types.UpdateServerNodeConfigRequest) error {
+func (l *UpdateServerNodeConfigLogic) UpdateServerNodeConfig(req *dto.UpdateServerNodeConfigRequest) error {
 	nodeStore := l.svcCtx.Store.Node()
 	if _, err := nodeStore.FindOneServer(l.ctx, req.ServerID); err != nil {
 		l.Errorf("[UpdateServerNodeConfig] FindOneServer Error: %v", err.Error())

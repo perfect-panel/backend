@@ -8,9 +8,9 @@ import (
 	"github.com/perfect-panel/server/internal/report"
 	paymentPlatform "github.com/perfect-panel/server/pkg/payment"
 
-	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/payment"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -31,7 +31,7 @@ func NewGetPaymentMethodListLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *GetPaymentMethodListLogic) GetPaymentMethodList(req *types.GetPaymentMethodListRequest) (resp *types.GetPaymentMethodListResponse, err error) {
+func (l *GetPaymentMethodListLogic) GetPaymentMethodList(req *dto.GetPaymentMethodListRequest) (resp *dto.GetPaymentMethodListResponse, err error) {
 	total, list, err := l.svcCtx.Store.Payment().FindListByPage(l.ctx, req.Page, req.Size, &payment.Filter{
 		Search: req.Search,
 		Mark:   req.Platform,
@@ -41,9 +41,9 @@ func (l *GetPaymentMethodListLogic) GetPaymentMethodList(req *types.GetPaymentMe
 		l.Errorw("find payment method list error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment method list error: %s", err.Error())
 	}
-	resp = &types.GetPaymentMethodListResponse{
+	resp = &dto.GetPaymentMethodListResponse{
 		Total: total,
-		List:  make([]types.PaymentMethodDetail, len(list)),
+		List:  make([]dto.PaymentMethodDetail, len(list)),
 	}
 
 	// gateway mod
@@ -73,7 +73,7 @@ func (l *GetPaymentMethodListLogic) GetPaymentMethodList(req *types.GetPaymentMe
 				}
 			}
 		}
-		resp.List[i] = types.PaymentMethodDetail{
+		resp.List[i] = dto.PaymentMethodDetail{
 			Id:          v.Id,
 			Name:        v.Name,
 			Platform:    v.Platform,

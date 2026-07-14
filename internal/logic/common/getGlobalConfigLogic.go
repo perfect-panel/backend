@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -28,8 +28,8 @@ func NewGetGlobalConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 	}
 }
 
-func (l *GetGlobalConfigLogic) GetGlobalConfig() (resp *types.GetGlobalConfigResponse, err error) {
-	resp = new(types.GetGlobalConfigResponse)
+func (l *GetGlobalConfigLogic) GetGlobalConfig() (resp *dto.GetGlobalConfigResponse, err error) {
+	resp = new(dto.GetGlobalConfigResponse)
 
 	currencyCfg, err := l.svcCtx.Store.System().GetCurrencyConfig(l.ctx)
 	if err != nil {
@@ -56,7 +56,7 @@ func (l *GetGlobalConfigLogic) GetGlobalConfig() (resp *types.GetGlobalConfigRes
 		resp.Subscribe.SubscribePath = "/sub" + l.svcCtx.Config.Subscribe.SubscribePath
 	}
 
-	resp.Verify = types.VeifyConfig{
+	resp.Verify = dto.VeifyConfig{
 		TurnstileSiteKey:          l.svcCtx.Config.Verify.TurnstileSiteKey,
 		EnableLoginVerify:         l.svcCtx.Config.Verify.LoginVerify,
 		EnableRegisterVerify:      l.svcCtx.Config.Verify.RegisterVerify,

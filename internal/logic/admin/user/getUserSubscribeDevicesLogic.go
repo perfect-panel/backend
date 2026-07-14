@@ -7,8 +7,8 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -27,14 +27,14 @@ func NewGetUserSubscribeDevicesLogic(ctx context.Context, svcCtx *svc.ServiceCon
 	}
 }
 
-func (l *GetUserSubscribeDevicesLogic) GetUserSubscribeDevices(req *types.GetUserSubscribeDevicesRequest) (resp *types.GetUserSubscribeDevicesResponse, err error) {
+func (l *GetUserSubscribeDevicesLogic) GetUserSubscribeDevices(req *dto.GetUserSubscribeDevicesRequest) (resp *dto.GetUserSubscribeDevicesResponse, err error) {
 	list, total, err := l.svcCtx.Store.User().QueryDevicePageList(l.ctx, req.UserId, req.SubscribeId, req.Page, req.Size)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetUserSubscribeDevices failed: %v", err.Error())
 	}
-	userRespList := make([]types.UserDevice, 0)
+	userRespList := make([]dto.UserDevice, 0)
 	tool.DeepCopy(&userRespList, list)
-	return &types.GetUserSubscribeDevicesResponse{
+	return &dto.GetUserSubscribeDevicesResponse{
 		Total: total,
 		List:  userRespList,
 	}, nil

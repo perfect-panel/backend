@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/order"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment"
@@ -42,7 +42,7 @@ const (
 	CloseOrderTimeMinutes = 15
 )
 
-func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.PortalPurchaseResponse, err error) {
+func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.PortalPurchaseResponse, err error) {
 	// find user auth
 	userAuth, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, req.AuthType, req.Identifier)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -69,7 +69,7 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 	}
 	var discount float64 = 1
 	if sub.Discount != "" {
-		var dis []types.SubscribeDiscount
+		var dis []dto.SubscribeDiscount
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
 	}
@@ -195,6 +195,6 @@ func (l *PurchaseLogic) Purchase(req *types.PortalPurchaseRequest) (resp *types.
 	} else {
 		l.Infow("[CloseOrder Task] Enqueue task success", logger.Field("TaskID", taskInfo.ID))
 	}
-	resp = &types.PortalPurchaseResponse{OrderNo: orderInfo.OrderNo}
+	resp = &dto.PortalPurchaseResponse{OrderNo: orderInfo.OrderNo}
 	return resp, nil
 }

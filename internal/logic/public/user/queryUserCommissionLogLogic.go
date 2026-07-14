@@ -3,12 +3,12 @@ package user
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -29,7 +29,7 @@ func NewQueryUserCommissionLogLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *QueryUserCommissionLogLogic) QueryUserCommissionLog(req *types.QueryUserCommissionLogListRequest) (resp *types.QueryUserCommissionLogListResponse, err error) {
+func (l *QueryUserCommissionLogLogic) QueryUserCommissionLog(req *dto.QueryUserCommissionLogListRequest) (resp *dto.QueryUserCommissionLogListResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -45,7 +45,7 @@ func (l *QueryUserCommissionLogLogic) QueryUserCommissionLog(req *types.QueryUse
 		l.Errorw("Query User Commission Log failed", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Commission Log failed: %v", err)
 	}
-	var list []types.CommissionLog
+	var list []dto.CommissionLog
 
 	for _, datum := range data {
 		var content log.Commission
@@ -53,7 +53,7 @@ func (l *QueryUserCommissionLogLogic) QueryUserCommissionLog(req *types.QueryUse
 			l.Errorf("unmarshal commission log content failed: %v", err.Error())
 			continue
 		}
-		list = append(list, types.CommissionLog{
+		list = append(list, dto.CommissionLog{
 			UserId:    datum.ObjectID,
 			Type:      content.Type,
 			Amount:    content.Amount,
@@ -62,7 +62,7 @@ func (l *QueryUserCommissionLogLogic) QueryUserCommissionLog(req *types.QueryUse
 		})
 	}
 
-	return &types.QueryUserCommissionLogListResponse{
+	return &dto.QueryUserCommissionLogListResponse{
 		List:  list,
 		Total: total,
 	}, nil

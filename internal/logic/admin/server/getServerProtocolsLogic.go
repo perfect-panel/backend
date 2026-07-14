@@ -3,8 +3,8 @@ package server
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -26,7 +26,7 @@ func NewGetServerProtocolsLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *GetServerProtocolsLogic) GetServerProtocols(req *types.GetServerProtocolsRequest) (resp *types.GetServerProtocolsResponse, err error) {
+func (l *GetServerProtocolsLogic) GetServerProtocols(req *dto.GetServerProtocolsRequest) (resp *dto.GetServerProtocolsResponse, err error) {
 	// find server
 	data, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.Id)
 	if err != nil {
@@ -35,7 +35,7 @@ func (l *GetServerProtocolsLogic) GetServerProtocols(req *types.GetServerProtoco
 	}
 
 	// handler protocols
-	var protocols []types.Protocol
+	var protocols []dto.Protocol
 	dst, err := data.UnmarshalProtocols()
 	if err != nil {
 		l.Errorf("[FilterServerList] UnmarshalProtocols Error: %s", err.Error())
@@ -43,7 +43,7 @@ func (l *GetServerProtocolsLogic) GetServerProtocols(req *types.GetServerProtoco
 	}
 	tool.DeepCopy(&protocols, dst)
 
-	return &types.GetServerProtocolsResponse{
+	return &dto.GetServerProtocolsResponse{
 		Protocols: protocols,
 	}, nil
 }

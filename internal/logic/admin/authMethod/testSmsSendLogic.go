@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/sms"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewTestSmsSendLogic(ctx context.Context, svcCtx *svc.ServiceContext) *TestS
 	}
 }
 
-func (l *TestSmsSendLogic) TestSmsSend(req *types.TestSmsSendRequest) error {
+func (l *TestSmsSendLogic) TestSmsSend(req *dto.TestSmsSendRequest) error {
 	client, err := sms.NewSender(l.svcCtx.Config.Mobile.Platform, l.svcCtx.Config.Mobile.PlatformConfig)
 	if err != nil {
 		l.Errorw("new sms sender err", logger.Field("error", err.Error()))

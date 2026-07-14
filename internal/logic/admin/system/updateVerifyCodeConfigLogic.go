@@ -8,8 +8,8 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -28,7 +28,7 @@ func NewUpdateVerifyCodeConfigLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *UpdateVerifyCodeConfigLogic) UpdateVerifyCodeConfig(req *types.VerifyCodeConfig) error {
+func (l *UpdateVerifyCodeConfigLogic) UpdateVerifyCodeConfig(req *dto.VerifyCodeConfig) error {
 	err := updateConfigFields(l.ctx, l.svcCtx, "verify_code", convertedConfigFields(*req), config.VerifyCodeConfigKey)
 	if err != nil {
 		l.Errorw("[UpdateRegisterConfig] update verify code config error", logger.Field("error", err.Error()))

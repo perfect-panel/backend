@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/task"
+	"github.com/perfect-panel/server/internal/model/entity/task"
 	"gorm.io/gorm"
 )
 

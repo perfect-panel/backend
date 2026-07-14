@@ -7,9 +7,9 @@ import (
 
 	"github.com/perfect-panel/server/pkg/logger"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -30,7 +30,7 @@ func NewGetUserTicketListLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 	}
 }
 
-func (l *GetUserTicketListLogic) GetUserTicketList(req *types.GetUserTicketListRequest) (resp *types.GetUserTicketListResponse, err error) {
+func (l *GetUserTicketListLogic) GetUserTicketList(req *dto.GetUserTicketListRequest) (resp *dto.GetUserTicketListResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
@@ -41,9 +41,9 @@ func (l *GetUserTicketListLogic) GetUserTicketList(req *types.GetUserTicketListR
 		l.Errorw("[GetUserTicketListLogic] Database Error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryTicketList error: %v", err)
 	}
-	resp = &types.GetUserTicketListResponse{
+	resp = &dto.GetUserTicketListResponse{
 		Total: total,
-		List:  make([]types.Ticket, 0),
+		List:  make([]dto.Ticket, 0),
 	}
 	tool.DeepCopy(&resp.List, list)
 	return

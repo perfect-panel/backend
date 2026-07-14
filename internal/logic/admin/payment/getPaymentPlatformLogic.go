@@ -3,8 +3,8 @@ package payment
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment"
 )
@@ -24,8 +24,8 @@ func NewGetPaymentPlatformLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *GetPaymentPlatformLogic) GetPaymentPlatform() (resp *types.PlatformResponse, err error) {
-	resp = &types.PlatformResponse{
+func (l *GetPaymentPlatformLogic) GetPaymentPlatform() (resp *dto.PlatformResponse, err error) {
+	resp = &dto.PlatformResponse{
 		List: payment.GetSupportedPlatforms(),
 	}
 	return

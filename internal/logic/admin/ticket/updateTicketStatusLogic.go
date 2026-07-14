@@ -3,8 +3,8 @@ package ticket
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewUpdateTicketStatusLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *UpdateTicketStatusLogic) UpdateTicketStatus(req *types.UpdateTicketStatusRequest) error {
+func (l *UpdateTicketStatusLogic) UpdateTicketStatus(req *dto.UpdateTicketStatusRequest) error {
 
 	err := l.svcCtx.Store.Ticket().UpdateTicketStatus(l.ctx, req.Id, 0, *req.Status)
 	if err != nil {

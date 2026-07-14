@@ -3,8 +3,8 @@ package subscribe
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewBatchDeleteSubscribeGroupLogic(ctx context.Context, svcCtx *svc.ServiceC
 	}
 }
 
-func (l *BatchDeleteSubscribeGroupLogic) BatchDeleteSubscribeGroup(req *types.BatchDeleteSubscribeGroupRequest) error {
+func (l *BatchDeleteSubscribeGroupLogic) BatchDeleteSubscribeGroup(req *dto.BatchDeleteSubscribeGroupRequest) error {
 	err := l.svcCtx.Store.Subscribe().BatchDeleteGroup(l.ctx, req.Ids)
 	if err != nil {
 		l.Logger.Error("[BatchDeleteSubscribeGroup] Delete Database Error: ", logger.Field("error", err.Error()))

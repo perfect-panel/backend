@@ -10,16 +10,16 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/auth"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/auth"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 
-func GetTelegramConfig(ctx context.Context, svcCtx *svc.ServiceContext) (*types.TelegramConfig, error) {
+func GetTelegramConfig(ctx context.Context, svcCtx *svc.ServiceContext) (*dto.TelegramConfig, error) {
 
 	data, err := svcCtx.Store.Auth().FindOneByMethod(ctx, "telegram")
 	if err != nil {
@@ -32,7 +32,7 @@ func GetTelegramConfig(ctx context.Context, svcCtx *svc.ServiceContext) (*types.
 		return nil, err
 	}
 
-	return &types.TelegramConfig{
+	return &dto.TelegramConfig{
 		TelegramBotToken:      telegramConfig.BotToken,
 		TelegramNotify:        *data.Enabled,
 		TelegramWebHookDomain: telegramConfig.WebHookDomain,

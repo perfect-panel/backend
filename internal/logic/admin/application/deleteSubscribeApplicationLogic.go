@@ -3,8 +3,8 @@ package application
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewDeleteSubscribeApplicationLogic(ctx context.Context, svcCtx *svc.Service
 	}
 }
 
-func (l *DeleteSubscribeApplicationLogic) DeleteSubscribeApplication(req *types.DeleteSubscribeApplicationRequest) error {
+func (l *DeleteSubscribeApplicationLogic) DeleteSubscribeApplication(req *dto.DeleteSubscribeApplicationRequest) error {
 	err := l.svcCtx.Store.Client().Delete(l.ctx, req.Id)
 	if err != nil {
 		l.Errorf("Failed to delete subscribe application with ID %d: %v", req.Id, err)

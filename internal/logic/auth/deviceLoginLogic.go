@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
@@ -36,7 +36,7 @@ func NewDeviceLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Devic
 	}
 }
 
-func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *types.LoginResponse, err error) {
+func (l *DeviceLoginLogic) DeviceLogin(req *dto.DeviceLoginRequest) (resp *dto.LoginResponse, err error) {
 	if !l.svcCtx.Config.Device.Enable {
 		return nil, xerr.NewErrMsg("Device login is disabled")
 	}
@@ -128,12 +128,12 @@ func (l *DeviceLoginLogic) DeviceLogin(req *types.DeviceLoginRequest) (resp *typ
 	}
 
 	loginStatus = true
-	return &types.LoginResponse{
+	return &dto.LoginResponse{
 		Token: token,
 	}, nil
 }
 
-func (l *DeviceLoginLogic) registerUserAndDevice(req *types.DeviceLoginRequest) (*user.User, error) {
+func (l *DeviceLoginLogic) registerUserAndDevice(req *dto.DeviceLoginRequest) (*user.User, error) {
 	l.Infow("device not found, creating new user and device",
 		logger.Field("identifier", req.Identifier),
 		logger.Field("ip", req.IP),

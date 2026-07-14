@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/node"
-	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/model/entity/node"
+	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/tool"

@@ -7,8 +7,8 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -29,7 +29,7 @@ func NewBatchDeleteSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContex
 
 var errorIsExistActiveUser = errors.New("subscription ID belongs to an active user subscription")
 
-func (l *BatchDeleteSubscribeLogic) BatchDeleteSubscribe(req *types.BatchDeleteSubscribeRequest) error {
+func (l *BatchDeleteSubscribeLogic) BatchDeleteSubscribe(req *dto.BatchDeleteSubscribeRequest) error {
 	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		for _, id := range req.Ids {
 			// Validate whether the subscription ID belongs to an active user subscription.

@@ -5,10 +5,10 @@ import (
 
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/ticket"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/ticket"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -29,7 +29,7 @@ func NewCreateUserTicketFollowLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *CreateUserTicketFollowLogic) CreateUserTicketFollow(req *types.CreateUserTicketFollowRequest) error {
+func (l *CreateUserTicketFollowLogic) CreateUserTicketFollow(req *dto.CreateUserTicketFollowRequest) error {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")

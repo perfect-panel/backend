@@ -3,9 +3,9 @@ package announcement
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/announcement"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/announcement"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewCreateAnnouncementLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *CreateAnnouncementLogic) CreateAnnouncement(req *types.CreateAnnouncementRequest) error {
+func (l *CreateAnnouncementLogic) CreateAnnouncement(req *dto.CreateAnnouncementRequest) error {
 
 	if err := l.svcCtx.Store.Announcement().Insert(l.ctx, &announcement.Announcement{
 		Title:   req.Title,

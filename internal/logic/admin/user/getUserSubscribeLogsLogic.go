@@ -4,9 +4,9 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -27,7 +27,7 @@ func NewGetUserSubscribeLogsLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *GetUserSubscribeLogsLogic) GetUserSubscribeLogs(req *types.GetUserSubscribeLogsRequest) (resp *types.GetUserSubscribeLogsResponse, err error) {
+func (l *GetUserSubscribeLogsLogic) GetUserSubscribeLogs(req *dto.GetUserSubscribeLogsRequest) (resp *dto.GetUserSubscribeLogsResponse, err error) {
 	params := &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
@@ -44,7 +44,7 @@ func (l *GetUserSubscribeLogsLogic) GetUserSubscribeLogs(req *types.GetUserSubsc
 		l.Errorw("[GetUserSubscribeLogs] Get User Subscribe Logs Error:", logger.Field("err", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Get User Subscribe Logs Error")
 	}
-	var list []types.UserSubscribeLog
+	var list []dto.UserSubscribeLog
 
 	for _, datum := range data {
 		var content log.Subscribe
@@ -52,7 +52,7 @@ func (l *GetUserSubscribeLogsLogic) GetUserSubscribeLogs(req *types.GetUserSubsc
 			l.Errorf("[GetUserSubscribeLogs] unmarshal subscribe log content failed: %v", err.Error())
 			continue
 		}
-		list = append(list, types.UserSubscribeLog{
+		list = append(list, dto.UserSubscribeLog{
 			Id:              datum.Id,
 			UserId:          datum.ObjectID,
 			UserSubscribeId: content.UserSubscribeId,
@@ -63,7 +63,7 @@ func (l *GetUserSubscribeLogsLogic) GetUserSubscribeLogs(req *types.GetUserSubsc
 		})
 	}
 
-	return &types.GetUserSubscribeLogsResponse{
+	return &dto.GetUserSubscribeLogsResponse{
 		List:  list,
 		Total: total,
 	}, err

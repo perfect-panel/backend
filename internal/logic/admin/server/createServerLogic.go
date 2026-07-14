@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/ip"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -29,7 +29,7 @@ func NewCreateServerLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Crea
 	}
 }
 
-func (l *CreateServerLogic) CreateServer(req *types.CreateServerRequest) error {
+func (l *CreateServerLogic) CreateServer(req *dto.CreateServerRequest) error {
 	data := node.Server{
 		Name:      req.Name,
 		Country:   req.Country,

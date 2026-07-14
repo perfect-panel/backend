@@ -16,8 +16,8 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	queue "github.com/perfect-panel/server/queue/types"
@@ -54,7 +54,7 @@ func NewSendEmailCodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Sen
 	}
 }
 
-func (l *SendEmailCodeLogic) SendEmailCode(req *types.SendCodeRequest) (resp *types.SendCodeResponse, err error) {
+func (l *SendEmailCodeLogic) SendEmailCode(req *dto.SendCodeRequest) (resp *dto.SendCodeResponse, err error) {
 	email := authmethod.CanonicalEmail(req.Email)
 	// Check if there is Redis in the code
 	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.ParseVerifyType(req.Type), email)
@@ -127,12 +127,12 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *types.SendCodeRequest) (resp *ty
 	}
 	l.Infow("[SendEmailCode]: Enqueue Success", logger.Field("taskID", taskInfo.ID), logger.Field("type", taskPayload.Type))
 	if l.svcCtx.Config.Model == constant.DevMode {
-		return &types.SendCodeResponse{
+		return &dto.SendCodeResponse{
 			Code:   payload.Code,
 			Status: true,
 		}, nil
 	} else {
-		return &types.SendCodeResponse{
+		return &dto.SendCodeResponse{
 			Status: true,
 		}, nil
 	}

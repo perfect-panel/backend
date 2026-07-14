@@ -34,10 +34,10 @@ type Proxy struct {
 	Path        string // For HTTP/HTTPS
 	ServiceName string // For gRPC
 	// Shadowsocks Options
-	Method    string
-	ServerKey string // For Shadowsocks 2022
-	UoT       bool   // UDP over TCP
-	UoTVersion int   // UoT version (1 or 2)
+	Method     string
+	ServerKey  string // For Shadowsocks 2022
+	UoT        bool   // UDP over TCP
+	UoTVersion int    // UoT version (1 or 2)
 
 	// Vmess/Vless/Trojan Options
 	Flow string // Flow for Vmess/Vless/Trojan

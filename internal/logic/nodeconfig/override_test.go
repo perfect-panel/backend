@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/internal/model/dto"
 )
 
 func TestOverrideModelAndApplyOverride(t *testing.T) {
@@ -19,14 +19,14 @@ func TestOverrideModelAndApplyOverride(t *testing.T) {
 		},
 	})
 
-	override, allInherited, err := OverrideModel(1, types.ServerNodeConfigOverride{
+	override, allInherited, err := OverrideModel(1, dto.ServerNodeConfigOverride{
 		InheritIPStrategy: false,
 		IPStrategy:        "prefer_ipv6",
 		InheritDNS:        false,
-		DNS:               []types.NodeDNS{},
+		DNS:               []dto.NodeDNS{},
 		InheritBlock:      true,
 		InheritOutbound:   false,
-		Outbound: []types.NodeOutbound{
+		Outbound: []dto.NodeOutbound{
 			{Name: "node", Protocol: "reject", Rules: []string{"geosite:private"}},
 		},
 	})
@@ -57,7 +57,7 @@ func TestOverrideModelAndApplyOverride(t *testing.T) {
 }
 
 func TestOverrideModelAllInherited(t *testing.T) {
-	_, allInherited, err := OverrideModel(1, types.ServerNodeConfigOverride{
+	_, allInherited, err := OverrideModel(1, dto.ServerNodeConfigOverride{
 		InheritIPStrategy: true,
 		InheritDNS:        true,
 		InheritBlock:      true,
@@ -130,12 +130,12 @@ func TestSanitizeNodeConfigValues(t *testing.T) {
 }
 
 func TestOverrideModelPreservesOutboundWithoutRules(t *testing.T) {
-	override, allInherited, err := OverrideModel(1, types.ServerNodeConfigOverride{
+	override, allInherited, err := OverrideModel(1, dto.ServerNodeConfigOverride{
 		InheritIPStrategy: true,
 		InheritDNS:        true,
 		InheritBlock:      true,
 		InheritOutbound:   false,
-		Outbound: []types.NodeOutbound{
+		Outbound: []dto.NodeOutbound{
 			{
 				Name:     " warp ",
 				Protocol: " socks ",

@@ -8,9 +8,9 @@ import (
 
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/logic/common"
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -38,7 +38,7 @@ func NewTelephoneLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Te
 	}
 }
 
-func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, ip, userAgent string) (resp *types.LoginResponse, err error) {
+func (l *TelephoneLoginLogic) TelephoneLogin(req *dto.TelephoneLoginRequest, ip, userAgent string) (resp *dto.LoginResponse, err error) {
 	phoneNumber, err := phone.FormatToE164(req.TelephoneAreaCode, req.Telephone)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TelephoneError), "Invalid phone number")
@@ -160,7 +160,7 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *types.TelephoneLoginRequest, i
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set session id error: %v", err.Error())
 	}
 	loginStatus = true
-	return &types.LoginResponse{
+	return &dto.LoginResponse{
 		Token: token,
 	}, nil
 }

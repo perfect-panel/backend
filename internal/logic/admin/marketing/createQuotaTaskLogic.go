@@ -5,10 +5,10 @@ import (
 	"strconv"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/task"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/task"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	queueType "github.com/perfect-panel/server/queue/types"
@@ -30,7 +30,7 @@ func NewCreateQuotaTaskLogic(ctx context.Context, svcCtx *svc.ServiceContext) *C
 	}
 }
 
-func (l *CreateQuotaTaskLogic) CreateQuotaTask(req *types.CreateQuotaTaskRequest) error {
+func (l *CreateQuotaTaskLogic) CreateQuotaTask(req *dto.CreateQuotaTaskRequest) error {
 	subIds, err := l.svcCtx.Store.User().QuerySubscribeIdsByFilter(l.ctx, &user.SubscribeFilter{
 		Subscribers: req.Subscribers,
 		IsActive:    req.IsActive,

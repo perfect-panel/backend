@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/ads"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/ads"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -27,7 +27,7 @@ func NewCreateAdsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CreateA
 	}
 }
 
-func (l *CreateAdsLogic) CreateAds(req *types.CreateAdsRequest) error {
+func (l *CreateAdsLogic) CreateAds(req *dto.CreateAdsRequest) error {
 	if err := l.svcCtx.Store.Ads().Insert(l.ctx, &ads.Ads{
 		Title:     req.Title,
 		Type:      req.Type,

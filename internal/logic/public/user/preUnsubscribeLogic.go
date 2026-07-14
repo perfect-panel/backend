@@ -3,8 +3,8 @@ package user
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -23,13 +23,13 @@ func NewPreUnsubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Pr
 	}
 }
 
-func (l *PreUnsubscribeLogic) PreUnsubscribe(req *types.PreUnsubscribeRequest) (resp *types.PreUnsubscribeResponse, err error) {
+func (l *PreUnsubscribeLogic) PreUnsubscribe(req *dto.PreUnsubscribeRequest) (resp *dto.PreUnsubscribeResponse, err error) {
 	remainingAmount, err := CalculateRemainingAmount(l.ctx, l.svcCtx, req.Id)
 	if err != nil {
 		l.Errorw("[PreUnsubscribeLogic] Calculate Remaining Amount Error:", logger.Field("err", err.Error()))
 		return nil, err
 	}
-	return &types.PreUnsubscribeResponse{
+	return &dto.PreUnsubscribeResponse{
 		DeductionAmount: remainingAmount,
 	}, nil
 }

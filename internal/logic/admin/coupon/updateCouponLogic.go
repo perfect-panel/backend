@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/model/coupon"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/coupon"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -28,7 +28,7 @@ func NewUpdateCouponLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Upda
 	}
 }
 
-func (l *UpdateCouponLogic) UpdateCoupon(req *types.UpdateCouponRequest) error {
+func (l *UpdateCouponLogic) UpdateCoupon(req *dto.UpdateCouponRequest) error {
 	fmt.Printf("req Subscribe: %v\n", req.Subscribe)
 	couponInfo := &coupon.Coupon{}
 	// update coupon

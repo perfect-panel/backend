@@ -1,7 +1,7 @@
 package order
 
 import (
-	"github.com/perfect-panel/server/internal/model/coupon"
+	"github.com/perfect-panel/server/internal/model/entity/coupon"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )

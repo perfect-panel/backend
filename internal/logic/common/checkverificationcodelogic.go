@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -31,8 +31,8 @@ func NewCheckVerificationCodeLogic(ctx context.Context, svcCtx *svc.ServiceConte
 	}
 }
 
-func (l *CheckVerificationCodeLogic) CheckVerificationCode(req *types.CheckVerificationCodeRequest) (resp *types.CheckVerificationCodeRespone, err error) {
-	resp = &types.CheckVerificationCodeRespone{}
+func (l *CheckVerificationCodeLogic) CheckVerificationCode(req *dto.CheckVerificationCodeRequest) (resp *dto.CheckVerificationCodeRespone, err error) {
+	resp = &dto.CheckVerificationCodeRespone{}
 	if req.Method == authmethod.Email {
 		email := authmethod.CanonicalEmail(req.Account)
 		cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.ParseVerifyType(req.Type), email)

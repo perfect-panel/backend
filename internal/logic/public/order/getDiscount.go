@@ -1,8 +1,8 @@
 package order
 
-import "github.com/perfect-panel/server/internal/types"
+import "github.com/perfect-panel/server/internal/model/dto"
 
-func getDiscount(discounts []types.SubscribeDiscount, inputMonths int64) float64 {
+func getDiscount(discounts []dto.SubscribeDiscount, inputMonths int64) float64 {
 	var finalDiscount float64 = 100
 
 	for _, discount := range discounts {

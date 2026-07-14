@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -27,7 +27,7 @@ func NewDeleteNodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Delete
 	}
 }
 
-func (l *DeleteNodeLogic) DeleteNode(req *types.DeleteNodeRequest) error {
+func (l *DeleteNodeLogic) DeleteNode(req *dto.DeleteNodeRequest) error {
 	nodeStore := l.svcCtx.Store.Node()
 	data, err := nodeStore.FindOneNode(l.ctx, req.Id)
 	if err != nil {

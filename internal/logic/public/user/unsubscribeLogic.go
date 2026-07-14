@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/timeutil"
@@ -12,10 +12,10 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -36,7 +36,7 @@ func NewUnsubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Unsub
 
 // Unsubscribe handles the subscription cancellation process with proper refund distribution
 // It prioritizes refunding to gift amount for balance-paid orders, then to regular balance
-func (l *UnsubscribeLogic) Unsubscribe(req *types.UnsubscribeRequest) error {
+func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")

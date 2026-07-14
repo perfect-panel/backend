@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/ip"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -29,7 +29,7 @@ func NewUpdateServerLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Upda
 	}
 }
 
-func (l *UpdateServerLogic) UpdateServer(req *types.UpdateServerRequest) error {
+func (l *UpdateServerLogic) UpdateServer(req *dto.UpdateServerRequest) error {
 	nodeStore := l.svcCtx.Store.Node()
 	data, err := nodeStore.FindOneServer(l.ctx, req.Id)
 	if err != nil {

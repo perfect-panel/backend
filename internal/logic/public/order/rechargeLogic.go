@@ -9,10 +9,10 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/order"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/order"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	queue "github.com/perfect-panel/server/queue/types"
@@ -34,7 +34,7 @@ func NewRechargeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Recharge
 	}
 }
 
-func (l *RechargeLogic) Recharge(req *types.RechargeOrderRequest) (resp *types.RechargeOrderResponse, err error) {
+func (l *RechargeLogic) Recharge(req *dto.RechargeOrderRequest) (resp *dto.RechargeOrderResponse, err error) {
 	store := l.svcCtx.Store
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
@@ -113,7 +113,7 @@ func (l *RechargeLogic) Recharge(req *types.RechargeOrderRequest) (resp *types.R
 	} else {
 		l.Infow("[Recharge] Enqueue task success", logger.Field("TaskID", taskInfo.ID))
 	}
-	return &types.RechargeOrderResponse{
+	return &dto.RechargeOrderResponse{
 		OrderNo: orderInfo.OrderNo,
 	}, nil
 }

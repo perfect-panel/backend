@@ -5,9 +5,9 @@ import (
 
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -29,7 +29,7 @@ func NewGetUserTicketDetailsLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *GetUserTicketDetailsLogic) GetUserTicketDetails(req *types.GetUserTicketDetailRequest) (resp *types.Ticket, err error) {
+func (l *GetUserTicketDetailsLogic) GetUserTicketDetails(req *dto.GetUserTicketDetailRequest) (resp *dto.Ticket, err error) {
 
 	data, err := l.svcCtx.Store.Ticket().QueryTicketDetail(l.ctx, req.Id)
 	if err != nil {
@@ -45,7 +45,7 @@ func (l *GetUserTicketDetailsLogic) GetUserTicketDetails(req *types.GetUserTicke
 	if data.UserId != u.Id {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "invalid access")
 	}
-	resp = &types.Ticket{}
+	resp = &dto.Ticket{}
 	tool.DeepCopy(resp, data)
 	return
 }

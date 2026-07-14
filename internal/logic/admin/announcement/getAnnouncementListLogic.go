@@ -3,13 +3,13 @@ package announcement
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/announcement"
+	"github.com/perfect-panel/server/internal/model/entity/announcement"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -28,7 +28,7 @@ func NewGetAnnouncementListLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *GetAnnouncementListLogic) GetAnnouncementList(req *types.GetAnnouncementListRequest) (resp *types.GetAnnouncementListResponse, err error) {
+func (l *GetAnnouncementListLogic) GetAnnouncementList(req *dto.GetAnnouncementListRequest) (resp *dto.GetAnnouncementListResponse, err error) {
 	total, list, err := l.svcCtx.Store.Announcement().GetAnnouncementListByPage(l.ctx, int(req.Page), int(req.Size), announcement.Filter{
 		Show:   req.Show,
 		Pinned: req.Pinned,
@@ -38,9 +38,9 @@ func (l *GetAnnouncementListLogic) GetAnnouncementList(req *types.GetAnnouncemen
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetAnnouncementListByPage error: %v", err.Error())
 	}
-	resp = &types.GetAnnouncementListResponse{}
+	resp = &dto.GetAnnouncementListResponse{}
 	resp.Total = total
-	resp.List = make([]types.Announcement, 0)
+	resp.List = make([]dto.Announcement, 0)
 	tool.DeepCopy(&resp.List, list)
 	return
 }

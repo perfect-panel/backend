@@ -3,8 +3,8 @@ package system
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -25,8 +25,8 @@ func NewGetSubscribeConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *GetSubscribeConfigLogic) GetSubscribeConfig() (resp *types.SubscribeConfig, err error) {
-	resp = &types.SubscribeConfig{}
+func (l *GetSubscribeConfigLogic) GetSubscribeConfig() (resp *dto.SubscribeConfig, err error) {
+	resp = &dto.SubscribeConfig{}
 	// get subscribe config from db
 	subscribeConfigs, err := l.svcCtx.Store.System().GetSubscribeConfig(l.ctx)
 	if err != nil {

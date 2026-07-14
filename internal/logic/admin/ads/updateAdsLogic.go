@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewUpdateAdsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateA
 	}
 }
 
-func (l *UpdateAdsLogic) UpdateAds(req *types.UpdateAdsRequest) error {
+func (l *UpdateAdsLogic) UpdateAds(req *dto.UpdateAdsRequest) error {
 	data, err := l.svcCtx.Store.Ads().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("find ads error", logger.Field("error", err.Error()), logger.Field("id", req.Id))

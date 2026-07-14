@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/auth"
-	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/auth"
+	"github.com/perfect-panel/server/internal/model/entity/log"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/oauth/apple"
@@ -56,7 +56,7 @@ func NewOAuthLoginGetTokenLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTokenRequest, ip, userAgent string) (resp *types.LoginResponse, err error) {
+func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *dto.OAuthLoginGetTokenRequest, ip, userAgent string) (resp *dto.LoginResponse, err error) {
 	requestID := uuidx.NewUUID().String()
 	loginStatus := false
 	var userInfo *user.User
@@ -83,10 +83,10 @@ func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *types.OAuthLoginGetTok
 	}
 
 	loginStatus = true
-	return &types.LoginResponse{Token: token}, nil
+	return &dto.LoginResponse{Token: token}, nil
 }
 
-func (l *OAuthLoginGetTokenLogic) google(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) google(req *dto.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
 	startTime := timeutil.Now()
 	l.Infow("google oauth processing started",
 		logger.Field("request_id", requestID),
@@ -164,7 +164,7 @@ func (l *OAuthLoginGetTokenLogic) google(req *types.OAuthLoginGetTokenRequest, r
 	return l.findOrRegisterUser(OAuthGoogle, googleUserInfo.OpenID, googleUserInfo.Email, googleUserInfo.Picture, requestID, ip, userAgent)
 }
 
-func (l *OAuthLoginGetTokenLogic) apple(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) apple(req *dto.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
 	startTime := timeutil.Now()
 	l.Infow("apple oauth processing started",
 		logger.Field("request_id", requestID),
@@ -264,7 +264,7 @@ func (l *OAuthLoginGetTokenLogic) apple(req *types.OAuthLoginGetTokenRequest, re
 	return l.findOrRegisterUser(OAuthApple, appleUnique, email, "", requestID, ip, userAgent)
 }
 
-func (l *OAuthLoginGetTokenLogic) telegram(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) telegram(req *dto.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
 	startTime := timeutil.Now()
 	l.Infow("telegram oauth processing started",
 		logger.Field("request_id", requestID),
@@ -327,7 +327,7 @@ func (l *OAuthLoginGetTokenLogic) telegram(req *types.OAuthLoginGetTokenRequest,
 	return l.findOrRegisterUser(OAuthTelegram, userID, email, avatar, requestID, ip, userAgent)
 }
 
-func (l *OAuthLoginGetTokenLogic) github(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) github(req *dto.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
 	startTime := timeutil.Now()
 	l.Infow("github oauth processing started",
 		logger.Field("request_id", requestID),
@@ -625,7 +625,7 @@ func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus bool, userInfo *
 	}
 }
 
-func (l *OAuthLoginGetTokenLogic) handleOAuthProvider(req *types.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
+func (l *OAuthLoginGetTokenLogic) handleOAuthProvider(req *dto.OAuthLoginGetTokenRequest, requestID, ip, userAgent string) (*user.User, error) {
 	l.Debugw("handling oauth provider",
 		logger.Field("request_id", requestID),
 		logger.Field("provider", req.Method),

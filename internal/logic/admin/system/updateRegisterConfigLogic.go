@@ -10,8 +10,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 )
 
 type UpdateRegisterConfigLogic struct {
@@ -28,7 +28,7 @@ func NewUpdateRegisterConfigLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *UpdateRegisterConfigLogic) UpdateRegisterConfig(req *types.RegisterConfig) error {
+func (l *UpdateRegisterConfigLogic) UpdateRegisterConfig(req *dto.RegisterConfig) error {
 	err := updateConfigFields(l.ctx, l.svcCtx, "register", convertedConfigFields(*req), config.RegisterConfigKey, config.GlobalConfigKey)
 	if err != nil {
 		l.Errorw("[UpdateRegisterConfig] update register config error", logger.Field("error", err.Error()))

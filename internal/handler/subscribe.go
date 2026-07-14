@@ -7,15 +7,15 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/perfect-panel/server/internal/logic/subscribe"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 )
 
 func SubscribeHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(c context.Context, ctx *app.RequestContext) {
-		req := types.SubscribeRequest{
+		req := dto.SubscribeRequest{
 			Token:  string(ctx.GetHeader("token")),
 			UA:     string(ctx.UserAgent()),
 			Flag:   ctx.Query("flag"),
@@ -67,7 +67,7 @@ func PanDomainSubscribeHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		writeSubscribeResponse(c, ctx, svcCtx, types.SubscribeRequest{
+		writeSubscribeResponse(c, ctx, svcCtx, dto.SubscribeRequest{
 			Token:  domainArr[0],
 			Flag:   domainArr[1],
 			UA:     ua,
@@ -76,7 +76,7 @@ func PanDomainSubscribeHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	}
 }
 
-func writeSubscribeResponse(c context.Context, ctx *app.RequestContext, svcCtx *svc.ServiceContext, req types.SubscribeRequest) {
+func writeSubscribeResponse(c context.Context, ctx *app.RequestContext, svcCtx *svc.ServiceContext, req dto.SubscribeRequest) {
 	l := subscribe.NewSubscribeLogic(c, svcCtx, subscribe.RequestMeta{
 		Host:       string(ctx.Host()),
 		RequestURI: string(ctx.URI().RequestURI()),

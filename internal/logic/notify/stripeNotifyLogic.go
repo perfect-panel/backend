@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/model/entity/payment"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment/stripe"

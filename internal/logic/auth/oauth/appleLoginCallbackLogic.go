@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -31,7 +31,7 @@ func NewAppleLoginCallbackLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *AppleLoginCallbackLogic) AppleLoginCallback(req *types.AppleLoginCallbackRequest) (*AppleLoginRedirect, error) {
+func (l *AppleLoginCallbackLogic) AppleLoginCallback(req *dto.AppleLoginCallbackRequest) (*AppleLoginRedirect, error) {
 	// validate the state code
 	result, err := l.svcCtx.Redis.Get(l.ctx, fmt.Sprintf("apple:%s", req.State)).Result()
 	if err != nil {
@@ -43,7 +43,7 @@ func (l *AppleLoginCallbackLogic) AppleLoginCallback(req *types.AppleLoginCallba
 	return redirect, nil
 }
 
-func appleLoginRedirect(location string, req *types.AppleLoginCallbackRequest, statusCode int) *AppleLoginRedirect {
+func appleLoginRedirect(location string, req *dto.AppleLoginCallbackRequest, statusCode int) *AppleLoginRedirect {
 	if statusCode == http.StatusTemporaryRedirect {
 		return &AppleLoginRedirect{StatusCode: statusCode, Location: location}
 	}

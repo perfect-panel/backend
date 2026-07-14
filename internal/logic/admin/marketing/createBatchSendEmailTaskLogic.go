@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/task"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/task"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -32,7 +32,7 @@ func NewCreateBatchSendEmailTaskLogic(ctx context.Context, svcCtx *svc.ServiceCo
 		svcCtx: svcCtx,
 	}
 }
-func (l *CreateBatchSendEmailTaskLogic) CreateBatchSendEmailTask(req *types.CreateBatchSendEmailTaskRequest) (err error) {
+func (l *CreateBatchSendEmailTaskLogic) CreateBatchSendEmailTask(req *dto.CreateBatchSendEmailTaskRequest) (err error) {
 	scope := task.ParseScopeType(req.Scope)
 	emails, err := l.svcCtx.Store.User().QueryEmailRecipients(l.ctx, &user.EmailRecipientFilter{
 		Scope:             scope.Int8(),

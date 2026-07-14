@@ -8,8 +8,8 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/limit"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -42,7 +42,7 @@ func NewSendSmsCodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SendS
 	}
 }
 
-func (l *SendSmsCodeLogic) SendSmsCode(req *types.SendSmsCodeRequest) (resp *types.SendCodeResponse, err error) {
+func (l *SendSmsCodeLogic) SendSmsCode(req *dto.SendSmsCodeRequest) (resp *dto.SendCodeResponse, err error) {
 	phoneNumber, err := phone.FormatToE164(req.TelephoneAreaCode, req.Telephone)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TelephoneError), "Invalid phone number")
@@ -113,12 +113,12 @@ func (l *SendSmsCodeLogic) SendSmsCode(req *types.SendSmsCodeRequest) (resp *typ
 	}
 	l.Infow("[SendSmsCode]: Enqueue Success", logger.Field("taskID", taskInfo.ID), logger.Field("payload", string(payloadValue)))
 	if l.svcCtx.Config.Model == constant.DevMode {
-		return &types.SendCodeResponse{
+		return &dto.SendCodeResponse{
 			Code:   taskPayload.Content,
 			Status: true,
 		}, nil
 	}
-	return &types.SendCodeResponse{
+	return &dto.SendCodeResponse{
 		Status: true,
 	}, nil
 }

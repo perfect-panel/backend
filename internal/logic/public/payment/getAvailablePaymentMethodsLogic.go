@@ -3,8 +3,8 @@ package payment
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -26,14 +26,14 @@ func NewGetAvailablePaymentMethodsLogic(ctx context.Context, svcCtx *svc.Service
 	}
 }
 
-func (l *GetAvailablePaymentMethodsLogic) GetAvailablePaymentMethods() (resp *types.GetAvailablePaymentMethodsResponse, err error) {
+func (l *GetAvailablePaymentMethodsLogic) GetAvailablePaymentMethods() (resp *dto.GetAvailablePaymentMethodsResponse, err error) {
 	data, err := l.svcCtx.Store.Payment().FindAvailableMethods(l.ctx)
 	if err != nil {
 		l.Errorw("[GetAvailablePaymentMethods] database error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetAvailablePaymentMethods: %v", err.Error())
 	}
-	resp = &types.GetAvailablePaymentMethodsResponse{
-		List: make([]types.PaymentMethod, 0),
+	resp = &dto.GetAvailablePaymentMethodsResponse{
+		List: make([]dto.PaymentMethod, 0),
 	}
 
 	tool.DeepCopy(&resp.List, data)

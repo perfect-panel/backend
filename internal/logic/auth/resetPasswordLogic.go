@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/entity/log"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/uuidx"
@@ -21,8 +21,8 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 )
 
 type ResetPasswordLogic struct {
@@ -40,7 +40,7 @@ func NewResetPasswordLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Res
 	}
 }
 
-func (l *ResetPasswordLogic) ResetPassword(req *types.ResetPasswordRequest) (resp *types.LoginResponse, err error) {
+func (l *ResetPasswordLogic) ResetPassword(req *dto.ResetPasswordRequest) (resp *dto.LoginResponse, err error) {
 	var userInfo *user.User
 	loginStatus := false
 	email := authmethod.CanonicalEmail(req.Email)
@@ -147,7 +147,7 @@ func (l *ResetPasswordLogic) ResetPassword(req *types.ResetPasswordRequest) (res
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "set session id error: %v", err.Error())
 	}
 	loginStatus = true
-	return &types.LoginResponse{
+	return &dto.LoginResponse{
 		Token: token,
 	}, nil
 }

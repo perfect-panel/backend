@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewCreateNodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Create
 	}
 }
 
-func (l *CreateNodeLogic) CreateNode(req *types.CreateNodeRequest) error {
+func (l *CreateNodeLogic) CreateNode(req *dto.CreateNodeRequest) error {
 	data := node.Node{
 		Name:     req.Name,
 		Tags:     tool.StringSliceToString(req.Tags),

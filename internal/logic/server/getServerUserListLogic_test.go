@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/gofrs/uuid/v5"
-	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 )
 
 func TestPlaceholderServerUserIsStable(t *testing.T) {

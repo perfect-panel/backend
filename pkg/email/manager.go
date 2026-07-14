@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/task"
+	"github.com/perfect-panel/server/internal/model/entity/task"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -22,7 +22,7 @@ var (
 )
 
 type WorkerManager struct {
-	tasks   TaskStore // task repository
+	tasks   TaskStore                    // task repository
 	sender  Sender                       // 邮件发送器接口
 	mutex   sync.RWMutex                 // 读写互斥锁，确保线程安全
 	workers map[int64]*Worker            // 存储所有 Worker 实例

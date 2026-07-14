@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,13 +26,13 @@ func NewGetNodeMultiplierLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 	}
 }
 
-func (l *GetNodeMultiplierLogic) GetNodeMultiplier() (resp *types.GetNodeMultiplierResponse, err error) {
+func (l *GetNodeMultiplierLogic) GetNodeMultiplier() (resp *dto.GetNodeMultiplierResponse, err error) {
 	data, err := l.svcCtx.Store.System().FindNodeMultiplierConfig(l.ctx)
 	if err != nil {
 		l.Logger.Error("Get Node Multiplier Config Error: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Get Node Multiplier Config Error: %s", err.Error())
 	}
-	var periods []types.TimePeriod
+	var periods []dto.TimePeriod
 	if data.Value != "" {
 		if err := json.Unmarshal([]byte(data.Value), &periods); err != nil {
 			l.Logger.Error("Unmarshal Node Multiplier Config Error: ", logger.Field("error", err.Error()), logger.Field("value", data.Value))
@@ -40,7 +40,7 @@ func (l *GetNodeMultiplierLogic) GetNodeMultiplier() (resp *types.GetNodeMultipl
 		}
 	}
 
-	return &types.GetNodeMultiplierResponse{
+	return &dto.GetNodeMultiplierResponse{
 		Periods: periods,
 	}, nil
 }

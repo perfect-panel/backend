@@ -3,8 +3,8 @@ package user
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewUpdateUserAuthMethodLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *UpdateUserAuthMethodLogic) UpdateUserAuthMethod(req *types.UpdateUserAuthMethodRequest) error {
+func (l *UpdateUserAuthMethodLogic) UpdateUserAuthMethod(req *dto.UpdateUserAuthMethodRequest) error {
 	method, err := l.svcCtx.Store.User().FindUserAuthMethodByPlatform(l.ctx, req.UserId, req.AuthType)
 	if err != nil {
 		l.Errorw("Get user auth method error", logger.Field("error", err.Error()), logger.Field("userId", req.UserId), logger.Field("authType", req.AuthType))

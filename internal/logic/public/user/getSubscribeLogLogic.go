@@ -3,12 +3,12 @@ package user
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -29,7 +29,7 @@ func NewGetSubscribeLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 	}
 }
 
-func (l *GetSubscribeLogLogic) GetSubscribeLog(req *types.GetSubscribeLogRequest) (resp *types.GetSubscribeLogResponse, err error) {
+func (l *GetSubscribeLogLogic) GetSubscribeLog(req *dto.GetSubscribeLogRequest) (resp *dto.GetSubscribeLogResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -45,7 +45,7 @@ func (l *GetSubscribeLogLogic) GetSubscribeLog(req *types.GetSubscribeLogRequest
 		l.Errorw("[GetUserSubscribeLogs] Get User Subscribe Logs Error:", logger.Field("err", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Get User Subscribe Logs Error")
 	}
-	var list []types.UserSubscribeLog
+	var list []dto.UserSubscribeLog
 
 	for _, item := range data {
 		var content log.Subscribe
@@ -53,7 +53,7 @@ func (l *GetSubscribeLogLogic) GetSubscribeLog(req *types.GetSubscribeLogRequest
 			l.Errorf("[GetUserSubscribeLogs] unmarshal subscribe log content failed: %v", err.Error())
 			continue
 		}
-		list = append(list, types.UserSubscribeLog{
+		list = append(list, dto.UserSubscribeLog{
 			Id:              item.Id,
 			UserId:          item.ObjectID,
 			UserSubscribeId: content.UserSubscribeId,
@@ -64,7 +64,7 @@ func (l *GetSubscribeLogLogic) GetSubscribeLog(req *types.GetSubscribeLogRequest
 		})
 	}
 
-	return &types.GetSubscribeLogResponse{
+	return &dto.GetSubscribeLogResponse{
 		List:  list,
 		Total: total,
 	}, err

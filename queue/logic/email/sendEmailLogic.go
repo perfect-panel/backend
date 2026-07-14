@@ -10,7 +10,7 @@ import (
 	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/email"
 	"github.com/perfect-panel/server/queue/types"

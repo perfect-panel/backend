@@ -3,8 +3,8 @@ package coupon
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewBatchDeleteCouponLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 	}
 }
 
-func (l *BatchDeleteCouponLogic) BatchDeleteCoupon(req *types.BatchDeleteCouponRequest) error {
+func (l *BatchDeleteCouponLogic) BatchDeleteCoupon(req *dto.BatchDeleteCouponRequest) error {
 	// batch delete coupon by ids
 	err := l.svcCtx.Store.Coupon().BatchDelete(l.ctx, req.Ids)
 	if err != nil {

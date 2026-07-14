@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 
 	"github.com/perfect-panel/server/initialize"
-	"github.com/perfect-panel/server/internal/model/auth"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/auth"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/email"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/sms"
@@ -31,7 +31,7 @@ func NewUpdateAuthMethodConfigLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *UpdateAuthMethodConfigLogic) UpdateAuthMethodConfig(req *types.UpdateAuthMethodConfigRequest) (resp *types.AuthMethodConfig, err error) {
+func (l *UpdateAuthMethodConfigLogic) UpdateAuthMethodConfig(req *dto.UpdateAuthMethodConfigRequest) (resp *dto.AuthMethodConfig, err error) {
 	method, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, req.Method)
 	if err != nil {
 		l.Errorw("find one by method failed", logger.Field("method", req.Method), logger.Field("error", err.Error()))
@@ -72,7 +72,7 @@ func (l *UpdateAuthMethodConfigLogic) UpdateAuthMethodConfig(req *types.UpdateAu
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "update auth method failed: %v", err.Error())
 	}
 
-	resp = new(types.AuthMethodConfig)
+	resp = new(dto.AuthMethodConfig)
 	tool.DeepCopy(resp, method)
 	if method.Config != "" {
 		if err := json.Unmarshal([]byte(method.Config), &resp.Config); err != nil {

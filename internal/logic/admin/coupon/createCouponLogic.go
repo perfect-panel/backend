@@ -4,9 +4,9 @@ import (
 	"context"
 	"math/rand"
 
-	"github.com/perfect-panel/server/internal/model/coupon"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/coupon"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/random"
 	"github.com/perfect-panel/server/pkg/snowflake"
@@ -31,7 +31,7 @@ func NewCreateCouponLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Crea
 	}
 }
 
-func (l *CreateCouponLogic) CreateCoupon(req *types.CreateCouponRequest) error {
+func (l *CreateCouponLogic) CreateCoupon(req *dto.CreateCouponRequest) error {
 	if req.Code == "" {
 		rand.NewSource(timeutil.Now().UnixNano())
 		sid := snowflake.GetID()

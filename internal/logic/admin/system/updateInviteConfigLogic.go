@@ -10,8 +10,8 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 )
 
 type UpdateInviteConfigLogic struct {
@@ -28,7 +28,7 @@ func NewUpdateInviteConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *UpdateInviteConfigLogic) UpdateInviteConfig(req *types.InviteConfig) error {
+func (l *UpdateInviteConfigLogic) UpdateInviteConfig(req *dto.InviteConfig) error {
 	err := updateConfigFields(l.ctx, l.svcCtx, "invite", convertedConfigFields(*req), config.InviteConfigKey, config.GlobalConfigKey)
 	if err != nil {
 		l.Errorw("[UpdateInviteConfig] update invite config error", logger.Field("error", err.Error()))

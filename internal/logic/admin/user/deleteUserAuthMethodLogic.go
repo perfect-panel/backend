@@ -3,8 +3,8 @@ package user
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewDeleteUserAuthMethodLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *DeleteUserAuthMethodLogic) DeleteUserAuthMethod(req *types.DeleteUserAuthMethodRequest) error {
+func (l *DeleteUserAuthMethodLogic) DeleteUserAuthMethod(req *dto.DeleteUserAuthMethodRequest) error {
 	err := l.svcCtx.Store.User().DeleteUserAuthMethods(l.ctx, req.UserId, req.AuthType)
 	if err != nil {
 		l.Errorw("[DeleteUserAuthMethodLogic] Delete User Auth Method Error:", logger.Field("err", err.Error()), logger.Field("userId", req.UserId), logger.Field("authType", req.AuthType))

@@ -3,9 +3,9 @@ package log
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewFilterMobileLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *F
 	}
 }
 
-func (l *FilterMobileLogLogic) FilterMobileLog(req *types.FilterLogParams) (resp *types.FilterMobileLogResponse, err error) {
+func (l *FilterMobileLogLogic) FilterMobileLog(req *dto.FilterLogParams) (resp *dto.FilterMobileLogResponse, err error) {
 	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:   req.Page,
 		Size:   req.Size,
@@ -40,7 +40,7 @@ func (l *FilterMobileLogLogic) FilterMobileLog(req *types.FilterLogParams) (resp
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter system log: %v", err.Error())
 	}
 
-	var list []types.MessageLog
+	var list []dto.MessageLog
 
 	for _, datum := range data {
 		var content log.Message
@@ -49,7 +49,7 @@ func (l *FilterMobileLogLogic) FilterMobileLog(req *types.FilterLogParams) (resp
 			l.Errorf("[FilterMobileLog] failed to unmarshal content: %v", err.Error())
 			continue
 		}
-		list = append(list, types.MessageLog{
+		list = append(list, dto.MessageLog{
 			Id:        datum.Id,
 			Type:      datum.Type,
 			Platform:  content.Platform,
@@ -61,7 +61,7 @@ func (l *FilterMobileLogLogic) FilterMobileLog(req *types.FilterLogParams) (resp
 		})
 	}
 
-	return &types.FilterMobileLogResponse{
+	return &dto.FilterMobileLogResponse{
 		Total: total,
 		List:  list,
 	}, nil

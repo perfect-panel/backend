@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -29,7 +29,7 @@ func NewCreateUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Create
 		Logger: logger.WithContext(ctx),
 	}
 }
-func (l *CreateUserLogic) CreateUser(req *types.CreateUserRequest) error {
+func (l *CreateUserLogic) CreateUser(req *dto.CreateUserRequest) error {
 	if req.ReferCode == "" {
 		// timestamp replaces user id
 		req.ReferCode = uuidx.UserInviteCode(timeutil.Now().UnixMicro())

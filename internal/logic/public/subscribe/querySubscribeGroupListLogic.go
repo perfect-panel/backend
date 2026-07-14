@@ -3,8 +3,8 @@ package subscribe
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -26,15 +26,15 @@ func NewQuerySubscribeGroupListLogic(ctx context.Context, svcCtx *svc.ServiceCon
 	}
 }
 
-func (l *QuerySubscribeGroupListLogic) QuerySubscribeGroupList() (resp *types.QuerySubscribeGroupListResponse, err error) {
+func (l *QuerySubscribeGroupListLogic) QuerySubscribeGroupList() (resp *dto.QuerySubscribeGroupListResponse, err error) {
 	total, list, err := l.svcCtx.Store.Subscribe().QueryGroupList(l.ctx)
 	if err != nil {
 		l.Logger.Error("[QuerySubscribeGroupListLogic] get subscribe group list failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get subscribe group list failed: %v", err.Error())
 	}
-	groupList := make([]types.SubscribeGroup, 0)
+	groupList := make([]dto.SubscribeGroup, 0)
 	tool.DeepCopy(&groupList, list)
-	return &types.QuerySubscribeGroupListResponse{
+	return &dto.QuerySubscribeGroupListResponse{
 		Total: total,
 		List:  groupList,
 	}, nil

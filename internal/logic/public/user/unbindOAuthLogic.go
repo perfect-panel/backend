@@ -5,9 +5,9 @@ import (
 
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -28,7 +28,7 @@ func NewUnbindOAuthLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Unbin
 	}
 }
 
-func (l *UnbindOAuthLogic) UnbindOAuth(req *types.UnbindOAuthRequest) error {
+func (l *UnbindOAuthLogic) UnbindOAuth(req *dto.UnbindOAuthRequest) error {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -45,6 +45,6 @@ func (l *UnbindOAuthLogic) UnbindOAuth(req *types.UnbindOAuthRequest) error {
 
 	return nil
 }
-func (l *UnbindOAuthLogic) validator(req *types.UnbindOAuthRequest) bool {
+func (l *UnbindOAuthLogic) validator(req *dto.UnbindOAuthRequest) bool {
 	return req.Method != "" && req.Method != "email" && req.Method != "mobile"
 }

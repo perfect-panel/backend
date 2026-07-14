@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/document"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/document"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -27,7 +27,7 @@ func NewUpdateDocumentLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Up
 	}
 }
 
-func (l *UpdateDocumentLogic) UpdateDocument(req *types.UpdateDocumentRequest) error {
+func (l *UpdateDocumentLogic) UpdateDocument(req *dto.UpdateDocumentRequest) error {
 	if err := l.svcCtx.Store.Document().Update(l.ctx, &document.Document{
 		Id:      req.Id,
 		Title:   req.Title,

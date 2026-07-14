@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/traffic"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/traffic"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -28,7 +28,7 @@ func NewFilterTrafficLogDetailsLogic(ctx context.Context, svcCtx *svc.ServiceCon
 	}
 }
 
-func (l *FilterTrafficLogDetailsLogic) FilterTrafficLogDetails(req *types.FilterTrafficLogDetailsRequest) (resp *types.FilterTrafficLogDetailsResponse, err error) {
+func (l *FilterTrafficLogDetailsLogic) FilterTrafficLogDetails(req *dto.FilterTrafficLogDetailsRequest) (resp *dto.FilterTrafficLogDetailsResponse, err error) {
 	var start, end time.Time
 	if req.Date != "" {
 		day, err := time.ParseInLocation("2006-01-02", req.Date, timeutil.Location())
@@ -58,9 +58,9 @@ func (l *FilterTrafficLogDetailsLogic) FilterTrafficLogDetails(req *types.Filter
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), " database query error: %s", err.Error())
 	}
 
-	var logs []types.TrafficLogDetails
+	var logs []dto.TrafficLogDetails
 	for _, v := range data {
-		logs = append(logs, types.TrafficLogDetails{
+		logs = append(logs, dto.TrafficLogDetails{
 			Id:          v.Id,
 			UserId:      v.UserId,
 			ServerId:    v.ServerId,
@@ -71,7 +71,7 @@ func (l *FilterTrafficLogDetailsLogic) FilterTrafficLogDetails(req *types.Filter
 		})
 	}
 
-	return &types.FilterTrafficLogDetailsResponse{
+	return &dto.FilterTrafficLogDetailsResponse{
 		List:  logs,
 		Total: total,
 	}, nil

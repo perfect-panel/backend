@@ -3,9 +3,9 @@ package application
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/client"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/client"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewUpdateSubscribeApplicationLogic(ctx context.Context, svcCtx *svc.Service
 	}
 }
 
-func (l *UpdateSubscribeApplicationLogic) UpdateSubscribeApplication(req *types.UpdateSubscribeApplicationRequest) (resp *types.SubscribeApplication, err error) {
+func (l *UpdateSubscribeApplicationLogic) UpdateSubscribeApplication(req *dto.UpdateSubscribeApplicationRequest) (resp *dto.SubscribeApplication, err error) {
 	data, err := l.svcCtx.Store.Client().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorf("Failed to find subscribe application with ID %d: %v", req.Id, err)
@@ -55,7 +55,7 @@ func (l *UpdateSubscribeApplicationLogic) UpdateSubscribeApplication(req *types.
 		l.Errorf("Failed to update subscribe application with ID %d: %v", req.Id, err)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "Failed to update subscribe application with ID %d", req.Id)
 	}
-	resp = &types.SubscribeApplication{}
+	resp = &dto.SubscribeApplication{}
 	tool.DeepCopy(&resp, data)
 	resp.DownloadLink = req.DownloadLink
 	return

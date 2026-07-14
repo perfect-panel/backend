@@ -3,8 +3,8 @@ package announcement
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewUpdateAnnouncementLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *UpdateAnnouncementLogic) UpdateAnnouncement(req *types.UpdateAnnouncementRequest) error {
+func (l *UpdateAnnouncementLogic) UpdateAnnouncement(req *dto.UpdateAnnouncementRequest) error {
 	info, err := l.svcCtx.Store.Announcement().FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[UpdateAnnouncement] Query Database Error", logger.Field("error", err.Error()))

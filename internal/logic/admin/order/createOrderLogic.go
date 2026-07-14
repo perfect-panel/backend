@@ -3,9 +3,9 @@ package order
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/order"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewCreateOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Creat
 	}
 }
 
-func (l *CreateOrderLogic) CreateOrder(req *types.CreateOrderRequest) error {
+func (l *CreateOrderLogic) CreateOrder(req *dto.CreateOrderRequest) error {
 	store := l.svcCtx.Store
 	paymentMethod, err := store.Payment().FindOne(l.ctx, req.PaymentId)
 	if err != nil {

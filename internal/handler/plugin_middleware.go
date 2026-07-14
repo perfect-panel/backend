@@ -8,7 +8,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	pluginv1 "github.com/perfect-panel/server/api/plugin/v1"
 	"github.com/perfect-panel/server/internal/middleware"
-	usermodel "github.com/perfect-panel/server/internal/model/user"
+	usermodel "github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/plugin"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"

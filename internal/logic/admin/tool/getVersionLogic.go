@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 )
@@ -25,7 +25,7 @@ func NewGetVersionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetVer
 	}
 }
 
-func (l *GetVersionLogic) GetVersion() (resp *types.VersionResponse, err error) {
+func (l *GetVersionLogic) GetVersion() (resp *dto.VersionResponse, err error) {
 	version := constant.Version
 	buildTime := constant.BuildTime
 
@@ -45,7 +45,7 @@ func (l *GetVersionLogic) GetVersion() (resp *types.VersionResponse, err error) 
 		formattedVersion = fmt.Sprintf("%s(%s) Develop", version, buildTime)
 	}
 
-	return &types.VersionResponse{
+	return &dto.VersionResponse{
 		Version: formattedVersion,
 	}, nil
 }

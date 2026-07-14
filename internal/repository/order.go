@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/order"
+	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"

@@ -3,12 +3,12 @@ package user
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -29,7 +29,7 @@ func NewQueryUserBalanceLogLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *QueryUserBalanceLogLogic) QueryUserBalanceLog() (resp *types.QueryUserBalanceLogListResponse, err error) {
+func (l *QueryUserBalanceLogLogic) QueryUserBalanceLog() (resp *dto.QueryUserBalanceLogListResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -47,14 +47,14 @@ func (l *QueryUserBalanceLogLogic) QueryUserBalanceLog() (resp *types.QueryUserB
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Balance Log Error")
 	}
 
-	list := make([]types.BalanceLog, 0)
+	list := make([]dto.BalanceLog, 0)
 	for _, datum := range data {
 		var content log.Balance
 		if err = content.Unmarshal([]byte(datum.Content)); err != nil {
 			l.Errorf("[QueryUserBalanceLog] unmarshal balance log content failed: %v", err.Error())
 			continue
 		}
-		list = append(list, types.BalanceLog{
+		list = append(list, dto.BalanceLog{
 			UserId:    datum.ObjectID,
 			Amount:    content.Amount,
 			Type:      content.Type,
@@ -64,7 +64,7 @@ func (l *QueryUserBalanceLogLogic) QueryUserBalanceLog() (resp *types.QueryUserB
 		})
 	}
 
-	return &types.QueryUserBalanceLogListResponse{
+	return &dto.QueryUserBalanceLogListResponse{
 		Total: total,
 		List:  list,
 	}, nil

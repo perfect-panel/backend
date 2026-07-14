@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/payment"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment/epay"
@@ -42,7 +42,7 @@ func NewEPayNotifyLogic(ctx context.Context, svcCtx *svc.ServiceContext, meta EP
 	}
 }
 
-func (l *EPayNotifyLogic) EPayNotify(req *types.EPayNotifyRequest) error {
+func (l *EPayNotifyLogic) EPayNotify(req *dto.EPayNotifyRequest) error {
 	store := l.svcCtx.Store
 	// Find payment config
 	data, ok := l.ctx.Value(constant.CtxKeyPayment).(*payment.Payment)

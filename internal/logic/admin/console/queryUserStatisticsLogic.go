@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 )
@@ -31,7 +31,7 @@ func NewQueryUserStatisticsLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatisticsResponse, err error) {
+func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *dto.UserStatisticsResponse, err error) {
 	if strings.ToLower(os.Getenv("PPANEL_MODE")) == "demo" {
 		return l.mockRevenueStatistics(), nil
 	}
@@ -39,13 +39,13 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 	// Try cache first
 	cached, cacheErr := l.svcCtx.Redis.Get(l.ctx, consoleUserStatisticsCacheKey).Result()
 	if cacheErr == nil && cached != "" {
-		var result types.UserStatisticsResponse
+		var result dto.UserStatisticsResponse
 		if json.Unmarshal([]byte(cached), &result) == nil {
 			return &result, nil
 		}
 	}
 
-	resp = &types.UserStatisticsResponse{}
+	resp = &dto.UserStatisticsResponse{}
 	now := timeutil.Now()
 	// query today user register count
 	todayUserResisterCount, err := l.svcCtx.Store.User().QueryResisterUserTotalByDate(l.ctx, now)
@@ -84,9 +84,9 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 		l.Errorw("[QueryUserStatisticsLogic] QueryDailyUserStatisticsList error", logger.Field("error", err.Error()))
 		// Don't return error, just log it and continue with empty list
 	} else {
-		monthlyList := make([]types.UserStatistics, len(monthlyListData))
+		monthlyList := make([]dto.UserStatistics, len(monthlyListData))
 		for i, data := range monthlyListData {
-			monthlyList[i] = types.UserStatistics{
+			monthlyList[i] = dto.UserStatistics{
 				Date:              data.Date,
 				Register:          data.Register,
 				NewOrderUsers:     data.NewOrderUsers,
@@ -119,9 +119,9 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 		l.Errorw("[QueryUserStatisticsLogic] QueryMonthlyUserStatisticsList error", logger.Field("error", err.Error()))
 		// Don't return error, just log it and continue with empty list
 	} else {
-		allList := make([]types.UserStatistics, len(allListData))
+		allList := make([]dto.UserStatistics, len(allListData))
 		for i, data := range allListData {
-			allList[i] = types.UserStatistics{
+			allList[i] = dto.UserStatistics{
 				Date:              data.Date,
 				Register:          data.Register,
 				NewOrderUsers:     data.NewOrderUsers,
@@ -139,15 +139,15 @@ func (l *QueryUserStatisticsLogic) QueryUserStatistics() (resp *types.UserStatis
 	return
 }
 
-func (l *QueryUserStatisticsLogic) mockRevenueStatistics() *types.UserStatisticsResponse {
+func (l *QueryUserStatisticsLogic) mockRevenueStatistics() *dto.UserStatisticsResponse {
 	now := timeutil.Now()
 
 	// Generate daily user statistics for the current month (from 1st to current date)
-	monthlyList := make([]types.UserStatistics, 7)
+	monthlyList := make([]dto.UserStatistics, 7)
 	for i := 0; i < 7; i++ {
 		dayDate := now.AddDate(0, 0, -(6 - i))
 		baseRegister := int64(18 + ((6 - i) * 3) + ((6-i)%3)*8)
-		monthlyList[i] = types.UserStatistics{
+		monthlyList[i] = dto.UserStatistics{
 			Date:              dayDate.Format("2006-01-02"),
 			Register:          baseRegister,
 			NewOrderUsers:     int64(float64(baseRegister) * 0.65),
@@ -156,11 +156,11 @@ func (l *QueryUserStatisticsLogic) mockRevenueStatistics() *types.UserStatistics
 	}
 
 	// Generate monthly user statistics for the past 6 months (oldest first)
-	allList := make([]types.UserStatistics, 6)
+	allList := make([]dto.UserStatistics, 6)
 	for i := 0; i < 6; i++ {
 		monthDate := now.AddDate(0, -(5 - i), 0)
 		baseRegister := int64(1800 + ((5 - i) * 200) + ((5-i)%2)*500)
-		allList[i] = types.UserStatistics{
+		allList[i] = dto.UserStatistics{
 			Date:              monthDate.Format("2006-01"),
 			Register:          baseRegister,
 			NewOrderUsers:     int64(float64(baseRegister) * 0.65),
@@ -168,19 +168,19 @@ func (l *QueryUserStatisticsLogic) mockRevenueStatistics() *types.UserStatistics
 		}
 	}
 
-	return &types.UserStatisticsResponse{
-		Today: types.UserStatistics{
+	return &dto.UserStatisticsResponse{
+		Today: dto.UserStatistics{
 			Register:          28,
 			NewOrderUsers:     18,
 			RenewalOrderUsers: 10,
 		},
-		Monthly: types.UserStatistics{
+		Monthly: dto.UserStatistics{
 			Register:          888,
 			NewOrderUsers:     588,
 			RenewalOrderUsers: 300,
 			List:              monthlyList,
 		},
-		All: types.UserStatistics{
+		All: dto.UserStatistics{
 			Register:          18888,
 			NewOrderUsers:     0, // This field is not used in All statistics
 			RenewalOrderUsers: 0, // This field is not used in All statistics

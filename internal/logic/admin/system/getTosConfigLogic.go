@@ -3,8 +3,8 @@ package system
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -25,8 +25,8 @@ func NewGetTosConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetT
 	}
 }
 
-func (l *GetTosConfigLogic) GetTosConfig() (resp *types.TosConfig, err error) {
-	resp = &types.TosConfig{}
+func (l *GetTosConfigLogic) GetTosConfig() (resp *dto.TosConfig, err error) {
+	resp = &dto.TosConfig{}
 	// get tos config from db
 	configs, err := l.svcCtx.Store.System().GetTosConfig(l.ctx)
 	if err != nil {

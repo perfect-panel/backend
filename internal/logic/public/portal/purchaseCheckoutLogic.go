@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/constant"
@@ -17,13 +17,13 @@ import (
 	paymentPlatform "github.com/perfect-panel/server/pkg/payment"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	queueType "github.com/perfect-panel/server/queue/types"
 
-	"github.com/perfect-panel/server/internal/model/order"
-	"github.com/perfect-panel/server/internal/model/payment"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/order"
+	"github.com/perfect-panel/server/internal/model/entity/payment"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment/alipay"
 	"github.com/perfect-panel/server/pkg/payment/epay"
@@ -52,7 +52,7 @@ func NewPurchaseCheckoutLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 
 // PurchaseCheckout processes the checkout for an order using the specified payment method
 // It validates the order, retrieves payment configuration, and routes to the appropriate payment handler
-func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest) (resp *types.CheckoutOrderResponse, err error) {
+func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *dto.CheckoutOrderRequest) (resp *dto.CheckoutOrderResponse, err error) {
 
 	// Validate and retrieve order information
 	orderInfo, err := l.svcCtx.Store.Order().FindOneByOrderNo(l.ctx, req.OrderNo)
@@ -82,7 +82,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 			l.Logger.Error("[PurchaseCheckout] epay error", logger.Field("error", err.Error()))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "epayPayment error: %v", err.Error())
 		}
-		resp = &types.CheckoutOrderResponse{
+		resp = &dto.CheckoutOrderResponse{
 			CheckoutUrl: url,
 			Type:        "url", // Client should redirect to URL
 		}
@@ -93,7 +93,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 		if err != nil {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "stripePayment error: %v", err.Error())
 		}
-		resp = &types.CheckoutOrderResponse{
+		resp = &dto.CheckoutOrderResponse{
 			Type:   "stripe", // Client should use Stripe SDK
 			Stripe: stripePayment,
 		}
@@ -105,7 +105,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 			l.Errorw("[PurchaseCheckout] alipayF2fPayment error", logger.Field("error", err.Error()))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "alipayF2fPayment error: %v", err.Error())
 		}
-		resp = &types.CheckoutOrderResponse{
+		resp = &dto.CheckoutOrderResponse{
 			Type:        "qr", // Client should display QR code
 			CheckoutUrl: url,
 		}
@@ -116,7 +116,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 		if err != nil {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "epayPayment error: %v", err.Error())
 		}
-		resp = &types.CheckoutOrderResponse{
+		resp = &dto.CheckoutOrderResponse{
 			CheckoutUrl: url,
 			Type:        "url", // Client should redirect to URL
 		}
@@ -140,7 +140,7 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *types.CheckoutOrderRequest
 			return nil, err
 		}
 
-		resp = &types.CheckoutOrderResponse{
+		resp = &dto.CheckoutOrderResponse{
 			Type: "balance", // Payment completed immediately
 		}
 
@@ -205,7 +205,7 @@ func (l *PurchaseCheckoutLogic) alipayF2fPayment(pay *payment.Payment, info *ord
 
 // stripePayment processes Stripe payment by creating a payment sheet
 // It supports various payment methods including WeChat Pay and Alipay through Stripe
-func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, identifier string) (*types.StripePayment, error) {
+func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, identifier string) (*dto.StripePayment, error) {
 	// Parse Stripe configuration from payment settings
 	stripeConfig := &payment.StripeConfig{}
 
@@ -238,7 +238,7 @@ func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, 
 	}
 
 	// Prepare response data for client-side Stripe integration
-	stripePayment := &types.StripePayment{
+	stripePayment := &dto.StripePayment{
 		PublishableKey: stripeConfig.PublicKey,
 		ClientSecret:   result.ClientSecret,
 		Method:         stripeConfig.Payment,

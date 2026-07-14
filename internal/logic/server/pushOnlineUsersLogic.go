@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -26,7 +26,7 @@ func NewPushOnlineUsersLogic(ctx context.Context, svcCtx *svc.ServiceContext) *P
 	}
 }
 
-func (l *PushOnlineUsersLogic) PushOnlineUsers(req *types.OnlineUsersRequest) error {
+func (l *PushOnlineUsersLogic) PushOnlineUsers(req *dto.OnlineUsersRequest) error {
 	// 验证请求数据
 	if req.ServerId <= 0 || len(req.Users) == 0 {
 		return errors.New("invalid request parameters")

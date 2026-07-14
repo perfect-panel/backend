@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -33,7 +33,7 @@ func NewQueryRevenueStatisticsLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.RevenueStatisticsResponse, err error) {
+func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *dto.RevenueStatisticsResponse, err error) {
 	if strings.ToLower(os.Getenv("PPANEL_MODE")) == "demo" {
 		return l.mockRevenueStatistics(), nil
 	}
@@ -41,13 +41,13 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 	// Try cache first
 	cached, cacheErr := l.svcCtx.Redis.Get(l.ctx, consoleRevenueStatisticsCacheKey).Result()
 	if cacheErr == nil && cached != "" {
-		var result types.RevenueStatisticsResponse
+		var result dto.RevenueStatisticsResponse
 		if json.Unmarshal([]byte(cached), &result) == nil {
 			return &result, nil
 		}
 	}
 
-	var today, monthly, all types.OrdersStatistics
+	var today, monthly, all dto.OrdersStatistics
 	now := timeutil.Now()
 	// Get today's revenue statistics
 	todayData, err := l.svcCtx.Store.Order().QueryDateOrders(l.ctx, now)
@@ -55,7 +55,7 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 		l.Errorw("[QueryRevenueStatisticsLogic] QueryDateOrders error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryDateOrders error: %v", err)
 	} else {
-		today = types.OrdersStatistics{
+		today = dto.OrdersStatistics{
 			AmountTotal:        todayData.AmountTotal,
 			NewOrderAmount:     todayData.NewOrderAmount,
 			RenewalOrderAmount: todayData.RenewalOrderAmount,
@@ -67,11 +67,11 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 		l.Errorw("[QueryRevenueStatisticsLogic] QueryMonthlyOrders error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryMonthlyOrders error: %v", err)
 	} else {
-		monthly = types.OrdersStatistics{
+		monthly = dto.OrdersStatistics{
 			AmountTotal:        monthlyData.AmountTotal,
 			NewOrderAmount:     monthlyData.NewOrderAmount,
 			RenewalOrderAmount: monthlyData.RenewalOrderAmount,
-			List:               make([]types.OrdersStatistics, 0),
+			List:               make([]dto.OrdersStatistics, 0),
 		}
 	}
 
@@ -81,9 +81,9 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 		l.Errorw("[QueryRevenueStatisticsLogic] QueryDailyOrdersList error", logger.Field("error", err.Error()))
 		// Don't return error, just log it and continue with empty list
 	} else {
-		monthlyList := make([]types.OrdersStatistics, len(monthlyListData))
+		monthlyList := make([]dto.OrdersStatistics, len(monthlyListData))
 		for i, data := range monthlyListData {
-			monthlyList[i] = types.OrdersStatistics{
+			monthlyList[i] = dto.OrdersStatistics{
 				Date:               data.Date,
 				AmountTotal:        data.AmountTotal,
 				NewOrderAmount:     data.NewOrderAmount,
@@ -99,11 +99,11 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 		l.Errorw("[QueryRevenueStatisticsLogic] QueryTotalOrders error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryTotalOrders error: %v", err)
 	} else {
-		all = types.OrdersStatistics{
+		all = dto.OrdersStatistics{
 			AmountTotal:        allData.AmountTotal,
 			NewOrderAmount:     allData.NewOrderAmount,
 			RenewalOrderAmount: allData.RenewalOrderAmount,
-			List:               make([]types.OrdersStatistics, 0),
+			List:               make([]dto.OrdersStatistics, 0),
 		}
 	}
 
@@ -113,9 +113,9 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 		l.Errorw("[QueryRevenueStatisticsLogic] QueryMonthlyOrdersList error", logger.Field("error", err.Error()))
 		// Don't return error, just log it and continue with empty list
 	} else {
-		allList := make([]types.OrdersStatistics, len(allListData))
+		allList := make([]dto.OrdersStatistics, len(allListData))
 		for i, data := range allListData {
-			allList[i] = types.OrdersStatistics{
+			allList[i] = dto.OrdersStatistics{
 				Date:               data.Date,
 				AmountTotal:        data.AmountTotal,
 				NewOrderAmount:     data.NewOrderAmount,
@@ -125,7 +125,7 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 		all.List = allList
 	}
 
-	resp = &types.RevenueStatisticsResponse{
+	resp = &dto.RevenueStatisticsResponse{
 		Today:   today,
 		Monthly: monthly,
 		All:     all,
@@ -140,15 +140,15 @@ func (l *QueryRevenueStatisticsLogic) QueryRevenueStatistics() (resp *types.Reve
 }
 
 // mockRevenueStatistics is a mock function to simulate revenue statistics data.
-func (l *QueryRevenueStatisticsLogic) mockRevenueStatistics() *types.RevenueStatisticsResponse {
+func (l *QueryRevenueStatisticsLogic) mockRevenueStatistics() *dto.RevenueStatisticsResponse {
 	now := timeutil.Now()
 
 	// Generate daily data for the current month (from 1st to current date)
-	monthlyList := make([]types.OrdersStatistics, 7)
+	monthlyList := make([]dto.OrdersStatistics, 7)
 	for i := 0; i < 7; i++ {
 		dayDate := now.AddDate(0, 0, -(6 - i))
 		baseAmount := int64(25000 + ((6 - i) * 3000) + ((6-i)%3)*8000)
-		monthlyList[i] = types.OrdersStatistics{
+		monthlyList[i] = dto.OrdersStatistics{
 			Date:               dayDate.Format("2006-01-02"),
 			AmountTotal:        baseAmount,
 			NewOrderAmount:     int64(float64(baseAmount) * 0.68),
@@ -157,11 +157,11 @@ func (l *QueryRevenueStatisticsLogic) mockRevenueStatistics() *types.RevenueStat
 	}
 
 	// Generate monthly data for the past 6 months (oldest first)
-	allList := make([]types.OrdersStatistics, 6)
+	allList := make([]dto.OrdersStatistics, 6)
 	for i := 0; i < 6; i++ {
 		monthDate := now.AddDate(0, -(5 - i), 0)
 		baseAmount := int64(1800000 + ((5 - i) * 200000) + ((5-i)%2)*500000)
-		allList[i] = types.OrdersStatistics{
+		allList[i] = dto.OrdersStatistics{
 			Date:               monthDate.Format("2006-01"),
 			AmountTotal:        baseAmount,
 			NewOrderAmount:     int64(float64(baseAmount) * 0.68),
@@ -169,19 +169,19 @@ func (l *QueryRevenueStatisticsLogic) mockRevenueStatistics() *types.RevenueStat
 		}
 	}
 
-	return &types.RevenueStatisticsResponse{
-		Today: types.OrdersStatistics{
+	return &dto.RevenueStatisticsResponse{
+		Today: dto.OrdersStatistics{
 			AmountTotal:        35888,
 			NewOrderAmount:     22888,
 			RenewalOrderAmount: 13000,
 		},
-		Monthly: types.OrdersStatistics{
+		Monthly: dto.OrdersStatistics{
 			AmountTotal:        888888,
 			NewOrderAmount:     588888,
 			RenewalOrderAmount: 300000,
 			List:               monthlyList,
 		},
-		All: types.OrdersStatistics{
+		All: dto.OrdersStatistics{
 			AmountTotal:        12888888,
 			NewOrderAmount:     8588888,
 			RenewalOrderAmount: 4300000,

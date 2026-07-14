@@ -85,22 +85,22 @@ func NewGormStore(db *gorm.DB, rds *redis.Client) *GormStore {
 	}
 }
 
-func (s *GormStore) Ads() AdsRepo                     { return s.ads }
-func (s *GormStore) Announcement() AnnouncementRepo   { return s.announcement }
-func (s *GormStore) Auth() AuthRepo                   { return s.auth }
-func (s *GormStore) Client() ClientRepo               { return s.client }
-func (s *GormStore) Coupon() CouponRepo               { return s.coupon }
-func (s *GormStore) Document() DocumentRepo           { return s.document }
-func (s *GormStore) Log() LogRepo                     { return s.log }
-func (s *GormStore) Node() NodeRepo                   { return s.node }
-func (s *GormStore) Order() OrderRepo                 { return s.order }
-func (s *GormStore) Payment() PaymentRepo             { return s.payment }
-func (s *GormStore) Subscribe() SubscribeRepo         { return s.subscribe }
-func (s *GormStore) System() SystemRepo               { return s.system }
-func (s *GormStore) Task() TaskRepo                   { return s.task }
-func (s *GormStore) Ticket() TicketRepo               { return s.ticket }
-func (s *GormStore) TrafficLog() TrafficRepo          { return s.trafficLog }
-func (s *GormStore) User() UserRepo                   { return s.user }
+func (s *GormStore) Ads() AdsRepo                   { return s.ads }
+func (s *GormStore) Announcement() AnnouncementRepo { return s.announcement }
+func (s *GormStore) Auth() AuthRepo                 { return s.auth }
+func (s *GormStore) Client() ClientRepo             { return s.client }
+func (s *GormStore) Coupon() CouponRepo             { return s.coupon }
+func (s *GormStore) Document() DocumentRepo         { return s.document }
+func (s *GormStore) Log() LogRepo                   { return s.log }
+func (s *GormStore) Node() NodeRepo                 { return s.node }
+func (s *GormStore) Order() OrderRepo               { return s.order }
+func (s *GormStore) Payment() PaymentRepo           { return s.payment }
+func (s *GormStore) Subscribe() SubscribeRepo       { return s.subscribe }
+func (s *GormStore) System() SystemRepo             { return s.system }
+func (s *GormStore) Task() TaskRepo                 { return s.task }
+func (s *GormStore) Ticket() TicketRepo             { return s.ticket }
+func (s *GormStore) TrafficLog() TrafficRepo        { return s.trafficLog }
+func (s *GormStore) User() UserRepo                 { return s.user }
 
 // InTx runs fn within a database transaction. A new GormStore backed by the
 // transaction is passed to fn, so all repository operations inside fn share

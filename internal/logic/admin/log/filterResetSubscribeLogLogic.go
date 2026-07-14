@@ -3,9 +3,9 @@ package log
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewFilterResetSubscribeLogLogic(ctx context.Context, svcCtx *svc.ServiceCon
 	}
 }
 
-func (l *FilterResetSubscribeLogLogic) FilterResetSubscribeLog(req *types.FilterResetSubscribeLogRequest) (resp *types.FilterResetSubscribeLogResponse, err error) {
+func (l *FilterResetSubscribeLogLogic) FilterResetSubscribeLog(req *dto.FilterResetSubscribeLogRequest) (resp *dto.FilterResetSubscribeLogResponse, err error) {
 	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
@@ -41,7 +41,7 @@ func (l *FilterResetSubscribeLogLogic) FilterResetSubscribeLog(req *types.Filter
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter system log: %v", err.Error())
 	}
 
-	var list []types.ResetSubscribeLog
+	var list []dto.ResetSubscribeLog
 
 	for _, item := range data {
 		var content log.ResetSubscribe
@@ -50,7 +50,7 @@ func (l *FilterResetSubscribeLogLogic) FilterResetSubscribeLog(req *types.Filter
 			l.Errorf("[FilterResetSubscribeLog] failed to unmarshal content: %v", err.Error())
 			continue
 		}
-		list = append(list, types.ResetSubscribeLog{
+		list = append(list, dto.ResetSubscribeLog{
 			Type:            content.Type,
 			UserId:          content.UserId,
 			UserSubscribeId: item.ObjectID,
@@ -59,7 +59,7 @@ func (l *FilterResetSubscribeLogLogic) FilterResetSubscribeLog(req *types.Filter
 		})
 	}
 
-	return &types.FilterResetSubscribeLogResponse{
+	return &dto.FilterResetSubscribeLogResponse{
 		List:  list,
 		Total: total,
 	}, nil

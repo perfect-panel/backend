@@ -3,8 +3,8 @@ package console
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -23,13 +23,13 @@ func NewQueryTicketWaitReplyLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *QueryTicketWaitReplyLogic) QueryTicketWaitReply() (resp *types.TicketWaitRelpyResponse, err error) {
+func (l *QueryTicketWaitReplyLogic) QueryTicketWaitReply() (resp *dto.TicketWaitRelpyResponse, err error) {
 	count, err := l.svcCtx.Store.Ticket().QueryWaitReplyTotal(l.ctx)
 	if err != nil {
 		l.Errorw("[QueryTicketWaitReply] Query Database Error: ", logger.Field("error", err.Error()))
 		return nil, err
 	}
-	return &types.TicketWaitRelpyResponse{
+	return &dto.TicketWaitRelpyResponse{
 		Count: count,
 	}, nil
 }

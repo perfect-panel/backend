@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewResetSortWithServerLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *ResetSortWithServerLogic) ResetSortWithServer(req *types.ResetSortRequest) error {
+func (l *ResetSortWithServerLogic) ResetSortWithServer(req *dto.ResetSortRequest) error {
 	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		nodeStore := store.Node()
 		currentItems, err := nodeStore.QueryServerSorts(l.ctx)
@@ -38,7 +38,7 @@ func (l *ResetSortWithServerLogic) ResetSortWithServer(req *types.ResetSortReque
 			currentSortMap[item.Id] = item.Sort
 		}
 
-		var itemsToUpdate []types.SortItem
+		var itemsToUpdate []dto.SortItem
 		for _, item := range req.Sort {
 			if oldSort, exists := currentSortMap[item.Id]; exists && oldSort != item.Sort {
 				itemsToUpdate = append(itemsToUpdate, item)

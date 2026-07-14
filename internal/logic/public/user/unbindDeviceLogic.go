@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -30,7 +30,7 @@ func NewUnbindDeviceLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Unbi
 	}
 }
 
-func (l *UnbindDeviceLogic) UnbindDevice(req *types.UnbindDeviceRequest) error {
+func (l *UnbindDeviceLogic) UnbindDevice(req *dto.UnbindDeviceRequest) error {
 	userInfo := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	device, err := l.svcCtx.Store.User().FindOneDevice(l.ctx, req.Id)
 	if err != nil {

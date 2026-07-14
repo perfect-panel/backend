@@ -5,9 +5,9 @@ import (
 
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -29,7 +29,7 @@ func NewQueryOrderListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Qu
 	}
 }
 
-func (l *QueryOrderListLogic) QueryOrderList(req *types.QueryOrderListRequest) (resp *types.QueryOrderListResponse, err error) {
+func (l *QueryOrderListLogic) QueryOrderList(req *dto.QueryOrderListRequest) (resp *dto.QueryOrderListResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -40,12 +40,12 @@ func (l *QueryOrderListLogic) QueryOrderList(req *types.QueryOrderListRequest) (
 		l.Errorw("[QueryOrderListLogic] Query order list failed", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query order list failed")
 	}
-	resp = &types.QueryOrderListResponse{
+	resp = &dto.QueryOrderListResponse{
 		Total: total,
-		List:  make([]types.OrderDetail, 0),
+		List:  make([]dto.OrderDetail, 0),
 	}
 	for _, item := range data {
-		var orderInfo types.OrderDetail
+		var orderInfo dto.OrderDetail
 		tool.DeepCopy(&orderInfo, item)
 		// Prevent commission amount leakage
 		orderInfo.Commission = 0

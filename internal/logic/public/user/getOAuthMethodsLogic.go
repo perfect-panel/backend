@@ -5,9 +5,9 @@ import (
 
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -29,7 +29,7 @@ func NewGetOAuthMethodsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 	}
 }
 
-func (l *GetOAuthMethodsLogic) GetOAuthMethods() (resp *types.GetOAuthMethodsResponse, err error) {
+func (l *GetOAuthMethodsLogic) GetOAuthMethods() (resp *dto.GetOAuthMethodsResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -40,9 +40,9 @@ func (l *GetOAuthMethodsLogic) GetOAuthMethods() (resp *types.GetOAuthMethodsRes
 		l.Errorw("find user auth methods failed:", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user auth methods failed: %v", err.Error())
 	}
-	list := make([]types.UserAuthMethod, 0)
+	list := make([]dto.UserAuthMethod, 0)
 	tool.DeepCopy(&list, methods)
-	return &types.GetOAuthMethodsResponse{
+	return &dto.GetOAuthMethodsResponse{
 		Methods: list,
 	}, nil
 }

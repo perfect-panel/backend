@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -30,7 +30,7 @@ func NewFilterServerListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 	}
 }
 
-func (l *FilterServerListLogic) FilterServerList(req *types.FilterServerListRequest) (resp *types.FilterServerListResponse, err error) {
+func (l *FilterServerListLogic) FilterServerList(req *dto.FilterServerListRequest) (resp *dto.FilterServerListResponse, err error) {
 	nodeStore := l.svcCtx.Store.Node()
 	total, data, err := nodeStore.FilterServerList(l.ctx, &node.FilterParams{
 		Page:   req.Page,
@@ -42,14 +42,14 @@ func (l *FilterServerListLogic) FilterServerList(req *types.FilterServerListRequ
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "[FilterServerList] Query Database Error")
 	}
 
-	list := make([]types.Server, 0)
+	list := make([]dto.Server, 0)
 
 	for _, datum := range data {
-		var server types.Server
+		var server dto.Server
 		tool.DeepCopy(&server, datum)
 
 		// handler protocols
-		var protocols []types.Protocol
+		var protocols []dto.Protocol
 		dst, err := datum.UnmarshalProtocols()
 		if err != nil {
 			l.Errorf("[FilterServerList] UnmarshalProtocols Error: %s", err.Error())
@@ -65,7 +65,7 @@ func (l *FilterServerListLogic) FilterServerList(req *types.FilterServerListRequ
 			}
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetNodeStatus Error")
 		}
-		server.Status = types.ServerStatus{
+		server.Status = dto.ServerStatus{
 			Mem:    nodeStatus.Mem,
 			Cpu:    nodeStatus.Cpu,
 			Disk:   nodeStatus.Disk,
@@ -75,14 +75,14 @@ func (l *FilterServerListLogic) FilterServerList(req *types.FilterServerListRequ
 		list = append(list, server)
 	}
 
-	return &types.FilterServerListResponse{
+	return &dto.FilterServerListResponse{
 		List:  list,
 		Total: total,
 	}, nil
 }
 
-func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []types.Protocol) []types.ServerOnlineUser {
-	result := make([]types.ServerOnlineUser, 0)
+func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []dto.Protocol) []dto.ServerOnlineUser {
+	result := make([]dto.ServerOnlineUser, 0)
 	nodeStore := l.svcCtx.Store.Node()
 	userStore := l.svcCtx.Store.User()
 
@@ -97,15 +97,15 @@ func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []types.
 		}
 		if len(data) > 0 {
 			for sub, online := range data {
-				var ips []types.ServerOnlineIP
+				var ips []dto.ServerOnlineIP
 				for _, ip := range online {
-					ips = append(ips, types.ServerOnlineIP{
+					ips = append(ips, dto.ServerOnlineIP{
 						IP:       ip,
 						Protocol: protocol.Type,
 					})
 				}
 
-				result = append(result, types.ServerOnlineUser{
+				result = append(result, dto.ServerOnlineUser{
 					IP:          ips,
 					SubscribeId: sub,
 				})
@@ -113,7 +113,7 @@ func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []types.
 		}
 	}
 	// merge same subscribe
-	var mapResult = make(map[int64]types.ServerOnlineUser)
+	var mapResult = make(map[int64]dto.ServerOnlineUser)
 	for _, item := range result {
 		if exist, ok := mapResult[item.SubscribeId]; ok {
 			// merge
@@ -129,7 +129,7 @@ func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []types.
 				}
 				continue
 			}
-			data := types.ServerOnlineUser{
+			data := dto.ServerOnlineUser{
 				IP:          item.IP,
 				UserId:      info.UserId,
 				Subscribe:   "",
@@ -145,7 +145,7 @@ func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []types.
 		}
 	}
 	// convert map to slice
-	result = make([]types.ServerOnlineUser, 0, len(mapResult))
+	result = make([]dto.ServerOnlineUser, 0, len(mapResult))
 	for _, item := range mapResult {
 		result = append(result, item)
 	}

@@ -3,7 +3,7 @@ package user
 import (
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 	"gorm.io/gorm"
 )
 

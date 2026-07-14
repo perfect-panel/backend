@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/email"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewTestEmailSendLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Tes
 	}
 }
 
-func (l *TestEmailSendLogic) TestEmailSend(req *types.TestEmailSendRequest) error {
+func (l *TestEmailSendLogic) TestEmailSend(req *dto.TestEmailSendRequest) error {
 	client, err := email.NewSender(l.svcCtx.Config.Email.Platform, l.svcCtx.Config.Email.PlatformConfig, l.svcCtx.Config.Site.SiteName)
 	if err != nil {
 		l.Errorw("new email sender err", logger.Field("error", err.Error()))

@@ -3,8 +3,8 @@ package document
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -26,18 +26,18 @@ func NewQueryDocumentListLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 	}
 }
 
-func (l *QueryDocumentListLogic) QueryDocumentList() (resp *types.QueryDocumentListResponse, err error) {
+func (l *QueryDocumentListLogic) QueryDocumentList() (resp *dto.QueryDocumentListResponse, err error) {
 	total, data, err := l.svcCtx.Store.Document().GetDocumentListByAll(l.ctx)
 	if err != nil {
 		l.Errorw("[QueryDocumentList] error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QueryDocumentList error: %v", err.Error())
 	}
-	resp = &types.QueryDocumentListResponse{
+	resp = &dto.QueryDocumentListResponse{
 		Total: total,
-		List:  make([]types.Document, 0),
+		List:  make([]dto.Document, 0),
 	}
 	for _, item := range data {
-		resp.List = append(resp.List, types.Document{
+		resp.List = append(resp.List, dto.Document{
 			Id:        item.Id,
 			Title:     item.Title,
 			Tags:      tool.StringMergeAndRemoveDuplicates(item.Tags),

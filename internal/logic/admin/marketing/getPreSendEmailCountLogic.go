@@ -3,10 +3,10 @@ package marketing
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/task"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/task"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 )
@@ -26,7 +26,7 @@ func NewGetPreSendEmailCountLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *GetPreSendEmailCountLogic) GetPreSendEmailCount(req *types.GetPreSendEmailCountRequest) (resp *types.GetPreSendEmailCountResponse, err error) {
+func (l *GetPreSendEmailCountLogic) GetPreSendEmailCount(req *dto.GetPreSendEmailCountRequest) (resp *dto.GetPreSendEmailCountResponse, err error) {
 	scope := task.ParseScopeType(req.Scope)
 	count, err := l.svcCtx.Store.User().CountEmailRecipients(l.ctx, &user.EmailRecipientFilter{
 		Scope:             scope.Int8(),
@@ -38,7 +38,7 @@ func (l *GetPreSendEmailCountLogic) GetPreSendEmailCount(req *types.GetPreSendEm
 		return nil, xerr.NewErrMsg("Failed to count emails")
 	}
 
-	return &types.GetPreSendEmailCountResponse{
+	return &dto.GetPreSendEmailCountResponse{
 		Count: count,
 	}, nil
 }

@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,19 +26,19 @@ func NewGetSubscribeApplicationListLogic(ctx context.Context, svcCtx *svc.Servic
 	}
 }
 
-func (l *GetSubscribeApplicationListLogic) GetSubscribeApplicationList(req *types.GetSubscribeApplicationListRequest) (resp *types.GetSubscribeApplicationListResponse, err error) {
+func (l *GetSubscribeApplicationListLogic) GetSubscribeApplicationList(req *dto.GetSubscribeApplicationListRequest) (resp *dto.GetSubscribeApplicationListResponse, err error) {
 	data, err := l.svcCtx.Store.Client().List(l.ctx)
 	if err != nil {
 		l.Errorf("Failed to get subscribe application list: %v", err)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Failed to get subscribe application list")
 	}
-	var list []types.SubscribeApplication
+	var list []dto.SubscribeApplication
 	for _, item := range data {
-		var temp types.DownloadLink
+		var temp dto.DownloadLink
 		if item.DownloadLink != "" {
 			_ = json.Unmarshal([]byte(item.DownloadLink), &temp)
 		}
-		list = append(list, types.SubscribeApplication{
+		list = append(list, dto.SubscribeApplication{
 			Id:                item.Id,
 			Name:              item.Name,
 			Description:       item.Description,
@@ -53,7 +53,7 @@ func (l *GetSubscribeApplicationListLogic) GetSubscribeApplicationList(req *type
 			UpdatedAt:         item.UpdatedAt.UnixMilli(),
 		})
 	}
-	resp = &types.GetSubscribeApplicationListResponse{
+	resp = &dto.GetSubscribeApplicationListResponse{
 		Total: int64(len(list)),
 		List:  list,
 	}

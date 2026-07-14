@@ -3,9 +3,9 @@ package user
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewGetUserLoginLogsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 	}
 }
 
-func (l *GetUserLoginLogsLogic) GetUserLoginLogs(req *types.GetUserLoginLogsRequest) (resp *types.GetUserLoginLogsResponse, err error) {
+func (l *GetUserLoginLogsLogic) GetUserLoginLogs(req *dto.GetUserLoginLogsRequest) (resp *dto.GetUserLoginLogsResponse, err error) {
 	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
@@ -37,7 +37,7 @@ func (l *GetUserLoginLogsLogic) GetUserLoginLogs(req *types.GetUserLoginLogsRequ
 		l.Errorw("[GetUserLoginLogs] get user login logs failed", logger.Field("error", err.Error()), logger.Field("request", req))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get user login logs failed: %v", err.Error())
 	}
-	var list []types.UserLoginLog
+	var list []dto.UserLoginLog
 
 	for _, datum := range data {
 		var content log.Login
@@ -45,7 +45,7 @@ func (l *GetUserLoginLogsLogic) GetUserLoginLogs(req *types.GetUserLoginLogsRequ
 			l.Errorf("[GetUserLoginLogs] unmarshal login log content failed: %v", err.Error())
 			continue
 		}
-		list = append(list, types.UserLoginLog{
+		list = append(list, dto.UserLoginLog{
 			Id:        datum.Id,
 			UserId:    datum.ObjectID,
 			LoginIP:   content.LoginIP,
@@ -55,7 +55,7 @@ func (l *GetUserLoginLogsLogic) GetUserLoginLogs(req *types.GetUserLoginLogsRequ
 		})
 	}
 
-	return &types.GetUserLoginLogsResponse{
+	return &dto.GetUserLoginLogsResponse{
 		Total: total,
 		List:  list,
 	}, nil

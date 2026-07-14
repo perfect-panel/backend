@@ -3,8 +3,8 @@ package system
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -25,8 +25,8 @@ func NewGetRegisterConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 	}
 }
 
-func (l *GetRegisterConfigLogic) GetRegisterConfig() (*types.RegisterConfig, error) {
-	resp := &types.RegisterConfig{}
+func (l *GetRegisterConfigLogic) GetRegisterConfig() (*dto.RegisterConfig, error) {
+	resp := &dto.RegisterConfig{}
 
 	// get register config from database
 	configs, err := l.svcCtx.Store.System().GetRegisterConfig(l.ctx)

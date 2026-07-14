@@ -3,8 +3,8 @@ package system
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -26,8 +26,8 @@ func NewGetPrivacyPolicyConfigLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *GetPrivacyPolicyConfigLogic) GetPrivacyPolicyConfig() (resp *types.PrivacyPolicyConfig, err error) {
-	resp = &types.PrivacyPolicyConfig{}
+func (l *GetPrivacyPolicyConfigLogic) GetPrivacyPolicyConfig() (resp *dto.PrivacyPolicyConfig, err error) {
+	resp = &dto.PrivacyPolicyConfig{}
 	// get tos config from db
 	configs, err := l.svcCtx.Store.System().GetTosConfig(l.ctx)
 	if err != nil {

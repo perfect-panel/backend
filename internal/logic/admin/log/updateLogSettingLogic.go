@@ -5,9 +5,9 @@ import (
 	"reflect"
 
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -29,7 +29,7 @@ func NewUpdateLogSettingLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 	}
 }
 
-func (l *UpdateLogSettingLogic) UpdateLogSetting(req *types.LogSetting) error {
+func (l *UpdateLogSettingLogic) UpdateLogSetting(req *dto.LogSetting) error {
 	v := reflect.ValueOf(*req)
 	// Get the reflection type of the structure
 	t := v.Type()

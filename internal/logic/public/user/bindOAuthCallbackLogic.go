@@ -8,10 +8,10 @@ import (
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/timeutil"
 
-	"github.com/perfect-panel/server/internal/model/auth"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/auth"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/oauth/apple"
 	githuboauth "github.com/perfect-panel/server/pkg/oauth/github"
@@ -45,7 +45,7 @@ type googleRequest struct {
 	State string `json:"state"`
 }
 
-func (l *BindOAuthCallbackLogic) BindOAuthCallback(req *types.BindOAuthCallbackRequest) error {
+func (l *BindOAuthCallbackLogic) BindOAuthCallback(req *dto.BindOAuthCallbackRequest) error {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -77,7 +77,7 @@ func (l *BindOAuthCallbackLogic) BindOAuthCallback(req *types.BindOAuthCallbackR
 
 	return nil
 }
-func (l *BindOAuthCallbackLogic) google(req *types.BindOAuthCallbackRequest) error {
+func (l *BindOAuthCallbackLogic) google(req *dto.BindOAuthCallbackRequest) error {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -145,7 +145,7 @@ func (l *BindOAuthCallbackLogic) google(req *types.BindOAuthCallbackRequest) err
 	return nil
 }
 
-func (l *BindOAuthCallbackLogic) apple(req *types.BindOAuthCallbackRequest) error {
+func (l *BindOAuthCallbackLogic) apple(req *dto.BindOAuthCallbackRequest) error {
 	// validate the state code
 	_, err := l.svcCtx.Redis.Get(l.ctx, fmt.Sprintf("apple:%s", req.Callback.(map[string]interface{})["state"])).Result()
 	if err != nil {
@@ -222,7 +222,7 @@ func (l *BindOAuthCallbackLogic) apple(req *types.BindOAuthCallbackRequest) erro
 	return nil
 }
 
-func (l *BindOAuthCallbackLogic) telegram(req *types.BindOAuthCallbackRequest) error {
+func (l *BindOAuthCallbackLogic) telegram(req *dto.BindOAuthCallbackRequest) error {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -316,7 +316,7 @@ func (l *BindOAuthCallbackLogic) telegram(req *types.BindOAuthCallbackRequest) e
 	return nil
 }
 
-func (l *BindOAuthCallbackLogic) github(req *types.BindOAuthCallbackRequest) error {
+func (l *BindOAuthCallbackLogic) github(req *dto.BindOAuthCallbackRequest) error {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")

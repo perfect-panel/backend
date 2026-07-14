@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/traffic"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
+	"github.com/perfect-panel/server/internal/model/entity/traffic"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -37,7 +37,7 @@ func NewQueryServerTotalDataLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTotalDataResponse, err error) {
+func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *dto.ServerTotalDataResponse, err error) {
 
 	if strings.ToLower(os.Getenv("PPANEL_MODE")) == "demo" {
 		return l.mockRevenueStatistics(), nil
@@ -46,7 +46,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	// Try cache first
 	cached, cacheErr := l.svcCtx.Redis.Get(l.ctx, consoleServerTotalDataCacheKey).Result()
 	if cacheErr == nil && cached != "" {
-		var result types.ServerTotalDataResponse
+		var result dto.ServerTotalDataResponse
 		if json.Unmarshal([]byte(cached), &result) == nil {
 			return &result, nil
 		}
@@ -104,9 +104,9 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	}
 
 	// Build today user traffic ranking
-	var userTodayTrafficRanking []types.UserTrafficData
+	var userTodayTrafficRanking []dto.UserTrafficData
 	for _, item := range todayTop10User {
-		userTodayTrafficRanking = append(userTodayTrafficRanking, types.UserTrafficData{
+		userTodayTrafficRanking = append(userTodayTrafficRanking, dto.UserTrafficData{
 			SID:      item.SubscribeId,
 			Upload:   item.Upload,
 			Download: item.Download,
@@ -122,7 +122,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query yesterday user traffic rank log error: %v", err)
 	}
 
-	var yesterdayUserRankData []types.UserTrafficData
+	var yesterdayUserRankData []dto.UserTrafficData
 	if yesterdayLog != nil {
 		var rank log.UserTrafficRank
 		err = rank.Unmarshal([]byte(yesterdayLog.Content))
@@ -136,7 +136,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		}
 		sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 		for _, k := range keys {
-			yesterdayUserRankData = append(yesterdayUserRankData, types.UserTrafficData{
+			yesterdayUserRankData = append(yesterdayUserRankData, dto.UserTrafficData{
 				SID:      rank.Rank[k].SubscribeId,
 				Upload:   rank.Rank[k].Upload,
 				Download: rank.Rank[k].Download,
@@ -161,13 +161,13 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		}
 	}
 
-	var todayServerRanking []types.ServerTrafficData
+	var todayServerRanking []dto.ServerTrafficData
 	for _, item := range todayTop10Server {
 		name := ""
 		if serverName, ok := serverMap[item.ServerId]; ok {
 			name = serverName
 		}
-		todayServerRanking = append(todayServerRanking, types.ServerTrafficData{
+		todayServerRanking = append(todayServerRanking, dto.ServerTrafficData{
 			ServerId: item.ServerId,
 			Name:     name,
 			Upload:   item.Upload,
@@ -176,7 +176,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	}
 
 	// Query yesterday server traffic rank
-	var yesterdayTop10Server []types.ServerTrafficData
+	var yesterdayTop10Server []dto.ServerTrafficData
 	yesterdayServerTrafficLog, err := logStore.FindFirstByDateType(l.ctx, yesterday, log.TypeServerTrafficRank.Uint8())
 	if err != nil {
 		l.Errorw("[QueryServerTotalDataLogic] Query yesterday server traffic rank log error", logger.Field("error", err.Error()))
@@ -218,7 +218,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 			if serverName, ok := serverMap[v.ServerId]; ok {
 				name = serverName
 			}
-			yesterdayTop10Server = append(yesterdayTop10Server, types.ServerTrafficData{
+			yesterdayTop10Server = append(yesterdayTop10Server, dto.ServerTrafficData{
 				ServerId: v.ServerId,
 				Name:     name,
 				Upload:   v.Upload,
@@ -273,7 +273,7 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 		}
 	}
 
-	resp = &types.ServerTotalDataResponse{
+	resp = &dto.ServerTotalDataResponse{
 		OnlineUsers:                   onlineUsers,
 		OnlineServers:                 onlineServers,
 		OfflineServers:                offlineServers,
@@ -296,16 +296,16 @@ func (l *QueryServerTotalDataLogic) QueryServerTotalData() (resp *types.ServerTo
 	return resp, nil
 }
 
-func (l *QueryServerTotalDataLogic) mockRevenueStatistics() *types.ServerTotalDataResponse {
+func (l *QueryServerTotalDataLogic) mockRevenueStatistics() *dto.ServerTotalDataResponse {
 	now := timeutil.Now()
 
 	// Generate server traffic ranking data for today (top 10)
-	serverTrafficToday := make([]types.ServerTrafficData, 10)
+	serverTrafficToday := make([]dto.ServerTrafficData, 10)
 	serverNames := []string{"香港-01", "美国-洛杉矶", "日本-东京", "新加坡-01", "韩国-首尔", "台湾-01", "德国-法兰克福", "英国-伦敦", "加拿大-多伦多", "澳洲-悉尼"}
 	for i := 0; i < 10; i++ {
 		upload := int64(500000000 + (i * 100000000) + (i%3)*200000000)    // 500MB - 1.5GB
 		download := int64(2000000000 + (i * 300000000) + (i%4)*500000000) // 2GB - 8GB
-		serverTrafficToday[i] = types.ServerTrafficData{
+		serverTrafficToday[i] = dto.ServerTrafficData{
 			ServerId: int64(i + 1),
 			Name:     serverNames[i],
 			Upload:   upload,
@@ -314,11 +314,11 @@ func (l *QueryServerTotalDataLogic) mockRevenueStatistics() *types.ServerTotalDa
 	}
 
 	// Generate server traffic ranking data for yesterday (top 10)
-	serverTrafficYesterday := make([]types.ServerTrafficData, 10)
+	serverTrafficYesterday := make([]dto.ServerTrafficData, 10)
 	for i := 0; i < 10; i++ {
 		upload := int64(480000000 + (i * 95000000) + (i%3)*180000000)
 		download := int64(1900000000 + (i * 280000000) + (i%4)*450000000)
-		serverTrafficYesterday[i] = types.ServerTrafficData{
+		serverTrafficYesterday[i] = dto.ServerTrafficData{
 			ServerId: int64(i + 1),
 			Name:     serverNames[i],
 			Upload:   upload,
@@ -326,7 +326,7 @@ func (l *QueryServerTotalDataLogic) mockRevenueStatistics() *types.ServerTotalDa
 		}
 	}
 
-	return &types.ServerTotalDataResponse{
+	return &dto.ServerTotalDataResponse{
 		OnlineUsers:                   1688,
 		OnlineServers:                 8,
 		OfflineServers:                2,

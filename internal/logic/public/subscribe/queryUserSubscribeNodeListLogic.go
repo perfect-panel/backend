@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/node"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
@@ -31,7 +31,7 @@ func NewQueryUserSubscribeNodeListLogic(ctx context.Context, svcCtx *svc.Service
 	}
 }
 
-func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *types.QueryUserSubscribeNodeListResponse, err error) {
+func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *dto.QueryUserSubscribeNodeListResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -44,7 +44,7 @@ func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *ty
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "DB_ERROR")
 	}
 
-	resp = &types.QueryUserSubscribeNodeListResponse{}
+	resp = &dto.QueryUserSubscribeNodeListResponse{}
 	for _, us := range userSubscribes {
 		userSubscribe, err := l.getUserSubscribe(us.Token)
 		if err != nil {
@@ -55,7 +55,7 @@ func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *ty
 		if err != nil {
 			return nil, err
 		}
-		userSubscribeInfo := types.UserSubscribeInfo{
+		userSubscribeInfo := dto.UserSubscribeInfo{
 			Id:          userSubscribe.Id,
 			Nodes:       nodes,
 			Traffic:     userSubscribe.Traffic,
@@ -86,8 +86,8 @@ func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *ty
 	return
 }
 
-func (l *QueryUserSubscribeNodeListLogic) getServers(userSub *user.Subscribe) (userSubscribeNodes []*types.UserSubscribeNodeInfo, err error) {
-	userSubscribeNodes = make([]*types.UserSubscribeNodeInfo, 0)
+func (l *QueryUserSubscribeNodeListLogic) getServers(userSub *user.Subscribe) (userSubscribeNodes []*dto.UserSubscribeNodeInfo, err error) {
+	userSubscribeNodes = make([]*dto.UserSubscribeNodeInfo, 0)
 	if l.isSubscriptionExpired(userSub) || l.isTrafficExhausted(userSub) {
 		return l.createExpiredServers(), nil
 	}
@@ -143,7 +143,7 @@ func (l *QueryUserSubscribeNodeListLogic) getServers(userSub *user.Subscribe) (u
 			if server == nil {
 				continue
 			}
-			userSubscribeNode := &types.UserSubscribeNodeInfo{
+			userSubscribeNode := &dto.UserSubscribeNodeInfo{
 				Id:        n.Id,
 				Name:      n.Name,
 				Uuid:      userSub.UUID,
@@ -227,7 +227,7 @@ func (l *QueryUserSubscribeNodeListLogic) isTrafficExhausted(userSub *user.Subsc
 	return userSub.Traffic > 0 && userSub.Download+userSub.Upload >= userSub.Traffic
 }
 
-func (l *QueryUserSubscribeNodeListLogic) createExpiredServers() []*types.UserSubscribeNodeInfo {
+func (l *QueryUserSubscribeNodeListLogic) createExpiredServers() []*dto.UserSubscribeNodeInfo {
 	return nil
 }
 

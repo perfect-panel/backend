@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -28,7 +28,7 @@ func NewCreateSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *C
 	}
 }
 
-func (l *CreateSubscribeLogic) CreateSubscribe(req *types.CreateSubscribeRequest) error {
+func (l *CreateSubscribeLogic) CreateSubscribe(req *dto.CreateSubscribeRequest) error {
 	discount := ""
 	if len(req.Discount) > 0 {
 		val, _ := json.Marshal(req.Discount)

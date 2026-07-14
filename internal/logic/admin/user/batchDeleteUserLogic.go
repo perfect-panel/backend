@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewBatchDeleteUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *B
 	}
 }
 
-func (l *BatchDeleteUserLogic) BatchDeleteUser(req *types.BatchDeleteUserRequest) error {
+func (l *BatchDeleteUserLogic) BatchDeleteUser(req *dto.BatchDeleteUserRequest) error {
 	isDemo := strings.ToLower(os.Getenv("PPANEL_MODE")) == "demo"
 
 	if tool.Contains(req.Ids, 2) && isDemo {

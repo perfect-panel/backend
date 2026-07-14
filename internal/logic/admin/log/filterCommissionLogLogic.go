@@ -3,9 +3,9 @@ package log
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewFilterCommissionLogLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *FilterCommissionLogLogic) FilterCommissionLog(req *types.FilterCommissionLogRequest) (resp *types.FilterCommissionLogResponse, err error) {
+func (l *FilterCommissionLogLogic) FilterCommissionLog(req *dto.FilterCommissionLogRequest) (resp *dto.FilterCommissionLogResponse, err error) {
 	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
@@ -38,7 +38,7 @@ func (l *FilterCommissionLogLogic) FilterCommissionLog(req *types.FilterCommissi
 		l.Errorw("Query User Commission Log failed", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Commission Log failed")
 	}
-	var list []types.CommissionLog
+	var list []dto.CommissionLog
 
 	for _, datum := range data {
 		var content log.Commission
@@ -46,7 +46,7 @@ func (l *FilterCommissionLogLogic) FilterCommissionLog(req *types.FilterCommissi
 			l.Errorf("unmarshal commission log content failed: %v", err.Error())
 			continue
 		}
-		list = append(list, types.CommissionLog{
+		list = append(list, dto.CommissionLog{
 			UserId:    datum.ObjectID,
 			Type:      content.Type,
 			Amount:    content.Amount,
@@ -54,7 +54,7 @@ func (l *FilterCommissionLogLogic) FilterCommissionLog(req *types.FilterCommissi
 			Timestamp: content.Timestamp,
 		})
 	}
-	return &types.FilterCommissionLogResponse{
+	return &dto.FilterCommissionLogResponse{
 		Total: total,
 		List:  list,
 	}, nil

@@ -3,9 +3,9 @@ package subscribe
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewCreateSubscribeGroupLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *CreateSubscribeGroupLogic) CreateSubscribeGroup(req *types.CreateSubscribeGroupRequest) error {
+func (l *CreateSubscribeGroupLogic) CreateSubscribeGroup(req *dto.CreateSubscribeGroupRequest) error {
 	err := l.svcCtx.Store.Subscribe().CreateGroup(l.ctx, &subscribe.Group{
 		Name:        req.Name,
 		Description: req.Description,

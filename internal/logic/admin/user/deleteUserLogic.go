@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func NewDeleteUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Delete
 	}
 }
 
-func (l *DeleteUserLogic) DeleteUser(req *types.GetDetailRequest) error {
+func (l *DeleteUserLogic) DeleteUser(req *dto.GetDetailRequest) error {
 	isDemo := strings.ToLower(os.Getenv("PPANEL_MODE")) == "demo"
 
 	if req.Id == 2 && isDemo {

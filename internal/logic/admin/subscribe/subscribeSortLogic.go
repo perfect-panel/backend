@@ -3,13 +3,13 @@ package subscribe
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -28,7 +28,7 @@ func NewSubscribeSortLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Sub
 	}
 }
 
-func (l *SubscribeSortLogic) SubscribeSort(req *types.SubscribeSortRequest) error {
+func (l *SubscribeSortLogic) SubscribeSort(req *dto.SubscribeSortRequest) error {
 	var sort = make(map[int64]int64, len(req.Sort))
 	var ids []int64
 	for i, v := range req.Sort {

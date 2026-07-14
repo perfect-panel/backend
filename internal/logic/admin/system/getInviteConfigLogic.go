@@ -3,8 +3,8 @@ package system
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -25,8 +25,8 @@ func NewGetInviteConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *G
 	}
 }
 
-func (l *GetInviteConfigLogic) GetInviteConfig() (*types.InviteConfig, error) {
-	resp := &types.InviteConfig{}
+func (l *GetInviteConfigLogic) GetInviteConfig() (*dto.InviteConfig, error) {
+	resp := &dto.InviteConfig{}
 	// get invite config from db
 	configs, err := l.svcCtx.Store.System().GetInviteConfig(l.ctx)
 	if err != nil {

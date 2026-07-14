@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -36,7 +36,7 @@ func NewTelephoneResetPasswordLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.TelephoneResetPasswordRequest) (resp *types.LoginResponse, err error) {
+func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *dto.TelephoneResetPasswordRequest) (resp *dto.LoginResponse, err error) {
 	code := req.Code
 
 	phoneNumber, err := phone.FormatToE164(req.TelephoneAreaCode, req.Telephone)
@@ -144,7 +144,7 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *types.Telephon
 			}
 		}
 	}()
-	return &types.LoginResponse{
+	return &dto.LoginResponse{
 		Token: token,
 	}, nil
 }

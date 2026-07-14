@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 )
@@ -26,7 +26,7 @@ func NewServerPushStatusLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 	}
 }
 
-func (l *ServerPushStatusLogic) ServerPushStatus(req *types.ServerPushStatusRequest) error {
+func (l *ServerPushStatusLogic) ServerPushStatus(req *dto.ServerPushStatusRequest) error {
 	// Find server info
 	serverInfo, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.ServerId)
 	if err != nil || serverInfo.Id <= 0 {

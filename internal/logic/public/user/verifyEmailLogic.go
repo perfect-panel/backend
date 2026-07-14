@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -36,7 +36,7 @@ type CacheKeyPayload struct {
 	LastAt int64  `json:"lastAt"`
 }
 
-func (l *VerifyEmailLogic) VerifyEmail(req *types.VerifyEmailRequest) error {
+func (l *VerifyEmailLogic) VerifyEmail(req *dto.VerifyEmailRequest) error {
 	email := authmethod.CanonicalEmail(req.Email)
 	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.Security, email)
 	value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()

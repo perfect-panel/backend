@@ -3,9 +3,9 @@ package marketing
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/task"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/task"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -24,7 +24,7 @@ func NewQueryQuotaTaskListLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *QueryQuotaTaskListLogic) QueryQuotaTaskList(req *types.QueryQuotaTaskListRequest) (resp *types.QueryQuotaTaskListResponse, err error) {
+func (l *QueryQuotaTaskListLogic) QueryQuotaTaskList(req *dto.QueryQuotaTaskListRequest) (resp *dto.QueryQuotaTaskListResponse, err error) {
 	if req.Page == 0 {
 		req.Page = 1
 	}
@@ -43,7 +43,7 @@ func (l *QueryQuotaTaskListLogic) QueryQuotaTaskList(req *types.QueryQuotaTaskLi
 		return nil, err
 	}
 
-	var list []types.QuotaTask
+	var list []dto.QuotaTask
 	for _, item := range data {
 		var scopeInfo task.QuotaScope
 		if err = scopeInfo.Unmarshal([]byte(item.Scope)); err != nil {
@@ -55,7 +55,7 @@ func (l *QueryQuotaTaskListLogic) QueryQuotaTaskList(req *types.QueryQuotaTaskLi
 			l.Errorf("[QueryQuotaTaskList] failed to unmarshal quota task content: %v", err.Error())
 			continue
 		}
-		list = append(list, types.QuotaTask{
+		list = append(list, dto.QuotaTask{
 			Id:           item.Id,
 			Subscribers:  scopeInfo.Subscribers,
 			IsActive:     scopeInfo.IsActive,
@@ -75,7 +75,7 @@ func (l *QueryQuotaTaskListLogic) QueryQuotaTaskList(req *types.QueryQuotaTaskLi
 		})
 	}
 
-	return &types.QueryQuotaTaskListResponse{
+	return &dto.QueryQuotaTaskListResponse{
 		Total: count,
 		List:  list,
 	}, nil

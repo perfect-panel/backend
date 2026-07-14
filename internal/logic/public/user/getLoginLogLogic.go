@@ -3,12 +3,12 @@ package user
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/log"
+	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -29,7 +29,7 @@ func NewGetLoginLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetLo
 	}
 }
 
-func (l *GetLoginLogLogic) GetLoginLog(req *types.GetLoginLogRequest) (resp *types.GetLoginLogResponse, err error) {
+func (l *GetLoginLogLogic) GetLoginLog(req *dto.GetLoginLogRequest) (resp *dto.GetLoginLogResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -45,7 +45,7 @@ func (l *GetLoginLogLogic) GetLoginLog(req *types.GetLoginLogRequest) (resp *typ
 		l.Errorw("find login log failed:", logger.Field("error", err.Error()), logger.Field("user_id", u.Id))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find login log failed: %v", err.Error())
 	}
-	list := make([]types.UserLoginLog, 0)
+	list := make([]dto.UserLoginLog, 0)
 
 	for _, datum := range data {
 		var content log.Login
@@ -53,7 +53,7 @@ func (l *GetLoginLogLogic) GetLoginLog(req *types.GetLoginLogRequest) (resp *typ
 			l.Errorf("[GetUserLoginLogs] unmarshal login log content failed: %v", err.Error())
 			continue
 		}
-		list = append(list, types.UserLoginLog{
+		list = append(list, dto.UserLoginLog{
 			Id:        datum.Id,
 			UserId:    datum.ObjectID,
 			LoginIP:   content.LoginIP,
@@ -63,7 +63,7 @@ func (l *GetLoginLogLogic) GetLoginLog(req *types.GetLoginLogRequest) (resp *typ
 		})
 	}
 
-	return &types.GetLoginLogResponse{
+	return &dto.GetLoginLogResponse{
 		Total: total,
 		List:  list,
 	}, nil

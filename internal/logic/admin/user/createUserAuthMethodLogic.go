@@ -3,13 +3,13 @@ package user
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -28,7 +28,7 @@ func NewCreateUserAuthMethodLogic(ctx context.Context, svcCtx *svc.ServiceContex
 	}
 }
 
-func (l *CreateUserAuthMethodLogic) CreateUserAuthMethod(req *types.CreateUserAuthMethodRequest) error {
+func (l *CreateUserAuthMethodLogic) CreateUserAuthMethod(req *dto.CreateUserAuthMethodRequest) error {
 	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		return store.User().UpsertUserAuthMethod(l.ctx, &user.AuthMethods{
 			UserId:         req.UserId,

@@ -6,8 +6,8 @@ import (
 
 	"github.com/perfect-panel/server/pkg/tool"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -29,7 +29,7 @@ func NewPrePurchaseOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 	}
 }
 
-func (l *PrePurchaseOrderLogic) PrePurchaseOrder(req *types.PrePurchaseOrderRequest) (resp *types.PrePurchaseOrderResponse, err error) {
+func (l *PrePurchaseOrderLogic) PrePurchaseOrder(req *dto.PrePurchaseOrderRequest) (resp *dto.PrePurchaseOrderResponse, err error) {
 	// find subscribe plan
 	sub, err := l.svcCtx.Store.Subscribe().FindOne(l.ctx, req.SubscribeId)
 	if err != nil {
@@ -38,7 +38,7 @@ func (l *PrePurchaseOrderLogic) PrePurchaseOrder(req *types.PrePurchaseOrderRequ
 	}
 	var discount float64 = 1
 	if sub.Discount != "" {
-		var dis []types.SubscribeDiscount
+		var dis []dto.SubscribeDiscount
 		_ = json.Unmarshal([]byte(sub.Discount), &dis)
 		discount = getDiscount(dis, req.Quantity)
 	}
@@ -83,7 +83,7 @@ func (l *PrePurchaseOrderLogic) PrePurchaseOrder(req *types.PrePurchaseOrderRequ
 		amount += feeAmount
 	}
 
-	resp = &types.PrePurchaseOrderResponse{
+	resp = &dto.PrePurchaseOrderResponse{
 		Price:          price,
 		Amount:         amount,
 		Discount:       discountAmount,

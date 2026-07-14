@@ -8,9 +8,9 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/phone"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -31,8 +31,8 @@ func NewQueryUserInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Que
 	}
 }
 
-func (l *QueryUserInfoLogic) QueryUserInfo() (resp *types.User, err error) {
-	resp = &types.User{}
+func (l *QueryUserInfoLogic) QueryUserInfo() (resp *dto.User, err error) {
+	resp = &dto.User{}
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -40,9 +40,9 @@ func (l *QueryUserInfoLogic) QueryUserInfo() (resp *types.User, err error) {
 	}
 	tool.DeepCopy(resp, u)
 
-	var userMethods []types.UserAuthMethod
+	var userMethods []dto.UserAuthMethod
 	for _, method := range resp.AuthMethods {
-		var item types.UserAuthMethod
+		var item dto.UserAuthMethod
 		tool.DeepCopy(&item, method)
 
 		switch method.AuthType {

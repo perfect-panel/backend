@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/document"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/document"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -27,7 +27,7 @@ func NewCreateDocumentLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Cr
 	}
 }
 
-func (l *CreateDocumentLogic) CreateDocument(req *types.CreateDocumentRequest) error {
+func (l *CreateDocumentLogic) CreateDocument(req *dto.CreateDocumentRequest) error {
 	if err := l.svcCtx.Store.Document().Insert(l.ctx, &document.Document{
 		Title:   req.Title,
 		Content: req.Content,

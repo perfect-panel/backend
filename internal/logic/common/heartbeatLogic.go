@@ -3,8 +3,8 @@ package common
 import (
 	"context"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 )
@@ -24,8 +24,8 @@ func NewHeartbeatLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Heartbe
 	}
 }
 
-func (l *HeartbeatLogic) Heartbeat() (resp *types.HeartbeatResponse, err error) {
-	return &types.HeartbeatResponse{
+func (l *HeartbeatLogic) Heartbeat() (resp *dto.HeartbeatResponse, err error) {
+	return &dto.HeartbeatResponse{
 		Status:    true,
 		Message:   "service is alive",
 		Timestamp: timeutil.Now().Unix(),

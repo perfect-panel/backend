@@ -6,8 +6,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/result"
 )
 
@@ -23,16 +23,16 @@ func ServerMiddleware(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	}
 }
 
-func serverCommonRequest(ctx *app.RequestContext) (types.ServerCommon, error) {
+func serverCommonRequest(ctx *app.RequestContext) (dto.ServerCommon, error) {
 	var serverID int64
 	if rawServerID := ctx.Query("server_id"); rawServerID != "" {
 		id, err := strconv.ParseInt(rawServerID, 10, 64)
 		if err != nil {
-			return types.ServerCommon{}, err
+			return dto.ServerCommon{}, err
 		}
 		serverID = id
 	}
-	return types.ServerCommon{
+	return dto.ServerCommon{
 		Protocol:  ctx.Query("protocol"),
 		ServerId:  serverID,
 		SecretKey: ctx.Query("secret_key"),

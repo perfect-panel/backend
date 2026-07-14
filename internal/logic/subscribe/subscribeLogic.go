@@ -8,15 +8,15 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/adapter"
-	"github.com/perfect-panel/server/internal/model/client"
-	"github.com/perfect-panel/server/internal/model/log"
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/entity/client"
+	"github.com/perfect-panel/server/internal/model/entity/log"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/report"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -48,7 +48,7 @@ func NewSubscribeLogic(ctx context.Context, svc *svc.ServiceContext, request Req
 	}
 }
 
-func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.SubscribeResponse, err error) {
+func (l *SubscribeLogic) Handler(req *dto.SubscribeRequest) (resp *dto.SubscribeResponse, err error) {
 	// query client list
 	clients, err := l.svc.Store.Client().List(l.ctx)
 	if err != nil {
@@ -146,7 +146,7 @@ func (l *SubscribeLogic) Handler(req *types.SubscribeRequest) (resp *types.Subsc
 		}
 	}
 
-	resp = &types.SubscribeResponse{
+	resp = &dto.SubscribeResponse{
 		Config: bytes,
 		Header: fmt.Sprintf(
 			"upload=%d;download=%d;total=%d;expire=%d",
@@ -212,7 +212,7 @@ func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error)
 	return userSub, nil
 }
 
-func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *user.Subscribe, req *types.SubscribeRequest) {
+func (l *SubscribeLogic) logSubscribeActivity(subscribeStatus bool, userSub *user.Subscribe, req *dto.SubscribeRequest) {
 	if !subscribeStatus {
 		return
 	}

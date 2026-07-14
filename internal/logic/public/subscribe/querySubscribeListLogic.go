@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/perfect-panel/server/internal/model/subscribe"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -28,7 +28,7 @@ func NewQuerySubscribeListLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 	}
 }
 
-func (l *QuerySubscribeListLogic) QuerySubscribeList(req *types.QuerySubscribeListRequest) (resp *types.QuerySubscribeListResponse, err error) {
+func (l *QuerySubscribeListLogic) QuerySubscribeList(req *dto.QuerySubscribeListRequest) (resp *dto.QuerySubscribeListResponse, err error) {
 
 	total, data, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
 		Page:            1,
@@ -42,15 +42,15 @@ func (l *QuerySubscribeListLogic) QuerySubscribeList(req *types.QuerySubscribeLi
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "QuerySubscribeList error: %v", err.Error())
 	}
 
-	resp = &types.QuerySubscribeListResponse{
+	resp = &dto.QuerySubscribeListResponse{
 		Total: total,
 	}
-	list := make([]types.Subscribe, len(data))
+	list := make([]dto.Subscribe, len(data))
 	for i, item := range data {
-		var sub types.Subscribe
+		var sub dto.Subscribe
 		tool.DeepCopy(&sub, item)
 		if item.Discount != "" {
-			var discount []types.SubscribeDiscount
+			var discount []dto.SubscribeDiscount
 			_ = json.Unmarshal([]byte(item.Discount), &discount)
 			sub.Discount = discount
 			list[i] = sub

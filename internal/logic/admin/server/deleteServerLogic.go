@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -27,7 +27,7 @@ func NewDeleteServerLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Dele
 	}
 }
 
-func (l *DeleteServerLogic) DeleteServer(req *types.DeleteServerRequest) error {
+func (l *DeleteServerLogic) DeleteServer(req *dto.DeleteServerRequest) error {
 	nodeStore := l.svcCtx.Store.Node()
 	if err := nodeStore.Transaction(l.ctx, func(db *gorm.DB) error {
 		if err := nodeStore.DeleteServer(l.ctx, req.Id, db); err != nil {

@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewUpdateNodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Update
 	}
 }
 
-func (l *UpdateNodeLogic) UpdateNode(req *types.UpdateNodeRequest) error {
+func (l *UpdateNodeLogic) UpdateNode(req *dto.UpdateNodeRequest) error {
 	nodeStore := l.svcCtx.Store.Node()
 	data, err := nodeStore.FindOneNode(l.ctx, req.Id)
 	if err != nil {

@@ -3,9 +3,9 @@ package marketing
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -24,7 +24,7 @@ func NewQueryQuotaTaskPreCountLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *QueryQuotaTaskPreCountLogic) QueryQuotaTaskPreCount(req *types.QueryQuotaTaskPreCountRequest) (resp *types.QueryQuotaTaskPreCountResponse, err error) {
+func (l *QueryQuotaTaskPreCountLogic) QueryQuotaTaskPreCount(req *dto.QueryQuotaTaskPreCountRequest) (resp *dto.QueryQuotaTaskPreCountResponse, err error) {
 	count, err := l.svcCtx.Store.User().CountSubscribesByFilter(l.ctx, &user.SubscribeFilter{
 		Subscribers: req.Subscribers,
 		IsActive:    req.IsActive,
@@ -36,7 +36,7 @@ func (l *QueryQuotaTaskPreCountLogic) QueryQuotaTaskPreCount(req *types.QueryQuo
 		return nil, err
 	}
 
-	return &types.QueryQuotaTaskPreCountResponse{
+	return &dto.QueryQuotaTaskPreCountResponse{
 		Count: count,
 	}, nil
 }

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/logic/nodeconfig"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -25,7 +25,7 @@ func NewGetServerNodeConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext
 	}
 }
 
-func (l *GetServerNodeConfigLogic) GetServerNodeConfig(req *types.GetServerNodeConfigRequest) (*types.GetServerNodeConfigResponse, error) {
+func (l *GetServerNodeConfigLogic) GetServerNodeConfig(req *dto.GetServerNodeConfigRequest) (*dto.GetServerNodeConfigResponse, error) {
 	nodeStore := l.svcCtx.Store.Node()
 	if _, err := nodeStore.FindOneServer(l.ctx, req.ServerID); err != nil {
 		l.Errorf("[GetServerNodeConfig] FindOneServer Error: %v", err.Error())
@@ -50,7 +50,7 @@ func (l *GetServerNodeConfigLogic) GetServerNodeConfig(req *types.GetServerNodeC
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "parse server node config override error: %v", err)
 	}
 
-	return &types.GetServerNodeConfigResponse{
+	return &dto.GetServerNodeConfigResponse{
 		Global:    global,
 		Override:  overrideResp,
 		Effective: effective,

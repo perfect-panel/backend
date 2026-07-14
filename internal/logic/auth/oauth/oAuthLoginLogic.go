@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/auth"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/auth"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	githuboauth "github.com/perfect-panel/server/pkg/oauth/github"
 	"github.com/perfect-panel/server/pkg/oauth/google"
@@ -34,7 +34,7 @@ func NewOAuthLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *OAuthL
 	}
 }
 
-func (l *OAuthLoginLogic) OAuthLogin(req *types.OAthLoginRequest) (resp *types.OAuthLoginResponse, err error) {
+func (l *OAuthLoginLogic) OAuthLogin(req *dto.OAthLoginRequest) (resp *dto.OAuthLoginResponse, err error) {
 	var uri string
 	switch req.Method {
 	case "google":
@@ -53,12 +53,12 @@ func (l *OAuthLoginLogic) OAuthLogin(req *types.OAthLoginRequest) (resp *types.O
 		l.Errorw("OAuthLogin ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "OAuthLogin: %v", err.Error())
 	}
-	return &types.OAuthLoginResponse{
+	return &dto.OAuthLoginResponse{
 		Redirect: uri,
 	}, nil
 }
 
-func (l *OAuthLoginLogic) google(req *types.OAthLoginRequest) (string, error) {
+func (l *OAuthLoginLogic) google(req *dto.OAthLoginRequest) (string, error) {
 	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "google")
 	if err != nil {
 		return "", err
@@ -88,7 +88,7 @@ func (l *OAuthLoginLogic) google(req *types.OAthLoginRequest) (string, error) {
 func (l *OAuthLoginLogic) facebook() (string, error) {
 	return "", nil
 }
-func (l *OAuthLoginLogic) apple(req *types.OAthLoginRequest) (string, error) {
+func (l *OAuthLoginLogic) apple(req *dto.OAthLoginRequest) (string, error) {
 	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "apple")
 	if err != nil {
 		return "", err
@@ -109,7 +109,7 @@ func (l *OAuthLoginLogic) apple(req *types.OAthLoginRequest) (string, error) {
 	}
 	return fmt.Sprintf(uri, cfg.ClientId, fmt.Sprintf("%s/v1/auth/oauth/callback/apple", cfg.RedirectURL), code), nil
 }
-func (l *OAuthLoginLogic) github(req *types.OAthLoginRequest) (string, error) {
+func (l *OAuthLoginLogic) github(req *dto.OAthLoginRequest) (string, error) {
 	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "github")
 	if err != nil {
 		return "", err
@@ -135,7 +135,7 @@ func (l *OAuthLoginLogic) github(req *types.OAthLoginRequest) (string, error) {
 	uri := client.AuthCodeURL(code, oauth2.AccessTypeOffline)
 	return uri, nil
 }
-func (l *OAuthLoginLogic) telegram(req *types.OAthLoginRequest) (string, error) {
+func (l *OAuthLoginLogic) telegram(req *dto.OAthLoginRequest) (string, error) {
 	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "telegram")
 	if err != nil {
 		return "", err

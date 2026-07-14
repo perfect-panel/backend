@@ -8,8 +8,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/perfect-panel/server/internal/logic/server"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 )
@@ -24,7 +24,7 @@ func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) app.HandlerFun
 			ctx.Abort()
 			return
 		}
-		req := types.QueryServerConfigRequest{
+		req := dto.QueryServerConfigRequest{
 			ServerID:  serverID,
 			SecretKey: ctx.Query("secret_key"),
 			Protocols: queryValues(ctx, "protocols", "protocols[]"),

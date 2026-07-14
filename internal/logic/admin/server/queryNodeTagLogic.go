@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -27,7 +27,7 @@ func NewQueryNodeTagLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Quer
 	}
 }
 
-func (l *QueryNodeTagLogic) QueryNodeTag() (resp *types.QueryNodeTagResponse, err error) {
+func (l *QueryNodeTagLogic) QueryNodeTag() (resp *dto.QueryNodeTagResponse, err error) {
 
 	nodeTags, err := l.svcCtx.Store.Node().QueryNodeTags(l.ctx)
 	if err != nil {
@@ -39,7 +39,7 @@ func (l *QueryNodeTagLogic) QueryNodeTag() (resp *types.QueryNodeTagResponse, er
 		tags = append(tags, strings.Split(item, ",")...)
 	}
 
-	return &types.QueryNodeTagResponse{
+	return &dto.QueryNodeTagResponse{
 		Tags: tool.RemoveDuplicateElements(tags...),
 	}, nil
 }

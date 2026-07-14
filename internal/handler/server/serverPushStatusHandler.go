@@ -5,14 +5,14 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/server"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 )
 
 // Push server status
 func ServerPushStatusHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(c context.Context, ctx *app.RequestContext) {
-		req := types.ServerPushStatusRequest{}
+		req := dto.ServerPushStatusRequest{}
 		_ = ctx.BindJSON(&req)
 		commonReq, err := serverCommonRequest(ctx)
 		if err != nil {

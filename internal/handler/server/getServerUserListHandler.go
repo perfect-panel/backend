@@ -6,8 +6,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/perfect-panel/server/internal/logic/server"
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
@@ -20,7 +20,7 @@ func GetServerUserListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			writeParamError(ctx, err)
 			return
 		}
-		req := types.GetServerUserListRequest{ServerCommon: commonReq}
+		req := dto.GetServerUserListRequest{ServerCommon: commonReq}
 		if validateErr := svcCtx.Validate(&req); validateErr != nil {
 			writeParamError(ctx, validateErr)
 			return

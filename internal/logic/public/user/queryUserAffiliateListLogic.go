@@ -5,12 +5,12 @@ import (
 
 	"github.com/perfect-panel/server/pkg/constant"
 
-	"github.com/perfect-panel/server/internal/model/user"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
+	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/internal/types"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
@@ -29,7 +29,7 @@ func NewQueryUserAffiliateListLogic(ctx context.Context, svcCtx *svc.ServiceCont
 	}
 }
 
-func (l *QueryUserAffiliateListLogic) QueryUserAffiliateList(req *types.QueryUserAffiliateListRequest) (resp *types.QueryUserAffiliateListResponse, err error) {
+func (l *QueryUserAffiliateListLogic) QueryUserAffiliateList(req *dto.QueryUserAffiliateListRequest) (resp *dto.QueryUserAffiliateListResponse, err error) {
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
@@ -41,16 +41,16 @@ func (l *QueryUserAffiliateListLogic) QueryUserAffiliateList(req *types.QueryUse
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Affiliate List failed: %v", err.Error())
 	}
 
-	list := make([]types.UserAffiliate, 0)
+	list := make([]dto.UserAffiliate, 0)
 	for _, item := range data {
-		list = append(list, types.UserAffiliate{
+		list = append(list, dto.UserAffiliate{
 			Identifier:   GetAuthMethod(l, item).AuthIdentifier,
 			Avatar:       item.Avatar,
 			RegisteredAt: item.CreatedAt.UnixMilli(),
 			Enable:       *item.Enable,
 		})
 	}
-	return &types.QueryUserAffiliateListResponse{
+	return &dto.QueryUserAffiliateListResponse{
 		Total: total,
 		List:  list,
 	}, nil

@@ -3,7 +3,7 @@ package adapter
 import (
 	"strings"
 
-	"github.com/perfect-panel/server/internal/model/node"
+	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 

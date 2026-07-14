@@ -1,14 +1,14 @@
 package portal
 
 import (
-	"github.com/perfect-panel/server/internal/model/coupon"
-	"github.com/perfect-panel/server/internal/model/payment"
-	"github.com/perfect-panel/server/internal/types"
+	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/coupon"
+	"github.com/perfect-panel/server/internal/model/entity/payment"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 
-func getDiscount(discounts []types.SubscribeDiscount, inputMonths int64) float64 {
+func getDiscount(discounts []dto.SubscribeDiscount, inputMonths int64) float64 {
 	var finalDiscount float64 = 100
 
 	for _, discount := range discounts {
