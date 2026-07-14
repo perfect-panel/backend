@@ -60,8 +60,8 @@ func (l *ResetTrafficLogic) ResetTraffic(req *dto.ResetTrafficOrderRequest) (res
 	if u.GiftAmount > 0 {
 		if u.GiftAmount >= amount {
 			deductionAmount = amount
-			amount = 0
 			u.GiftAmount -= amount
+			amount = 0
 		} else {
 			deductionAmount = u.GiftAmount
 			amount -= u.GiftAmount
