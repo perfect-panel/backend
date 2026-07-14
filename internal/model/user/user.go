@@ -163,12 +163,13 @@ type LoginLogFilterParams struct {
 
 // UserFilterParams filters users in paginated queries.
 type UserFilterParams struct {
-	Search          string
-	UserId          *int64
-	SubscribeId     *int64
-	UserSubscribeId *int64
-	Order           string // Order by id, e.g., "desc"
-	Unscoped        bool   // Whether to include soft-deleted records
+	Search             string
+	UserId             *int64
+	SubscribeId        *int64
+	UserSubscribeId    *int64
+	UserSubscribeToken string
+	Order              string // Order by id, e.g., "desc"
+	Unscoped           bool   // Whether to include soft-deleted records
 }
 
 // EmailRecipientFilter filters email recipients.

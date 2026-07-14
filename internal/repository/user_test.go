@@ -141,6 +141,74 @@ func TestApplyUserPageFiltersSkipsBlankSearch(t *testing.T) {
 	}
 }
 
+func TestApplyUserPageFiltersMatchesSubscribeTokenOrUUID(t *testing.T) {
+	tests := []struct {
+		name      string
+		dialector gorm.Dialector
+		wantSQL   []string
+	}{
+		{
+			name: "mysql",
+			dialector: mysql.New(mysql.Config{
+				DSN:                       "gorm:gorm@tcp(localhost:9910)/gorm?charset=utf8&parseTime=True&loc=Local",
+				SkipInitializeWithVersion: true,
+			}),
+			wantSQL: []string{
+				"EXISTS (SELECT 1 FROM `user_subscribe`",
+				"`user_subscribe`.`user_id` = `user`.`id`",
+				"(`user_subscribe`.`token` = ? OR `user_subscribe`.`uuid` = ?)",
+			},
+		},
+		{
+			name: "postgres",
+			dialector: postgres.New(postgres.Config{
+				DSN:                  "host=localhost user=gorm password=gorm dbname=gorm port=9920 sslmode=disable",
+				PreferSimpleProtocol: true,
+			}),
+			wantSQL: []string{
+				`EXISTS (SELECT 1 FROM "user_subscribe"`,
+				`"user_subscribe"."user_id" = "user"."id"`,
+				`("user_subscribe"."token" = $1 OR "user_subscribe"."uuid" = $2)`,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db, err := gorm.Open(tt.dialector, &gorm.Config{
+				DryRun:               true,
+				DisableAutomaticPing: true,
+			})
+			if err != nil {
+				t.Fatalf("open gorm db: %v", err)
+			}
+
+			var result []user.User
+			stmt := applyUserPageFilters(db.Model(&user.User{}), &user.UserFilterParams{
+				UserSubscribeToken: "sub-token-or-uuid",
+			}).Find(&result).Statement
+			sql := stmt.SQL.String()
+
+			for _, want := range tt.wantSQL {
+				if !strings.Contains(sql, want) {
+					t.Fatalf("SQL missing %q:\n%s", want, sql)
+				}
+			}
+			if strings.Contains(sql, "status") {
+				t.Fatalf("token/uuid lookup should not add status filter:\n%s", sql)
+			}
+			if len(stmt.Vars) != 2 {
+				t.Fatalf("vars len = %d, want 2: %#v", len(stmt.Vars), stmt.Vars)
+			}
+			for index, got := range stmt.Vars {
+				if got != "sub-token-or-uuid" {
+					t.Fatalf("var[%d] = %#v, want subscribe token", index, got)
+				}
+			}
+		})
+	}
+}
+
 func TestNormalizePage(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -281,7 +281,7 @@ func applyUserPageFilters(conn *gorm.DB, filter *user.UserFilterParams) *gorm.DB
 			conn = conn.Where(userSearchCondition(conn), search, search)
 		}
 	}
-	if filter.UserSubscribeId != nil || filter.SubscribeId != nil {
+	if filter.UserSubscribeId != nil || filter.SubscribeId != nil || strings.TrimSpace(filter.UserSubscribeToken) != "" {
 		conn = userSubscribeExistsCondition(conn, userIdColumn, filter)
 	}
 	if filter.Order != "" {
@@ -300,7 +300,7 @@ func userSubscribeExistsCondition(conn *gorm.DB, userIdColumn string, filter *us
 	conditions := []string{
 		fmt.Sprintf("%s = %s", userSubscribeColumn(conn, "user_id"), userIdColumn),
 	}
-	args := make([]interface{}, 0, 3)
+	args := make([]interface{}, 0, 5)
 	if filter.UserSubscribeId != nil {
 		conditions = append(conditions, fmt.Sprintf("%s = ?", userSubscribeColumn(conn, "id")))
 		args = append(args, *filter.UserSubscribeId)
@@ -309,8 +309,14 @@ func userSubscribeExistsCondition(conn *gorm.DB, userIdColumn string, filter *us
 		conditions = append(conditions, fmt.Sprintf("%s = ?", userSubscribeColumn(conn, "subscribe_id")))
 		args = append(args, *filter.SubscribeId)
 	}
-	conditions = append(conditions, fmt.Sprintf("%s IN ?", userSubscribeColumn(conn, "status")))
-	args = append(args, []int64{0, 1})
+	subscribeToken := strings.TrimSpace(filter.UserSubscribeToken)
+	if subscribeToken != "" {
+		conditions = append(conditions, fmt.Sprintf("(%s = ? OR %s = ?)", userSubscribeColumn(conn, "token"), userSubscribeColumn(conn, "uuid")))
+		args = append(args, subscribeToken, subscribeToken)
+	} else {
+		conditions = append(conditions, fmt.Sprintf("%s IN ?", userSubscribeColumn(conn, "status")))
+		args = append(args, []int64{0, 1})
+	}
 	return conn.Where(
 		fmt.Sprintf(
 			"EXISTS (SELECT 1 FROM %s WHERE %s)",

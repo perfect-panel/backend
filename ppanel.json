@@ -3298,6 +3298,12 @@
             "required": false,
             "type": "integer",
             "format": "int64"
+          },
+          {
+            "name": "user_subscribe_token",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
