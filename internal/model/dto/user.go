@@ -49,7 +49,7 @@ type DeleteUserDeivceRequest struct {
 }
 
 type DeleteUserSubscribeRequest struct {
-	UserSubscribeId int64 `json:"user_subscribe_id,string"`
+	UserSubscribeId int64 `json:"user_subscribe_id"`
 }
 
 type GetUserAuthMethodRequest struct {
