@@ -35,6 +35,7 @@ type NotifyResult struct {
 	Method    string
 	UserId    int64
 	Amount    int64
+	Currency  string
 }
 type Order struct {
 	OrderNo   string
@@ -170,15 +171,8 @@ func (c *Client) ParseNotify(payload []byte, signature string) (*NotifyResult, e
 	orderNo := paymentIntent.Metadata["order_no"]
 	userId := paymentIntent.Metadata["user_id"]
 	var method string
-	if paymentIntent.PaymentMethod != nil && paymentIntent.PaymentMethod.ID != "" {
-		fmt.Println("paymentMethod:", paymentIntent.PaymentMethod.ID)
-		result, err := c.RetrievePaymentMethod(paymentIntent.PaymentMethod.ID)
-		if err != nil {
-			logger.Error("[stripe] Payment callback query payment method error", logger.Field("errors", err.Error()))
-		}
-		if result != nil {
-			method = string(result.Type)
-		}
+	if len(paymentIntent.PaymentMethodTypes) > 0 {
+		method = paymentIntent.PaymentMethodTypes[0]
 	}
 	// userId string 转 int64
 	uid, _ := strconv.ParseInt(userId, 10, 64)
@@ -188,7 +182,8 @@ func (c *Client) ParseNotify(payload []byte, signature string) (*NotifyResult, e
 		TradeNo:   paymentIntent.ID,
 		UserId:    uid,
 		Method:    method,
-		Amount:    paymentIntent.Amount,
+		Amount:    paymentIntent.AmountReceived,
+		Currency:  string(paymentIntent.Currency),
 	}, nil
 }
 

@@ -177,6 +177,28 @@ func TestNotifyMiddleware_propagatesPaymentContext_whenTokenResolves(t *testing.
 	}
 }
 
+func TestNotifyMiddlewareRejectsRoutePlatformThatDoesNotMatchToken(t *testing.T) {
+	paymentConfig := &payment.Payment{Platform: "EPay", Token: "notify-token"}
+	engine := server.Default()
+	downstreamRan := false
+	engine.GET("/v1/notify/:platform/:token", NotifyMiddleware(&svc.ServiceContext{
+		Store: paymentStore{payment: paymentRepository{payment: paymentConfig}},
+	}), func(_ context.Context, ctx *app.RequestContext) {
+		downstreamRan = true
+		ctx.String(http.StatusOK, "unreachable")
+	})
+	ctx := requestContext(engine, http.MethodGet, "/v1/notify/Stripe/notify-token")
+
+	engine.ServeHTTP(context.Background(), ctx)
+
+	if downstreamRan {
+		t.Fatal("platform mismatch must abort before callback handling")
+	}
+	if status := ctx.Response.StatusCode(); status != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, status)
+	}
+}
+
 type paymentStore struct {
 	repository.Store
 	payment repository.PaymentRepo

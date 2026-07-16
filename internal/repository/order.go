@@ -30,7 +30,9 @@ type OrderRepo interface {
 	Delete(ctx context.Context, id int64, tx ...*gorm.DB) error
 	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	UpdateOrderStatus(ctx context.Context, orderNo string, status uint8, tx ...*gorm.DB) error
-	UpdateOrderStatusAndTradeNo(ctx context.Context, orderNo string, status uint8, tradeNo string, tx ...*gorm.DB) error
+	UpdatePaymentExpectation(ctx context.Context, orderNo string, amount int64, currency string, tx ...*gorm.DB) (bool, error)
+	MarkOrderPaid(ctx context.Context, orderNo, tradeNo string, tx ...*gorm.DB) (bool, error)
+	QueryOrdersByStatusAfterID(ctx context.Context, status uint8, afterID int64, limit int) ([]*order.Order, error)
 	CountUserCouponUsage(ctx context.Context, userID int64, coupon string) (int64, error)
 	QueryOrderListByPage(ctx context.Context, page, size int, status uint8, user, subscribe int64, search string) (int64, []*order.Details, error)
 	FindOneDetails(ctx context.Context, id int64) (*order.Details, error)
@@ -218,21 +220,78 @@ func (m *orderRepo) UpdateOrderStatus(ctx context.Context, orderNo string, statu
 	}, m.getCacheKeys(orderInfo)...)
 }
 
-// UpdateOrderStatusAndTradeNo Update order status and trade number
-func (m *orderRepo) UpdateOrderStatusAndTradeNo(ctx context.Context, orderNo string, status uint8, tradeNo string, tx ...*gorm.DB) error {
+// UpdatePaymentExpectation persists the exact amount and currency sent to a
+// payment gateway. Only a pending order may receive or refresh this snapshot.
+func (m *orderRepo) UpdatePaymentExpectation(ctx context.Context, orderNo string, amount int64, currency string, tx ...*gorm.DB) (bool, error) {
 	orderInfo, err := m.FindOneByOrderNo(ctx, orderNo)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+	var updated bool
+	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
-		return conn.Model(&order.Order{}).Where("order_no = ?", orderNo).Updates(map[string]interface{}{
-			"status":   status,
-			"trade_no": tradeNo,
-		}).Error
+		result := conn.Model(&order.Order{}).
+			Where("order_no = ? AND status = ?", orderNo, uint8(1)).
+			Updates(map[string]interface{}{
+				"payment_amount":   amount,
+				"payment_currency": currency,
+			})
+		updated = result.RowsAffected == 1
+		return result.Error
 	}, m.getCacheKeys(orderInfo)...)
+	if err != nil || updated {
+		return updated, err
+	}
+	// MySQL reports zero affected rows when a repeated checkout writes the
+	// same values. Treat that as success only after re-reading and confirming
+	// that the order is still pending with the identical snapshot.
+	latest, err := m.FindOneByOrderNo(ctx, orderNo)
+	if err != nil {
+		return false, err
+	}
+	return latest.Status == 1 && latest.PaymentAmount == amount && latest.PaymentCurrency == currency, nil
+}
+
+// MarkOrderPaid performs the only valid callback-driven state transition. The
+// affected-row result is part of the contract so callers cannot enqueue an
+// activation task after a stale or conflicting transition.
+func (m *orderRepo) MarkOrderPaid(ctx context.Context, orderNo, tradeNo string, tx ...*gorm.DB) (bool, error) {
+	orderInfo, err := m.FindOneByOrderNo(ctx, orderNo)
+	if err != nil {
+		return false, err
+	}
+	var updated bool
+	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		if len(tx) > 0 {
+			conn = tx[0]
+		}
+		result := conn.Model(&order.Order{}).
+			Where("order_no = ? AND status = ?", orderNo, uint8(1)).
+			Updates(map[string]interface{}{
+				"status":   uint8(2),
+				"trade_no": tradeNo,
+			})
+		updated = result.RowsAffected == 1
+		return result.Error
+	}, m.getCacheKeys(orderInfo)...)
+	return updated, err
+}
+
+func (m *orderRepo) QueryOrdersByStatusAfterID(ctx context.Context, status uint8, afterID int64, limit int) ([]*order.Order, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 1000
+	}
+	var orders []*order.Order
+	err := m.QueryNoCacheCtx(ctx, &orders, func(conn *gorm.DB, value interface{}) error {
+		return conn.Model(&order.Order{}).
+			Where("status = ? AND id > ?", status, afterID).
+			Order("id ASC").
+			Limit(limit).
+			Find(value).Error
+	})
+	return orders, err
 }
 
 // FindOneDetailsByOrderNo Find order details by order number

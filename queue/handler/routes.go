@@ -22,6 +22,8 @@ func RegisterHandlers(mux *asynq.ServeMux, serverCtx *svc.ServiceContext) {
 	mux.Handle(types.DeferCloseOrder, orderLogic.NewDeferCloseOrderLogic(serverCtx))
 	// Forthwith activate order task
 	mux.Handle(types.ForthwithActivateOrder, orderLogic.NewActivateOrderLogic(serverCtx))
+	// Recover paid orders whose activation enqueue was interrupted.
+	mux.Handle(types.SchedulerReconcilePaidOrders, orderLogic.NewReconcilePaidOrdersLogic(serverCtx))
 
 	// Forthwith traffic statistics
 	mux.Handle(types.ForthwithTrafficStatistics, traffic.NewTrafficStatisticsLogic(serverCtx))

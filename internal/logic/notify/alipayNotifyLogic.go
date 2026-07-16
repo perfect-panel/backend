@@ -11,12 +11,11 @@ import (
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
-	"github.com/hibiken/asynq"
+	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/model/entity/payment"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment/alipay"
-	"github.com/perfect-panel/server/queue/types"
 )
 
 type AlipayNotifyLogic struct {
@@ -53,46 +52,61 @@ func (l *AlipayNotifyLogic) AlipayNotify(form url.Values) error {
 		NotifyURL:   data.Domain + "/v1/payment/alipay/notify",
 		Sandbox:     config.Sandbox,
 	})
+	if client == nil {
+		return errors.New("initialize Alipay client failed")
+	}
 	notify, err := client.DecodeNotification(form)
 	if err != nil {
 		l.Logger.Error("[AlipayNotify] Decode notification failed", logger.Field("error", err.Error()))
 		return err
 	}
-	if notify.Status == alipay.Success {
+	if notify.Status == alipay.Success || notify.Status == alipay.Finished {
 		orderInfo, err := store.Order().FindOneByOrderNo(l.ctx, notify.OrderNo)
 		if err != nil {
 			l.Logger.Error("[AlipayNotify] Find order failed", logger.Field("error", err.Error()), logger.Field("orderNo", notify.OrderNo))
 			return errors.Wrapf(xerr.NewErrCode(xerr.OrderNotExist), "order not exist: %v", notify.OrderNo)
 		}
 
-		if orderInfo.Status == 5 {
+		if finished, err := validateAlipayCallback(orderInfo, data, &config, notify); err != nil {
+			return err
+		} else if finished {
 			return nil
 		}
-
-		// Update order status and trade_no
-		err = store.Order().UpdateOrderStatusAndTradeNo(l.ctx, notify.OrderNo, 2, notify.TradeNo)
+		status, err := client.QueryTrade(l.ctx, notify.OrderNo)
 		if err != nil {
-			l.Logger.Error("[AlipayNotify] Update order status failed", logger.Field("error", err.Error()), logger.Field("orderNo", notify.OrderNo))
+			return err
+		}
+		if status != alipay.Success && status != alipay.Finished {
+			return errors.New("Alipay trade is not paid")
+		}
+		if err := markOrderPaidAndEnqueue(l.ctx, l.svcCtx, orderInfo, notify.TradeNo); err != nil {
 			return err
 		}
 		l.Logger.Info("[AlipayNotify] Notify status success", logger.Field("orderNo", notify.OrderNo))
-		payload := types.ForthwithActivateOrderPayload{
-			OrderNo: notify.OrderNo,
-		}
-		bytes, err := json.Marshal(&payload)
-		if err != nil {
-			l.Logger.Error("[AlipayNotify] Marshal payload failed", logger.Field("error", err.Error()))
-			return err
-		}
-		task := asynq.NewTask(types.ForthwithActivateOrder, bytes, asynq.MaxRetry(5))
-		taskInfo, err := l.svcCtx.Queue.EnqueueContext(l.ctx, task)
-		if err != nil {
-			l.Logger.Error("[AlipayNotify] Enqueue task failed", logger.Field("error", err.Error()))
-			return err
-		}
-		l.Logger.Info("[AlipayNotify] Enqueue task success", logger.Field("taskInfo", taskInfo))
 	} else {
 		l.Logger.Error("[AlipayNotify] Notify status failed", logger.Field("status", string(notify.Status)))
 	}
 	return nil
+}
+
+func validateAlipayCallback(orderInfo *order.Order, paymentConfig *payment.Payment, config *payment.AlipayF2FConfig, notify *alipay.Notification) (bool, error) {
+	if notify == nil {
+		return false, errors.New("Alipay callback is missing")
+	}
+	if err := validateOrderPayment(orderInfo, paymentConfig); err != nil {
+		return false, err
+	}
+	if notify.AppId != config.AppId {
+		return false, errors.New("Alipay app id mismatch")
+	}
+	if finished, err := finishedOrderDuplicate(orderInfo, notify.TradeNo); err != nil || finished {
+		return finished, err
+	}
+	if err := validateOrderCanSettle(orderInfo); err != nil {
+		return false, err
+	}
+	if err := validatePaymentExpectation(orderInfo, notify.Amount, "CNY"); err != nil {
+		return false, err
+	}
+	return false, nil
 }

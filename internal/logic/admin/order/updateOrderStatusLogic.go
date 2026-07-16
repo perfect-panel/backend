@@ -67,7 +67,10 @@ func (l *UpdateOrderStatusLogic) UpdateOrderStatus(req *dto.UpdateOrderStatusReq
 			}
 			p, _ := json.Marshal(payload)
 			task := asynq.NewTask(queue.ForthwithActivateOrder, p)
-			_, err = l.svcCtx.Queue.EnqueueContext(l.ctx, task)
+			_, err = l.svcCtx.Queue.EnqueueContext(l.ctx, task, asynq.TaskID(queue.ActivationTaskID(info.OrderNo)))
+			if errors.Is(err, asynq.ErrTaskIDConflict) {
+				err = nil
+			}
 			if err != nil {
 				l.Errorw("[UpdateOrderStatus] Enqueue error", logger.Field("error", err.Error()))
 				return errors.Wrapf(xerr.NewErrCode(xerr.QueueEnqueueError), "Enqueue error: %v", err.Error())

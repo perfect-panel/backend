@@ -1,7 +1,10 @@
 package epay
 
 import (
+	"crypto/subtle"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -10,14 +13,16 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/pkg/logger"
+	paymentUtil "github.com/perfect-panel/server/pkg/payment"
 	"github.com/perfect-panel/server/pkg/tool"
 )
 
 type Client struct {
-	Pid  string
-	Url  string
-	Key  string
-	Type string
+	Pid        string
+	Url        string
+	Key        string
+	Type       string
+	httpClient *http.Client
 }
 
 type Order struct {
@@ -29,13 +34,25 @@ type Order struct {
 	ReturnUrl string
 }
 
-type queryOrderStatusResponse struct {
-	Code       int    `json:"code"`
-	Msg        string `json:"msg"`
-	TradeNo    string `json:"trade_no"`
-	OutTradeNo string `json:"out_trade_no"`
-	Type       string `json:"type"`
-	Status     int    `json:"status"`
+type QueryResult struct {
+	MerchantID string
+	TradeNo    string
+	OrderNo    string
+	Type       string
+	Money      string
+	Paid       bool
+	Message    string
+}
+
+type queryOrderResponse struct {
+	Code       int             `json:"code"`
+	Msg        string          `json:"msg"`
+	TradeNo    string          `json:"trade_no"`
+	OutTradeNo string          `json:"out_trade_no"`
+	Type       string          `json:"type"`
+	Money      string          `json:"money"`
+	Pid        json.RawMessage `json:"pid"`
+	Status     int             `json:"status"`
 }
 
 func NewClient(pid, url, key string, Type string) *Client {
@@ -44,6 +61,9 @@ func NewClient(pid, url, key string, Type string) *Client {
 		Url:  url,
 		Key:  key,
 		Type: Type,
+		httpClient: &http.Client{
+			Timeout: 5 * time.Second,
+		},
 	}
 }
 
@@ -51,7 +71,7 @@ func (c *Client) CreatePayUrl(order Order) string {
 	// Prepare URL values
 	params := url.Values{}
 	params.Set("name", order.Name)
-	params.Set("money", tool.FormatFloat(order.Amount, 2))
+	params.Set("money", FormatMoney(order.Amount))
 	params.Set("notify_url", order.NotifyUrl)
 	params.Set("out_trade_no", order.OrderNo)
 	params.Set("pid", c.Pid)
@@ -85,37 +105,126 @@ func (c *Client) createSign(params map[string]string) string {
 }
 
 func (c *Client) VerifySign(params map[string]string) bool {
-	return c.createSign(params) == params["sign"]
+	expected := c.createSign(params)
+	received := strings.ToLower(params["sign"])
+	if len(expected) != len(received) || len(received) == 0 {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(expected), []byte(received)) == 1
 }
 
-func (c *Client) QueryOrderStatus(orderNo string) bool {
-	client := http.Client{
-		Timeout: 5 * time.Second,
+// QueryOrder obtains authoritative payment details directly from the gateway.
+// A successful HTTP response is not enough: EPay-compatible gateways use code=1
+// to indicate a successful lookup and status=1 to indicate a paid order.
+func (c *Client) QueryOrder(orderNo string) (*QueryResult, error) {
+	if orderNo == "" {
+		return nil, errors.New("order number is empty")
 	}
-	resp, err := client.Get(c.Url + "/api.php" + "?act=order" + "&pid=" + c.Pid + "&key=" + c.Key + "&out_trade_no=" + orderNo)
+	endpoint, err := url.Parse(c.Url)
 	if err != nil {
-		logger.Error("[Epay] QueryOrderStatus error", logger.Field("orderNo", orderNo), logger.Field("error", err.Error()))
-		return false
+		return nil, fmt.Errorf("parse endpoint: %w", err)
+	}
+	if endpoint.Scheme != "http" && endpoint.Scheme != "https" {
+		return nil, errors.New("unsupported payment endpoint scheme")
+	}
+	endpoint.Path = strings.TrimSuffix(endpoint.Path, "/") + "/api.php"
+	query := endpoint.Query()
+	query.Set("act", "order")
+	query.Set("pid", c.Pid)
+	query.Set("key", c.Key)
+	query.Set("out_trade_no", orderNo)
+	endpoint.RawQuery = query.Encode()
+
+	req, err := http.NewRequest(http.MethodGet, endpoint.String(), nil)
+	if err != nil {
+		return nil, errors.New("create gateway query request failed")
+	}
+	client := c.httpClient
+	if client == nil {
+		client = &http.Client{Timeout: 5 * time.Second}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, errors.New("gateway query request failed")
 	}
 	defer resp.Body.Close()
-	value, err := io.ReadAll(resp.Body)
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("query gateway returned HTTP %d", resp.StatusCode)
+	}
+	const maxQueryResponseSize = 1 << 20
+	value, err := io.ReadAll(io.LimitReader(resp.Body, maxQueryResponseSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("read query response: %w", err)
+	}
+	if len(value) > maxQueryResponseSize {
+		return nil, errors.New("query response is too large")
+	}
+	var response queryOrderResponse
+	if err := json.Unmarshal(value, &response); err != nil {
+		return nil, fmt.Errorf("decode query response: %w", err)
+	}
+	if response.Code != 1 {
+		return nil, fmt.Errorf("gateway order lookup failed: code=%d", response.Code)
+	}
+	merchantID, err := rawString(response.Pid)
+	if err != nil {
+		return nil, fmt.Errorf("decode merchant id: %w", err)
+	}
+	return &QueryResult{
+		MerchantID: merchantID,
+		TradeNo:    response.TradeNo,
+		OrderNo:    response.OutTradeNo,
+		Type:       response.Type,
+		Money:      response.Money,
+		Paid:       response.Status == 1,
+		Message:    response.Msg,
+	}, nil
+}
+
+// QueryOrderStatus is kept for callers that only need a status boolean.
+func (c *Client) QueryOrderStatus(orderNo string) bool {
+	result, err := c.QueryOrder(orderNo)
 	if err != nil {
 		logger.Error("[Epay] QueryOrderStatus error", logger.Field("orderNo", orderNo), logger.Field("error", err.Error()))
 		return false
 	}
-	var response queryOrderStatusResponse
-	err = json.Unmarshal(value, &response)
-	if err != nil {
-		logger.Error("[Epay] QueryOrderStatus error", logger.Field("orderNo", orderNo), logger.Field("error", err.Error()))
-		return false
+	return result.Paid
+}
+
+// FormatMoney returns the exact two-decimal amount sent to an EPay-compatible
+// gateway. It intentionally preserves the historical truncation behaviour.
+func FormatMoney(amount float64) string {
+	return tool.FormatFloat(amount, 2)
+}
+
+// ParseMoney converts a non-negative decimal amount to its integer minor unit.
+// It rejects floats, exponents and values with more than two decimal places.
+func ParseMoney(value string) (int64, error) {
+	return paymentUtil.ParseAmount(value)
+}
+
+func rawString(value json.RawMessage) (string, error) {
+	if len(value) == 0 || string(value) == "null" {
+		return "", errors.New("merchant id is missing")
 	}
-	return response.Status == 1
+	var text string
+	if value[0] == '"' {
+		if err := json.Unmarshal(value, &text); err != nil {
+			return "", err
+		}
+		return text, nil
+	}
+	var number json.Number
+	if err := json.Unmarshal(value, &number); err != nil {
+		return "", err
+	}
+	return number.String(), nil
 }
 
 // StructToMap converts a struct to map[string]string
 func (c *Client) structToMap(order Order) map[string]string {
 	result := make(map[string]string)
-	result["money"] = tool.FormatFloat(order.Amount, 2)
+	result["money"] = FormatMoney(order.Amount)
 	result["name"] = order.Name
 	result["notify_url"] = order.NotifyUrl
 	result["out_trade_no"] = order.OrderNo

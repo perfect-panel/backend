@@ -3,18 +3,18 @@ package notify
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/perfect-panel/server/pkg/constant"
 
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
-	"github.com/hibiken/asynq"
+	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/model/entity/payment"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment/stripe"
-	"github.com/perfect-panel/server/queue/types"
 )
 
 type StripeNotifyLogic struct {
@@ -53,36 +53,51 @@ func (l *StripeNotifyLogic) StripeNotify(payload []byte, signature string) error
 		l.Errorw("[StripeNotify] error", logger.Field("errors", err.Error()))
 		return err
 	}
+	if notify.EventType != "payment_intent.succeeded" {
+		return nil
+	}
 	orderInfo, err := store.Order().FindOneByOrderNo(l.ctx, notify.OrderNo)
 	if err != nil {
 		l.Logger.Error("[StripeNotify] Find order failed", logger.Field("error", err.Error()), logger.Field("orderNo", notify.OrderNo))
 		return errors.Wrapf(xerr.NewErrCode(xerr.OrderNotExist), "order not exist: %v", notify.OrderNo)
 	}
-	if notify.EventType == "payment_intent.succeeded" {
-		if orderInfo.Status == 5 {
-			return nil
-		}
-		// update order status and trade_no
-		err = store.Order().UpdateOrderStatusAndTradeNo(l.ctx, notify.OrderNo, 2, notify.TradeNo)
-		if err != nil {
-			return err
-		}
-		// create ActivateOrder task
-		payload := types.ForthwithActivateOrderPayload{
-			OrderNo: notify.OrderNo,
-		}
-		bytes, err := json.Marshal(payload)
-		if err != nil {
-			l.Errorw("[StripeNotify] Marshal error", logger.Field("errors", err.Error()), logger.Field("payload", payload))
-			return err
-		}
-		task := asynq.NewTask(types.ForthwithActivateOrder, bytes, asynq.MaxRetry(5))
-		_, err = l.svcCtx.Queue.Enqueue(task)
-		if err != nil {
-			l.Errorw("[StripeNotify] Enqueue error", logger.Field("errors", err.Error()))
-			return err
-		}
-		l.Infow("[StripeNotify] success", logger.Field("orderNo", notify.OrderNo))
+	if finished, err := validateStripeCallback(orderInfo, stripeConfig, &config, notify); err != nil {
+		return err
+	} else if finished {
+		return nil
 	}
+	paid, err := client.QueryOrderStatus(notify.TradeNo)
+	if err != nil {
+		return err
+	}
+	if !paid {
+		return errors.New("Stripe payment intent is not paid")
+	}
+	if err := markOrderPaidAndEnqueue(l.ctx, l.svcCtx, orderInfo, notify.TradeNo); err != nil {
+		return err
+	}
+	l.Infow("[StripeNotify] success", logger.Field("orderNo", notify.OrderNo))
 	return nil
+}
+
+func validateStripeCallback(orderInfo *order.Order, paymentConfig *payment.Payment, config *payment.StripeConfig, notify *stripe.NotifyResult) (bool, error) {
+	if notify == nil {
+		return false, errors.New("Stripe callback is missing")
+	}
+	if err := validateOrderPayment(orderInfo, paymentConfig); err != nil {
+		return false, err
+	}
+	if notify.Method == "" || notify.Method != config.Payment {
+		return false, errors.New("Stripe payment method mismatch")
+	}
+	if finished, err := finishedOrderDuplicate(orderInfo, notify.TradeNo); err != nil || finished {
+		return finished, err
+	}
+	if err := validateOrderCanSettle(orderInfo); err != nil {
+		return false, err
+	}
+	if err := validatePaymentExpectation(orderInfo, notify.Amount, strings.ToUpper(notify.Currency)); err != nil {
+		return false, err
+	}
+	return false, nil
 }

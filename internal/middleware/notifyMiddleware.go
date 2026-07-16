@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/svc"
@@ -19,7 +20,7 @@ func NotifyMiddleware(svc *svc.ServiceContext) app.HandlerFunc {
 			Platform: requestCtx.Param("platform"),
 			Token:    requestCtx.Param("token"),
 		}
-		ctx, err := PaymentNotifyContext(ctx, svc, params.Token)
+		ctx, err := PaymentNotifyContext(ctx, svc, params.Platform, params.Token)
 		if err != nil {
 			requestCtx.JSON(400, map[string]string{"error": err.Error()})
 			requestCtx.Abort()
@@ -29,10 +30,13 @@ func NotifyMiddleware(svc *svc.ServiceContext) app.HandlerFunc {
 	}
 }
 
-func PaymentNotifyContext(ctx context.Context, svc *svc.ServiceContext, token string) (context.Context, error) {
+func PaymentNotifyContext(ctx context.Context, svc *svc.ServiceContext, platform, token string) (context.Context, error) {
 	config, err := svc.Store.Payment().FindOneByPaymentToken(ctx, token)
 	if err != nil {
 		return ctx, err
+	}
+	if config.Platform != platform {
+		return ctx, errors.New("payment callback platform mismatch")
 	}
 	ctx = context.WithValue(ctx, constant.CtxKeyPlatform, config.Platform)
 	ctx = context.WithValue(ctx, constant.CtxKeyPayment, config)

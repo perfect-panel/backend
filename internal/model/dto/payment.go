@@ -23,7 +23,7 @@ type DeletePaymentMethodRequest struct {
 }
 
 type EPayNotifyRequest struct {
-	Pid         int64  `json:"pid"          form:"pid"`
+	Pid         string `json:"pid"          form:"pid"`
 	TradeNo     string `json:"trade_no"     form:"trade_no"`
 	OutTradeNo  string `json:"out_trade_no" form:"out_trade_no"`
 	Type        string `json:"type"         form:"type"`

@@ -104,6 +104,15 @@ func TestNativeFormValues_prioritizesPostValue_whenQueryDuplicatesKey(t *testing
 	}
 }
 
+func TestUniqueFormValuesRejectsDuplicateCallbackParameters(t *testing.T) {
+	_, err := uniqueFormValues(map[string][]string{
+		"out_trade_no": {"body-order", "query-order"},
+	})
+	if err == nil {
+		t.Fatal("duplicate callback parameters must be rejected")
+	}
+}
+
 func TestStripePayload_acceptsHistoricalLimitAndRejectsLargerPayload(t *testing.T) {
 	tests := []struct {
 		name    string

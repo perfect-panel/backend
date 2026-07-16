@@ -16,7 +16,7 @@ import (
 	gormlogger "gorm.io/gorm/logger"
 )
 
-func TestOrderRepoUpdateOrderStatusAndTradeNoUpdatesBothFields(t *testing.T) {
+func TestOrderRepoMarkOrderPaidUsesPendingCondition(t *testing.T) {
 	var logs bytes.Buffer
 	db, err := gorm.Open(mysql.New(mysql.Config{
 		DSN:                       "gorm:gorm@tcp(localhost:9910)/gorm?charset=utf8&parseTime=True&loc=Local",
@@ -25,26 +25,24 @@ func TestOrderRepoUpdateOrderStatusAndTradeNoUpdatesBothFields(t *testing.T) {
 		DryRun:                 true,
 		DisableAutomaticPing:   true,
 		SkipDefaultTransaction: true,
-		Logger: gormlogger.New(log.New(&logs, "", 0), gormlogger.Config{
-			LogLevel: gormlogger.Info,
-		}),
+		Logger:                 gormlogger.New(log.New(&logs, "", 0), gormlogger.Config{LogLevel: gormlogger.Info}),
 	})
 	if err != nil {
 		t.Fatalf("open gorm db: %v", err)
 	}
-
 	redisServer := miniredis.RunT(t)
 	redisClient := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})
 	t.Cleanup(func() { _ = redisClient.Close() })
-	repo := newOrderRepo(db, redisClient)
 
-	err = repo.UpdateOrderStatusAndTradeNo(context.Background(), "order-123", 2, "trade-456")
+	updated, err := newOrderRepo(db, redisClient).MarkOrderPaid(context.Background(), "order-123", "trade-456")
 	if err != nil {
-		t.Fatalf("update order status and trade number: %v", err)
+		t.Fatalf("MarkOrderPaid: %v", err)
 	}
-
+	if updated {
+		t.Fatal("dry-run update must not report an affected row")
+	}
 	sql := logs.String()
-	for _, want := range []string{"UPDATE `order`", "`status`=2", "`trade_no`='trade-456'", "WHERE order_no = 'order-123'"} {
+	for _, want := range []string{"UPDATE `order`", "`status`=2", "`trade_no`='trade-456'", "WHERE order_no = 'order-123' AND status = 1"} {
 		if !strings.Contains(sql, want) {
 			t.Fatalf("SQL missing %q:\n%s", want, sql)
 		}

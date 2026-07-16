@@ -12,7 +12,6 @@ import (
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
-	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment"
 	"github.com/perfect-panel/server/pkg/result"
@@ -34,15 +33,16 @@ func PaymentNotifyHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 
 		switch payment.ParsePlatform(platform) {
 		case payment.EPay, payment.CryptoSaaS:
-			req := &dto.EPayNotifyRequest{}
-			if err := httpx.ShouldBind(ctx, req); err != nil {
+			params, err := uniqueFormValues(nativeFormValues(ctx))
+			if err != nil {
 				logger.WithContext(c).Errorw("[PaymentNotifyHandler] ShouldBind failed", logger.Field("error", err.Error()))
 				ctx.String(consts.StatusBadRequest, "invalid request")
 				return
 			}
+			req := epayNotifyRequest(params)
 			l := notify.NewEPayNotifyLogic(c, svcCtx, notify.EPayNotifyMeta{
 				Method: string(ctx.Method()),
-				Params: formValues(nativeFormValues(ctx)),
+				Params: params,
 			})
 			if err := l.EPayNotify(req); err != nil {
 				logger.WithContext(c).Errorf("EPayNotify failed: %v", err.Error())
@@ -96,12 +96,28 @@ func stripePayload(payload []byte) ([]byte, error) {
 	return payload, nil
 }
 
-func formValues(values url.Values) map[string]string {
-	params := make(map[string]string)
+func uniqueFormValues(values url.Values) (map[string]string, error) {
+	params := make(map[string]string, len(values))
 	for key, value := range values {
-		if len(value) > 0 {
-			params[key] = value[0]
+		if len(value) != 1 {
+			return nil, fmt.Errorf("callback parameter %q must occur exactly once", key)
 		}
+		params[key] = value[0]
 	}
-	return params
+	return params, nil
+}
+
+func epayNotifyRequest(params map[string]string) *dto.EPayNotifyRequest {
+	return &dto.EPayNotifyRequest{
+		Pid:         params["pid"],
+		TradeNo:     params["trade_no"],
+		OutTradeNo:  params["out_trade_no"],
+		Type:        params["type"],
+		Name:        params["name"],
+		Money:       params["money"],
+		TradeStatus: params["trade_status"],
+		Param:       params["param"],
+		Sign:        params["sign"],
+		SignType:    params["sign_type"],
+	}
 }

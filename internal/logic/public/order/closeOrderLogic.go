@@ -197,7 +197,7 @@ func (l *CloseOrderLogic) confirmationPayment(order *order.Order) bool {
 func (l *CloseOrderLogic) queryAlipay(paymentConfig *payment.Payment, TradeNo string) bool {
 	config := payment.AlipayF2FConfig{}
 	if err := json.Unmarshal([]byte(paymentConfig.Config), &config); err != nil {
-		l.Errorw("[CloseOrder] Unmarshal payment config failed", logger.Field("error", err.Error()), logger.Field("config", paymentConfig.Config))
+		l.Errorw("[CloseOrder] Unmarshal payment config failed", logger.Field("error", err.Error()), logger.Field("paymentId", paymentConfig.Id))
 		return false
 	}
 	client := alipay.NewClient(alipay.Config{
@@ -207,6 +207,9 @@ func (l *CloseOrderLogic) queryAlipay(paymentConfig *payment.Payment, TradeNo st
 		InvoiceName: config.InvoiceName,
 		Sandbox:     config.Sandbox,
 	})
+	if client == nil {
+		return false
+	}
 	status, err := client.QueryTrade(l.ctx, TradeNo)
 	if err != nil {
 		l.Errorw("[CloseOrder] Query trade failed", logger.Field("error", err.Error()), logger.Field("TradeNo", TradeNo))
@@ -224,7 +227,7 @@ func (l *CloseOrderLogic) queryAlipay(paymentConfig *payment.Payment, TradeNo st
 func (l *CloseOrderLogic) queryStripe(paymentConfig *payment.Payment, TradeNo string) bool {
 	config := payment.StripeConfig{}
 	if err := json.Unmarshal([]byte(paymentConfig.Config), &config); err != nil {
-		l.Errorw("[CloseOrder] Unmarshal payment config failed", logger.Field("error", err.Error()), logger.Field("config", paymentConfig.Config))
+		l.Errorw("[CloseOrder] Unmarshal payment config failed", logger.Field("error", err.Error()), logger.Field("paymentId", paymentConfig.Id))
 		return false
 	}
 	client := stripe.NewClient(stripe.Config{

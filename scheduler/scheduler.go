@@ -34,6 +34,12 @@ func (m *Service) Start() {
 	if _, err := m.server.Register("@every 60s", flushTrafficTask, asynq.MaxRetry(3)); err != nil {
 		logger.Errorf("register flush traffic task failed: %s", err.Error())
 	}
+	// Paid order state doubles as a durable activation outbox. Reconcile it
+	// periodically so a transient Redis outage cannot strand a paid order.
+	reconcilePaidOrdersTask := asynq.NewTask(types.SchedulerReconcilePaidOrders, nil)
+	if _, err := m.server.Register("@every 60s", reconcilePaidOrdersTask, asynq.MaxRetry(3)); err != nil {
+		logger.Errorf("register paid order reconciliation task failed: %s", err.Error())
+	}
 	//// schedule total server data task: every 5 minutes
 	//totalServerDataTask := asynq.NewTask(types.SchedulerTotalServerData, nil)
 	//if _, err := m.server.Register("@every 180s", totalServerDataTask); err != nil {

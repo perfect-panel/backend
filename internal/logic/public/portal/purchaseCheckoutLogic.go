@@ -182,6 +182,9 @@ func (l *PurchaseCheckoutLogic) alipayF2fPayment(pay *payment.Payment, info *ord
 		NotifyURL:   notifyUrl,
 		Sandbox:     f2FConfig.Sandbox,
 	})
+	if client == nil {
+		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "initialize Alipay client failed")
+	}
 
 	// Convert order amount to CNY using current exchange rate
 	amount, err := l.queryExchangeRate("CNY", info.Amount)
@@ -189,7 +192,13 @@ func (l *PurchaseCheckoutLogic) alipayF2fPayment(pay *payment.Payment, info *ord
 		l.Errorw("[PurchaseCheckout] queryExchangeRate error", logger.Field("error", err.Error()))
 		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "queryExchangeRate error: %s", err.Error())
 	}
-	convertAmount := int64(amount * 100) // Convert to cents for API
+	convertAmount, err := paymentPlatform.ParseAmount(epay.FormatMoney(amount))
+	if err != nil {
+		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "invalid Alipay amount: %v", err)
+	}
+	if err := l.persistPaymentExpectation(info, convertAmount, "CNY"); err != nil {
+		return "", err
+	}
 
 	// Create pre-payment trade and generate QR code
 	QRCode, err := client.PreCreateTrade(l.ctx, alipay.Order{
@@ -220,6 +229,9 @@ func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, 
 		PublicKey:     stripeConfig.PublicKey,
 		WebhookSecret: stripeConfig.WebhookSecret,
 	})
+	if err := l.persistPaymentExpectation(info, info.Amount, strings.ToUpper(l.svcCtx.Config.Currency.Unit)); err != nil {
+		return nil, err
+	}
 
 	// Create Stripe payment sheet for client-side processing
 	result, err := client.CreatePaymentSheet(&stripe.Order{
@@ -276,6 +288,13 @@ func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order
 		}
 	} else {
 		amount = float64(info.Amount) / float64(100)
+	}
+	expectedAmount, err := epay.ParseMoney(epay.FormatMoney(amount))
+	if err != nil {
+		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "invalid EPay amount: %v", err)
+	}
+	if err := l.persistPaymentExpectation(info, expectedAmount, "CNY"); err != nil {
+		return "", err
 	}
 
 	// gateway mod
@@ -336,6 +355,13 @@ func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info 
 		}
 	} else {
 		amount = float64(info.Amount) / float64(100)
+	}
+	expectedAmount, err := epay.ParseMoney(epay.FormatMoney(amount))
+	if err != nil {
+		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "invalid CryptoSaaS amount: %v", err)
+	}
+	if err := l.persistPaymentExpectation(info, expectedAmount, "CNY"); err != nil {
+		return "", err
 	}
 
 	// gateway mod
@@ -402,6 +428,23 @@ func (l *PurchaseCheckoutLogic) queryExchangeRate(to string, src int64) (amount 
 	}
 	l.svcCtx.ExchangeRate = result
 	return result * amount, nil
+}
+
+func (l *PurchaseCheckoutLogic) persistPaymentExpectation(info *order.Order, amount int64, currency string) error {
+	updated, err := l.svcCtx.Store.Order().UpdatePaymentExpectation(l.ctx, info.OrderNo, amount, currency)
+	if err != nil {
+		l.Errorw("[PurchaseCheckout] Save payment expectation failed",
+			logger.Field("error", err.Error()),
+			logger.Field("orderNo", info.OrderNo),
+		)
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "save payment expectation: %v", err)
+	}
+	if !updated {
+		return errors.Wrapf(xerr.NewErrCode(xerr.OrderStatusError), "order is no longer pending")
+	}
+	info.PaymentAmount = amount
+	info.PaymentCurrency = currency
+	return nil
 }
 
 // balancePayment processes balance payment with gift amount priority logic
@@ -538,7 +581,10 @@ activation:
 	}
 
 	task := asynq.NewTask(queueType.ForthwithActivateOrder, bytes, asynq.MaxRetry(5))
-	_, err = l.svcCtx.Queue.EnqueueContext(l.ctx, task)
+	_, err = l.svcCtx.Queue.EnqueueContext(l.ctx, task, asynq.TaskID(queueType.ActivationTaskID(o.OrderNo)))
+	if errors.Is(err, asynq.ErrTaskIDConflict) {
+		err = nil
+	}
 	if err != nil {
 		l.Errorw("[PurchaseCheckout] Enqueue activation task error", logger.Field("error", err.Error()))
 		return err

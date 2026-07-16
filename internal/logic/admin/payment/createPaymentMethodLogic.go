@@ -101,7 +101,7 @@ func (l *CreatePaymentMethodLogic) CreatePaymentMethod(req *dto.CreatePaymentMet
 func parsePaymentPlatformConfig(ctx context.Context, platform payment.Platform, config interface{}) string {
 	data, err := json.Marshal(config)
 	if err != nil {
-		logger.WithContext(ctx).Errorw("marshal config error", logger.Field("platform", platform), logger.Field("config", config), logger.Field("error", err.Error()))
+		logger.WithContext(ctx).Errorw("marshal config error", logger.Field("platform", platform), logger.Field("error", err.Error()))
 		return ""
 	}
 
@@ -111,7 +111,7 @@ func parsePaymentPlatformConfig(ctx context.Context, platform payment.Platform, 
 		Marshal() ([]byte, error)
 	}) string {
 		if err = target.Unmarshal(data); err != nil {
-			logger.WithContext(ctx).Errorw("parse "+name+" config error", logger.Field("config", string(data)), logger.Field("error", err.Error()))
+			logger.WithContext(ctx).Errorw("parse "+name+" config error", logger.Field("error", err.Error()))
 			return ""
 		}
 		content, err := target.Marshal()
