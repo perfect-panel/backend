@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
 	"github.com/perfect-panel/server/internal/model/entity/log"
+	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
@@ -39,11 +41,18 @@ func NewUserLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UserLog
 }
 
 func (l *UserLoginLogic) UserLogin(req *dto.UserLoginRequest) (resp *dto.LoginResponse, err error) {
+	if err := registerpolicy.EnsureMethodEnabled(l.ctx, l.svcCtx, registerpolicy.MethodEmail); err != nil {
+		return nil, err
+	}
+	email, err := authmethod.ValidateEmail(req.Email, "", false)
+	if err != nil {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "invalid email: %v", err)
+	}
 	loginStatus := false
 	var userInfo *user.User
 	// Record login status
 	defer func(svcCtx *svc.ServiceContext) {
-		if userInfo.Id != 0 {
+		if userInfo != nil && userInfo.Id != 0 {
 			loginLog := log.Login{
 				Method:    "email",
 				LoginIP:   req.IP,
@@ -67,18 +76,16 @@ func (l *UserLoginLogic) UserLogin(req *dto.UserLoginRequest) (resp *dto.LoginRe
 		}
 	}(l.svcCtx)
 
-	userInfo, err = l.svcCtx.Store.User().FindOneByEmail(l.ctx, req.Email)
-
-	if userInfo.DeletedAt.Valid {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email deleted: %v", req.Email)
-	}
-
+	userInfo, err = l.svcCtx.Store.User().FindOneByEmail(l.ctx, email)
 	if err != nil {
-		if errors.As(err, &gorm.ErrRecordNotFound) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email not exist: %v", req.Email)
 		}
 		logger.WithContext(l.ctx).Error(err)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
+	}
+	if userInfo.DeletedAt.Valid {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email deleted: %v", req.Email)
 	}
 
 	// Verify password

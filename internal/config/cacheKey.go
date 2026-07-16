@@ -62,3 +62,9 @@ const SendIntervalKeyPrefix = "send:interval:"
 
 // SendCountLimitKeyPrefix Send Count Limit Key Prefix eg. send:limit:register:email:xxx@ppanel.dev
 const SendCountLimitKeyPrefix = "send:limit:"
+
+// RegisterIPLimitKeyPrefix limits new accounts created by the same client IP.
+const RegisterIPLimitKeyPrefix = "register:limit:ip:"
+
+// VerifyCodeAttemptKeyPrefix limits guesses against a verification code.
+const VerifyCodeAttemptKeyPrefix = "auth:verify:attempt:"

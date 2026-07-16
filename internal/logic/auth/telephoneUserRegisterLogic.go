@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -11,6 +10,8 @@ import (
 	"github.com/perfect-panel/server/pkg/timeutil"
 
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
+	"github.com/perfect-panel/server/internal/logic/common"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
@@ -24,11 +25,6 @@ import (
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
-
-type CacheKeyPayload struct {
-	Code   string `json:"code"`
-	LastAt int64  `json:"lastAt"`
-}
 
 type TelephoneUserRegisterLogic struct {
 	logger.Logger
@@ -46,17 +42,14 @@ func NewTelephoneUserRegisterLogic(ctx context.Context, svcCtx *svc.ServiceConte
 }
 
 func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *dto.TelephoneRegisterRequest) (resp *dto.LoginResponse, err error) {
-	c := l.svcCtx.Config.Register
-	// Check if the registration is stopped
-	if c.StopRegister {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.StopRegister), "stop register")
+	if err := registerpolicy.EnsureRegistrationOpen(l.ctx, l.svcCtx, registerpolicy.MethodMobile); err != nil {
+		return nil, err
+	}
+	if err := registerpolicy.VerifyHuman(l.ctx, l.svcCtx, req.CfToken, req.IP); err != nil {
+		return nil, err
 	}
 	if !phone.Check(req.TelephoneAreaCode, req.Telephone) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TelephoneError), "telephone number error")
-	}
-
-	if !l.svcCtx.Config.Mobile.Enable {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SmsNotEnabled), "sms login is not enabled")
 	}
 
 	phoneNumber, err := phone.FormatToE164(req.TelephoneAreaCode, req.Telephone)
@@ -66,22 +59,9 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *dto.TelephoneReg
 
 	// if the email verification is enabled, the verification code is required
 	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeTelephoneCacheKey, constant.ParseVerifyType(uint8(constant.Register)), phoneNumber)
-	value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
-	if err != nil {
-		l.Errorw("Redis Error", logger.Field("error", err.Error()), logger.Field("cacheKey", cacheKey))
+	if err := common.ValidateVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, req.Code, false); err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 	}
-
-	var payload CacheKeyPayload
-	err = json.Unmarshal([]byte(value), &payload)
-	if err != nil {
-		l.Errorw("Unmarshal Error", logger.Field("error", err.Error()), logger.Field("value", value))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
-	}
-	if payload.Code != req.Code {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
-	}
-	l.svcCtx.Redis.Del(l.ctx, cacheKey)
 	// Check if the user exists
 	_, err = l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -103,6 +83,12 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *dto.TelephoneReg
 			l.Errorw("FindOneByReferCode Error", logger.Field("error", err))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.InviteCodeError), "invite code is invalid")
 		}
+	}
+	if err := registerpolicy.TakeIPPermit(l.ctx, l.svcCtx, req.IP); err != nil {
+		return nil, err
+	}
+	if err := common.ValidateVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, req.Code, true); err != nil {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 	}
 
 	// Generate password

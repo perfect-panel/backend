@@ -8,6 +8,7 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
@@ -15,7 +16,6 @@ import (
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/phone"
 	"github.com/perfect-panel/server/pkg/random"
-	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
 	queue "github.com/perfect-panel/server/queue/types"
 	"github.com/pkg/errors"
@@ -43,14 +43,26 @@ func NewSendSmsCodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SendS
 }
 
 func (l *SendSmsCodeLogic) SendSmsCode(req *dto.SendSmsCodeRequest) (resp *dto.SendCodeResponse, err error) {
+	verifyType := constant.ParseVerifyType(req.Type)
+	if verifyType == constant.Register {
+		if err := registerpolicy.EnsureRegistrationOpen(l.ctx, l.svcCtx, registerpolicy.MethodMobile); err != nil {
+			return nil, err
+		}
+	} else if err := registerpolicy.EnsureMethodEnabled(l.ctx, l.svcCtx, registerpolicy.MethodMobile); err != nil {
+		return nil, err
+	}
 	phoneNumber, err := phone.FormatToE164(req.TelephoneAreaCode, req.Telephone)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TelephoneError), "Invalid phone number")
 	}
 
-	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeTelephoneCacheKey, constant.ParseVerifyType(req.Type), phoneNumber)
+	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeTelephoneCacheKey, verifyType, phoneNumber)
 	// Check if the limit is exceeded of current request
-	limiter := limit.NewPeriodLimit(60, 1, l.svcCtx.Redis, fmt.Sprintf("%s:%s:%s", config.SendIntervalKeyPrefix, "mobile", constant.ParseVerifyType(req.Type)))
+	interval := l.svcCtx.Config.VerifyCode.Interval
+	if interval <= 0 {
+		interval = 60
+	}
+	limiter := limit.NewPeriodLimit(int(interval), 1, l.svcCtx.Redis, fmt.Sprintf("%smobile:%s:", config.SendIntervalKeyPrefix, verifyType))
 	permit, err := limiter.Take(phoneNumber)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Failed to take limit")
@@ -59,20 +71,25 @@ func (l *SendSmsCodeLogic) SendSmsCode(req *dto.SendSmsCodeRequest) (resp *dto.S
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TooManyRequests), "send sms too many requests")
 	}
 	// Check if the limit is exceeded of the today
-	permit, err = l.svcCtx.AuthLimiter.Take(fmt.Sprintf("%s:%s:%s", "mobile", constant.ParseVerifyType(req.Type), phoneNumber))
+	dailyLimit := l.svcCtx.Config.VerifyCode.Limit
+	if dailyLimit <= 0 {
+		dailyLimit = 15
+	}
+	dailyLimiter := limit.NewPeriodLimit(86400, int(dailyLimit), l.svcCtx.Redis, config.SendCountLimitKeyPrefix, limit.Align())
+	permit, err = dailyLimiter.Take(fmt.Sprintf("%s:%s:%s", "mobile", verifyType, phoneNumber))
 	if err != nil {
 		return nil, err
 	}
-	if !l.svcCtx.AuthLimiter.ParsePermitState(permit) {
+	if !dailyLimiter.ParsePermitState(permit) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TodaySendCountExceedsLimit), "This account has reached the limit of sending times today")
 	}
 	m, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindUserAuthMethodByOpenID error")
 	}
-	if constant.ParseVerifyType(req.Type) == constant.Register && m.Id > 0 {
+	if verifyType == constant.Register && m.Id > 0 {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "mobile already bind")
-	} else if constant.ParseVerifyType(req.Type) == constant.Security && m.Id == 0 {
+	} else if verifyType == constant.Security && m.Id == 0 {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "mobile not bind")
 	}
 
@@ -85,14 +102,7 @@ func (l *SendSmsCodeLogic) SendSmsCode(req *dto.SendSmsCodeRequest) (resp *dto.S
 	code := random.Key(6, 0)
 	taskPayload.Telephone = req.Telephone
 	taskPayload.Content = code
-	// Save to Redis
-	payload := CacheKeyPayload{
-		Code:   code,
-		LastAt: timeutil.Now().Unix(),
-	}
-	// Marshal the payload
-	val, _ := json.Marshal(payload)
-	if err = l.svcCtx.Redis.Set(l.ctx, cacheKey, string(val), time.Second*time.Duration(l.svcCtx.Config.VerifyCode.ExpireTime)).Err(); err != nil {
+	if err = SaveVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, code, time.Second*time.Duration(l.svcCtx.Config.VerifyCode.ExpireTime)); err != nil {
 		l.Errorw("[SendSmsCode]: Redis Error", logger.Field("error", err.Error()), logger.Field("cacheKey", cacheKey))
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.ERROR), "Failed to set verification code")
 	}
@@ -108,16 +118,11 @@ func (l *SendSmsCodeLogic) SendSmsCode(req *dto.SendSmsCodeRequest) (resp *dto.S
 	// Enqueue the task
 	taskInfo, err := l.svcCtx.Queue.Enqueue(task)
 	if err != nil {
-		l.Errorw("[SendSmsCode]: Enqueue Error", logger.Field("error", err.Error()), logger.Field("payload", string(payloadValue)))
+		_ = DeleteVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey)
+		l.Errorw("[SendSmsCode]: Enqueue Error", logger.Field("error", err.Error()), logger.Field("type", taskPayload.Type))
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.ERROR), "Failed to enqueue task")
 	}
-	l.Infow("[SendSmsCode]: Enqueue Success", logger.Field("taskID", taskInfo.ID), logger.Field("payload", string(payloadValue)))
-	if l.svcCtx.Config.Model == constant.DevMode {
-		return &dto.SendCodeResponse{
-			Code:   taskPayload.Content,
-			Status: true,
-		}, nil
-	}
+	l.Infow("[SendSmsCode]: Enqueue Success", logger.Field("taskID", taskInfo.ID), logger.Field("type", taskPayload.Type))
 	return &dto.SendCodeResponse{
 		Status: true,
 	}, nil

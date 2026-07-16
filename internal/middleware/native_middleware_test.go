@@ -57,10 +57,13 @@ func TestDeviceMiddleware_decryptsRequestAndEncryptsResponse_whenDeviceLogin(t *
 
 	engine := server.Default()
 	engine.POST("/device", DeviceMiddleware(&svc.ServiceContext{
-		Config: appconfig.Config{Device: appconfig.DeviceConfig{Enable: true, SecuritySecret: secret}},
+		Config: appconfig.Config{Device: appconfig.DeviceConfig{Enable: true, EnableSecurity: true, SecuritySecret: secret}},
 	}), func(requestCtx context.Context, ctx *app.RequestContext) {
 		if loginType, _ := requestCtx.Value(constant.LoginType).(string); loginType != "device" {
 			t.Errorf("expected derived request context login type %q, got %q", "device", loginType)
+		}
+		if secure, _ := requestCtx.Value(constant.CtxKeyDeviceSecure).(bool); !secure {
+			t.Error("expected decrypted device request to carry the secure marker")
 		}
 		if got := ctx.Query("page"); got != "2" {
 			t.Errorf("expected decrypted query page %q, got %q", "2", got)
@@ -102,6 +105,47 @@ func TestDeviceMiddleware_decryptsRequestAndEncryptsResponse_whenDeviceLogin(t *
 	}
 	if plainText != `{"status":"ok"}` {
 		t.Fatalf("expected encrypted response data %q, got %q", `{"status":"ok"}`, plainText)
+	}
+}
+
+func TestDeviceMiddleware_rejectsPlaintextDeviceLoginRoute_withoutLoginTypeHeader(t *testing.T) {
+	const secret = "device-secret"
+	engine := server.Default()
+	downstreamRan := false
+	engine.POST("/v1/auth/login/device", DeviceMiddleware(&svc.ServiceContext{
+		Config: appconfig.Config{Device: appconfig.DeviceConfig{Enable: true, EnableSecurity: true, SecuritySecret: secret}},
+	}), func(_ context.Context, ctx *app.RequestContext) {
+		downstreamRan = true
+		ctx.String(http.StatusOK, "unreachable")
+	})
+	ctx := requestContext(engine, http.MethodPost, "/v1/auth/login/device")
+	ctx.Request.SetBodyString(`{"identifier":"forged-device"}`)
+
+	engine.ServeHTTP(context.Background(), ctx)
+
+	if downstreamRan {
+		t.Fatal("expected plaintext device login to abort before downstream handler")
+	}
+	assertErrorEnvelope(t, ctx.Response.Body(), xerr.InvalidCiphertext, "Invalid ciphertext")
+}
+
+func TestDeviceMiddleware_allowsUnrelatedPlaintextRoute_whenSecurityEnabled(t *testing.T) {
+	engine := server.Default()
+	engine.POST("/v1/auth/login", DeviceMiddleware(&svc.ServiceContext{
+		Config: appconfig.Config{Device: appconfig.DeviceConfig{Enable: true, EnableSecurity: true, SecuritySecret: "device-secret"}},
+	}), func(_ context.Context, ctx *app.RequestContext) {
+		ctx.String(http.StatusOK, string(ctx.Request.Body()))
+	})
+	ctx := requestContext(engine, http.MethodPost, "/v1/auth/login")
+	ctx.Request.SetBodyString(`{"email":"alice@example.com"}`)
+
+	engine.ServeHTTP(context.Background(), ctx)
+
+	if status := ctx.Response.StatusCode(); status != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, status)
+	}
+	if body := string(ctx.Response.Body()); body != `{"email":"alice@example.com"}` {
+		t.Fatalf("unexpected response body %q", body)
 	}
 }
 

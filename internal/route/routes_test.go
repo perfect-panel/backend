@@ -226,6 +226,7 @@ func TestRegisterHandlers_middlewareContracts(t *testing.T) {
 		name     string
 		config   appconfig.Config
 		paths    []string
+		method   string
 		wantCode uint32
 		wantMsg  string
 	}{
@@ -247,9 +248,11 @@ func TestRegisterHandlers_middlewareContracts(t *testing.T) {
 		{
 			name: "device-only",
 			config: appconfig.Config{Device: appconfig.DeviceConfig{
-				Enable: true,
+				Enable:         true,
+				EnableSecurity: true,
 			}},
-			paths:    []string{"/v1/auth/check"},
+			paths:    []string{"/v1/auth/login/device"},
+			method:   http.MethodPost,
 			wantCode: xerr.SecretIsEmpty,
 			wantMsg:  "Secret is empty",
 		},
@@ -261,9 +264,13 @@ func TestRegisterHandlers_middlewareContracts(t *testing.T) {
 			RegisterHandlers(router, &svc.ServiceContext{Config: tc.config})
 
 			for _, path := range tc.paths {
+				method := tc.method
+				if method == "" {
+					method = http.MethodGet
+				}
 				ctx := router.NewContext()
 				ctx.Request.SetRequestURI(path)
-				ctx.Request.Header.SetMethod(http.MethodGet)
+				ctx.Request.Header.SetMethod(method)
 
 				// When
 				router.ServeHTTP(context.Background(), ctx)

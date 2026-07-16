@@ -16,25 +16,27 @@ import (
 
 func DeviceMiddleware(srvCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(ctx context.Context, requestCtx *app.RequestContext) {
-
 		if !srvCtx.Config.Device.Enable {
 			requestCtx.Next(ctx)
 			return
 		}
-
+		loginType := string(requestCtx.GetHeader("Login-Type"))
+		isDeviceLoginRoute := string(requestCtx.Path()) == "/v1/auth/login/device"
+		if ctx.Value(constant.CtxKeyUser) == nil && loginType != "" {
+			ctx = context.WithValue(ctx, constant.LoginType, loginType)
+		}
+		if !isDeviceLoginRoute && loginType != "device" {
+			requestCtx.Next(ctx)
+			return
+		}
+		ctx = context.WithValue(ctx, constant.LoginType, "device")
+		if !srvCtx.Config.Device.EnableSecurity {
+			requestCtx.Next(ctx)
+			return
+		}
 		if srvCtx.Config.Device.SecuritySecret == "" {
 			result.HttpResult(requestCtx, nil, errors.Wrapf(xerr.NewErrCode(xerr.SecretIsEmpty), "Secret is empty"))
 			requestCtx.Abort()
-			return
-		}
-
-		if ctx.Value(constant.CtxKeyUser) == nil && string(requestCtx.GetHeader("Login-Type")) != "" {
-			ctx = context.WithValue(ctx, constant.LoginType, string(requestCtx.GetHeader("Login-Type")))
-		}
-
-		loginType, ok := ctx.Value(constant.LoginType).(string)
-		if !ok || loginType != "device" {
-			requestCtx.Next(ctx)
 			return
 		}
 
@@ -43,6 +45,7 @@ func DeviceMiddleware(srvCtx *svc.ServiceContext) app.HandlerFunc {
 			requestCtx.Abort()
 			return
 		}
+		ctx = context.WithValue(ctx, constant.CtxKeyDeviceSecure, true)
 		requestCtx.Next(ctx)
 		EncryptDeviceResponse(requestCtx, srvCtx.Config.Device.SecuritySecret)
 		requestCtx.Abort()

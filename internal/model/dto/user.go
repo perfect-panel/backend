@@ -152,7 +152,7 @@ type UnbindDeviceRequest struct {
 }
 
 type UpdateBindEmailRequest struct {
-	Email string `json:"email" validate:"required"`
+	Email string `json:"email" validate:"required,email"`
 }
 
 type UpdateBindMobileRequest struct {

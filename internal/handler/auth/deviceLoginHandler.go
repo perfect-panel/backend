@@ -23,6 +23,7 @@ func DeviceLoginHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			result.ParamErrorResult(c, validateErr)
 			return
 		}
+		req.IP = c.ClientIP()
 
 		l := auth.NewDeviceLoginLogic(ctx, svcCtx)
 		resp, err := l.DeviceLogin(&req)

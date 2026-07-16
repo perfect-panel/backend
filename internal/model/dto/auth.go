@@ -21,13 +21,13 @@ type AuthMethodConfig struct {
 }
 
 type BindOAuthCallbackRequest struct {
-	Method   string      `json:"method"`
-	Callback interface{} `json:"callback"`
+	Method   string      `json:"method" validate:"required,oneof=google apple telegram github"`
+	Callback interface{} `json:"callback" validate:"required"`
 }
 
 type BindOAuthRequest struct {
-	Method   string `json:"method"`
-	Redirect string `json:"redirect"`
+	Method   string `json:"method" validate:"required,oneof=google apple telegram github"`
+	Redirect string `json:"redirect" validate:"required"`
 }
 
 type BindOAuthResponse struct {
@@ -40,7 +40,7 @@ type BindTelegramResponse struct {
 }
 
 type CheckUserRequest struct {
-	Email string `form:"email" validate:"required"`
+	Email string `form:"email" validate:"required,email"`
 }
 
 type CheckUserResponse struct {
@@ -51,7 +51,7 @@ type CheckVerificationCodeRequest struct {
 	Method  string `json:"method" validate:"required,oneof=email mobile"`
 	Account string `json:"account" validate:"required"`
 	Code    string `json:"code" validate:"required"`
-	Type    uint8  `json:"type" validate:"required"`
+	Type    uint8  `json:"type" validate:"required,oneof=1 2"`
 }
 
 type CheckVerificationCodeRespone struct {
@@ -67,6 +67,7 @@ type DeviceAuthticateConfig struct {
 
 type DeviceLoginRequest struct {
 	Identifier string `json:"identifier" validate:"required"`
+	Invite     string `json:"invite,optional"`
 	IP         string `header:"X-Original-Forwarded-For"`
 	UserAgent  string `json:"user_agent" validate:"required"`
 	CfToken    string `json:"cf_token,optional"`
@@ -114,6 +115,7 @@ type OAthLoginRequest struct {
 type OAuthLoginGetTokenRequest struct {
 	Method   string      `json:"method" validate:"required"` // google, facebook, apple, telegram, github etc.
 	Callback interface{} `json:"callback" validate:"required"`
+	CfToken  string      `json:"cf_token,optional"`
 }
 
 type OAuthLoginResponse struct {
@@ -133,7 +135,7 @@ type PubilcVerifyCodeConfig struct {
 
 type ResetPasswordRequest struct {
 	Identifier string `json:"identifier"`
-	Email      string `json:"email" validate:"required"`
+	Email      string `json:"email" validate:"required,email"`
 	Password   string `json:"password" validate:"required"`
 	Code       string `json:"code,optional"`
 	IP         string `header:"X-Original-Forwarded-For"`
@@ -143,8 +145,8 @@ type ResetPasswordRequest struct {
 }
 
 type SendCodeRequest struct {
-	Email string `json:"email" validate:"required"`
-	Type  uint8  `json:"type" validate:"required"`
+	Email string `json:"email" validate:"required,email"`
+	Type  uint8  `json:"type" validate:"required,oneof=1 2"`
 }
 
 type SendCodeResponse struct {
@@ -153,7 +155,7 @@ type SendCodeResponse struct {
 }
 
 type SendSmsCodeRequest struct {
-	Type              uint8  `json:"type" validate:"required"`
+	Type              uint8  `json:"type" validate:"required,oneof=1 2"`
 	Telephone         string `json:"telephone" validate:"required"`
 	TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
 }
@@ -212,7 +214,7 @@ type TelephoneResetPasswordRequest struct {
 }
 
 type TestEmailSendRequest struct {
-	Email string `json:"email" validate:"required"`
+	Email string `json:"email" validate:"required,email"`
 }
 
 type TestSmsSendRequest struct {
@@ -233,7 +235,7 @@ type UpdateAuthMethodConfigRequest struct {
 
 type UserLoginRequest struct {
 	Identifier string `json:"identifier"`
-	Email      string `json:"email" validate:"required"`
+	Email      string `json:"email" validate:"required,email"`
 	Password   string `json:"password" validate:"required"`
 	IP         string `header:"X-Original-Forwarded-For"`
 	UserAgent  string `header:"User-Agent"`
@@ -243,7 +245,7 @@ type UserLoginRequest struct {
 
 type UserRegisterRequest struct {
 	Identifier string `json:"identifier"`
-	Email      string `json:"email" validate:"required"`
+	Email      string `json:"email" validate:"required,email"`
 	Password   string `json:"password" validate:"required"`
 	Invite     string `json:"invite,optional"`
 	Code       string `json:"code,optional"`
@@ -254,6 +256,6 @@ type UserRegisterRequest struct {
 }
 
 type VerifyEmailRequest struct {
-	Email string `json:"email" validate:"required"`
+	Email string `json:"email" validate:"required,email"`
 	Code  string `json:"code" validate:"required"`
 }

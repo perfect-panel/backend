@@ -3,6 +3,7 @@ package system
 import (
 	"context"
 
+	"github.com/perfect-panel/server/initialize"
 	"github.com/perfect-panel/server/internal/config"
 
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -34,5 +35,6 @@ func (l *UpdateVerifyCodeConfigLogic) UpdateVerifyCodeConfig(req *dto.VerifyCode
 		l.Errorw("[UpdateRegisterConfig] update verify code config error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update register config error: %v", err.Error())
 	}
+	initialize.Verify(l.svcCtx)
 	return nil
 }

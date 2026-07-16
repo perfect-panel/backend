@@ -1,10 +1,9 @@
 package random
 
 import (
+	cryptorand "crypto/rand"
+	"math/big"
 	"strings"
-	"time"
-
-	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 const (
@@ -75,13 +74,7 @@ func Key(length int, keyType int) string {
 	if keyType == 1 {
 		randomString = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz"
 	}
-	var res []byte
-	rand.Seed(time.Now().UnixNano())
-	for i := 0; i < length; i++ {
-		n := rand.Intn(len(randomString))
-		res = append(res, randomString[n])
-	}
-	return string(res)
+	return secureKey(length, randomString)
 }
 
 func KeyNew(length int, keyType int) string {
@@ -91,12 +84,25 @@ func KeyNew(length int, keyType int) string {
 	} else if keyType == 2 {
 		randomString = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	}
-	var res []byte
-	for i := 0; i < length; i++ {
-		n := rand.Intn(len(randomString))
-		res = append(res, randomString[n])
+	return secureKey(length, randomString)
+}
+
+func secureKey(length int, alphabet string) string {
+	if length <= 0 || len(alphabet) == 0 {
+		return ""
 	}
-	return string(res)
+	result := make([]byte, length)
+	upper := big.NewInt(int64(len(alphabet)))
+	for i := range result {
+		index, err := cryptorand.Int(cryptorand.Reader, upper)
+		if err != nil {
+			// A functioning OS CSPRNG is a security prerequisite. Never fall back
+			// to a predictable generator for verification codes or OAuth state.
+			panic("crypto/rand unavailable: " + err.Error())
+		}
+		result[i] = alphabet[index.Int64()]
+	}
+	return string(result)
 }
 
 func StrToDashedString(strNum string) string {

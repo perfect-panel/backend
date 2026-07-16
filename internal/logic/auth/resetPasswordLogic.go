@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -13,6 +12,8 @@ import (
 	"github.com/perfect-panel/server/pkg/uuidx"
 
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
+	"github.com/perfect-panel/server/internal/logic/common"
 	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -41,6 +42,9 @@ func NewResetPasswordLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Res
 }
 
 func (l *ResetPasswordLogic) ResetPassword(req *dto.ResetPasswordRequest) (resp *dto.LoginResponse, err error) {
+	if err := registerpolicy.EnsureMethodEnabled(l.ctx, l.svcCtx, registerpolicy.MethodEmail); err != nil {
+		return nil, err
+	}
 	var userInfo *user.User
 	loginStatus := false
 	email := authmethod.CanonicalEmail(req.Email)
@@ -72,20 +76,8 @@ func (l *ResetPasswordLogic) ResetPassword(req *dto.ResetPasswordRequest) (resp 
 	}()
 
 	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.Security, email)
-	// Check the verification code
-	if value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result(); err != nil {
-		l.Errorw("Verification code lookup failed", logger.Field("error", err.Error()))
+	if err := common.ValidateVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, req.Code, false); err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "Verification code error")
-	} else {
-		var payload CacheKeyPayload
-		if err := json.Unmarshal([]byte(value), &payload); err != nil {
-			l.Errorw("Verification code payload decode failed", logger.Field("error", err.Error()))
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "Verification code error")
-		}
-		if payload.Code != req.Code {
-			l.Errorw("Verification code mismatch", logger.Field("error", "verification code mismatch"))
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "Verification code error")
-		}
 	}
 
 	// Check user
@@ -103,6 +95,9 @@ func (l *ResetPasswordLogic) ResetPassword(req *dto.ResetPasswordRequest) (resp 
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email not exist: %v", req.Email)
 		}
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
+	}
+	if err := common.ValidateVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, req.Code, true); err != nil {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "Verification code error")
 	}
 
 	// Update password

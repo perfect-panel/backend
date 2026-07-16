@@ -57,6 +57,20 @@ func (l *UpdateAuthMethodConfigLogic) UpdateAuthMethodConfig(req *dto.UpdateAuth
 			mobileConfig.Unmarshal(string(configs))
 			req.Config = mobileConfig
 		}
+		if req.Method == "device" {
+			configs, _ := json.Marshal(req.Config)
+			deviceConfig := new(auth.DeviceConfig)
+			if err := deviceConfig.Unmarshal(string(configs)); err != nil {
+				return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "invalid device config: %v", err)
+			}
+			if deviceConfig.OnlyRealDevice && !deviceConfig.EnableSecurity {
+				return nil, errors.Wrap(xerr.NewErrCode(xerr.InvalidParams), "only_real_device requires enable_security")
+			}
+			if deviceConfig.EnableSecurity && deviceConfig.SecuritySecret == "" {
+				return nil, errors.Wrap(xerr.NewErrCode(xerr.InvalidParams), "device security secret is required")
+			}
+			req.Config = deviceConfig
+		}
 
 		bytes, err := json.Marshal(req.Config)
 		if err != nil {

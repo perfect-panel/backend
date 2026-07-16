@@ -26,7 +26,7 @@ func UserLoginHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 		// get client ip
 		req.IP = c.ClientIP()
 		req.UserAgent = string(c.UserAgent())
-		if svcCtx.Config.Verify.LoginVerify && !svcCtx.Config.Debug {
+		if svcCtx.Config.Verify.LoginVerify {
 			verifyTurns := turnstile.New(turnstile.Config{
 				Secret:  svcCtx.Config.Verify.TurnstileSecret,
 				Timeout: 3 * time.Second,

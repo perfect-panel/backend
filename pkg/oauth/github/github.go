@@ -79,14 +79,14 @@ func (c *Client) GetUserInfo(token string) (*UserInfo, error) {
 		return nil, err
 	}
 
-	// If the user's email is not public, fetch it from the emails endpoint
-	if userInfo.Email == "" {
-		email, err := c.GetPrimaryEmail(token)
-		if err != nil {
-			logger.Error("[GitHub OAuth 2.0] Get Primary Email", logger.Field("error", err.Error()))
-		} else {
-			userInfo.Email = email
-		}
+	// The profile email does not carry verification metadata. Only attach an
+	// address returned by the emails endpoint with verified=true.
+	userInfo.Email = ""
+	email, err := c.GetPrimaryEmail(token)
+	if err != nil {
+		logger.Error("[GitHub OAuth 2.0] Get Verified Email", logger.Field("error", err.Error()))
+	} else {
+		userInfo.Email = email
 	}
 
 	return &userInfo, nil

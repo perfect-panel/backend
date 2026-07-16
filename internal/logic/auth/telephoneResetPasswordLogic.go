@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
+	"github.com/perfect-panel/server/internal/logic/common"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/svc"
@@ -37,6 +39,9 @@ func NewTelephoneResetPasswordLogic(ctx context.Context, svcCtx *svc.ServiceCont
 }
 
 func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *dto.TelephoneResetPasswordRequest) (resp *dto.LoginResponse, err error) {
+	if err := registerpolicy.EnsureMethodEnabled(l.ctx, l.svcCtx, registerpolicy.MethodMobile); err != nil {
+		return nil, err
+	}
 	code := req.Code
 
 	phoneNumber, err := phone.FormatToE164(req.TelephoneAreaCode, req.Telephone)
@@ -44,19 +49,9 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *dto.TelephoneR
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TelephoneError), "Invalid phone number")
 	}
 
-	if l.svcCtx.Config.Mobile.Enable {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SmsNotEnabled), "sms login is not enabled")
-	}
-
 	// if the email verification is enabled, the verification code is required
 	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeTelephoneCacheKey, constant.Security, phoneNumber)
-	value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
-	if err != nil {
-		l.Errorw("Redis Error", logger.Field("error", err.Error()), logger.Field("cacheKey", cacheKey))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
-	}
-
-	if value != code {
+	if err := common.ValidateVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, code, false); err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 	}
 
@@ -74,6 +69,9 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *dto.TelephoneR
 	if err != nil {
 		l.Errorw("FindOneByTelephone Error", logger.Field("error", err))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
+	}
+	if err := common.ValidateVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, code, true); err != nil {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 	}
 
 	// Generate password

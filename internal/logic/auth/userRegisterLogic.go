@@ -2,11 +2,11 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
 	"github.com/perfect-panel/server/internal/logic/common"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/log"
@@ -42,13 +42,17 @@ func NewUserRegisterLogic(ctx context.Context, svcCtx *svc.ServiceContext) *User
 
 func (l *UserRegisterLogic) UserRegister(req *dto.UserRegisterRequest) (resp *dto.LoginResponse, err error) {
 
-	c := l.svcCtx.Config.Register
 	email := l.svcCtx.Config.Email
-	canonicalEmail := authmethod.CanonicalEmail(req.Email)
+	canonicalEmail, err := authmethod.ValidateEmail(req.Email, email.DomainSuffixList, email.EnableDomainSuffix)
+	if err != nil {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "invalid email: %v", err)
+	}
 	var referer *user.User
-	// Check if the registration is stopped
-	if c.StopRegister {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.StopRegister), "stop register")
+	if err := registerpolicy.EnsureRegistrationOpen(l.ctx, l.svcCtx, registerpolicy.MethodEmail); err != nil {
+		return nil, err
+	}
+	if err := registerpolicy.VerifyHuman(l.ctx, l.svcCtx, req.CfToken, req.IP); err != nil {
+		return nil, err
 	}
 
 	if req.Invite == "" {
@@ -67,18 +71,7 @@ func (l *UserRegisterLogic) UserRegister(req *dto.UserRegisterRequest) (resp *dt
 	// if the email verification is enabled, the verification code is required
 	if email.EnableVerify {
 		cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.Register, canonicalEmail)
-		value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
-		if err != nil {
-			l.Errorw("Redis Error", logger.Field("error", err.Error()), logger.Field("cacheKey", cacheKey))
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
-		}
-		var payload common.CacheKeyPayload
-		err = json.Unmarshal([]byte(value), &payload)
-		if err != nil {
-			l.Errorw("Unmarshal Error", logger.Field("error", err.Error()))
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
-		}
-		if payload.Code != req.Code {
+		if err := common.ValidateVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, req.Code, false); err != nil {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 		}
 	}
@@ -91,6 +84,15 @@ func (l *UserRegisterLogic) UserRegister(req *dto.UserRegisterRequest) (resp *dt
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "user email exist: %v", req.Email)
 	} else if err == nil && u.DeletedAt.Valid {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "user email deleted: %v", req.Email)
+	}
+	if err := registerpolicy.TakeIPPermit(l.ctx, l.svcCtx, req.IP); err != nil {
+		return nil, err
+	}
+	if email.EnableVerify {
+		cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, constant.Register, canonicalEmail)
+		if err := common.ValidateVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, req.Code, true); err != nil {
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
+		}
 	}
 
 	// Generate password

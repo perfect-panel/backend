@@ -72,11 +72,6 @@ func applyDeviceMiddleware(ctx context.Context, c *app.RequestContext, svcCtx *s
 	if !svcCtx.Config.Device.Enable {
 		return ctx, nil, true
 	}
-	if svcCtx.Config.Device.SecuritySecret == "" {
-		result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.SecretIsEmpty), "Secret is empty"))
-		c.Abort()
-		return ctx, nil, false
-	}
 	if ctx.Value(constant.CtxKeyUser) == nil && string(c.GetHeader("Login-Type")) != "" {
 		ctx = context.WithValue(ctx, constant.LoginType, string(c.GetHeader("Login-Type")))
 	}
@@ -84,11 +79,20 @@ func applyDeviceMiddleware(ctx context.Context, c *app.RequestContext, svcCtx *s
 	if !ok || loginType != "device" {
 		return ctx, nil, true
 	}
+	if !svcCtx.Config.Device.EnableSecurity {
+		return ctx, nil, true
+	}
+	if svcCtx.Config.Device.SecuritySecret == "" {
+		result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.SecretIsEmpty), "Secret is empty"))
+		c.Abort()
+		return ctx, nil, false
+	}
 	if !middleware.DecryptDeviceRequest(c, svcCtx.Config.Device.SecuritySecret) {
 		result.HttpResult(c, nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidCiphertext), "Invalid ciphertext"))
 		c.Abort()
 		return ctx, nil, false
 	}
+	ctx = context.WithValue(ctx, constant.CtxKeyDeviceSecure, true)
 	return ctx, func() {
 		middleware.EncryptDeviceResponse(c, svcCtx.Config.Device.SecuritySecret)
 		c.Abort()

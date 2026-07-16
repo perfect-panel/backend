@@ -8,6 +8,7 @@ import (
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/timeutil"
 
+	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/auth"
 	"github.com/perfect-panel/server/internal/model/entity/user"
@@ -17,6 +18,7 @@ import (
 	githuboauth "github.com/perfect-panel/server/pkg/oauth/github"
 	"github.com/perfect-panel/server/pkg/oauth/google"
 	"github.com/perfect-panel/server/pkg/oauth/telegram"
+	"github.com/perfect-panel/server/pkg/oauthstate"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -46,10 +48,16 @@ type googleRequest struct {
 }
 
 func (l *BindOAuthCallbackLogic) BindOAuthCallback(req *dto.BindOAuthCallbackRequest) error {
+	if err := registerpolicy.EnsureMethodEnabled(l.ctx, l.svcCtx, req.Method); err != nil {
+		return err
+	}
 	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
+	}
+	if _, ok := req.Callback.(map[string]interface{}); !ok {
+		return errors.Wrap(xerr.NewErrCode(xerr.InvalidParams), "OAuth callback must be an object")
 	}
 	var err error
 	switch req.Method {
@@ -90,7 +98,7 @@ func (l *BindOAuthCallbackLogic) google(req *dto.BindOAuthCallbackRequest) error
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "CloneMapToStruct failed")
 	}
 	// validate the state code
-	redirect, err := l.svcCtx.Redis.Get(l.ctx, fmt.Sprintf("google:%s", request.State)).Result()
+	redirect, err := oauthstate.Consume(l.ctx, l.svcCtx.Redis, fmt.Sprintf("google:%s", request.State))
 	if err != nil {
 		l.Errorw("error get google state code: %v", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get google state code failed")
@@ -104,7 +112,7 @@ func (l *BindOAuthCallbackLogic) google(req *dto.BindOAuthCallbackRequest) error
 	var cfg auth.GoogleAuthConfig
 	err = json.Unmarshal([]byte(authMethod.Config), &cfg)
 	if err != nil {
-		l.Errorw("error unmarshal google config: %v", logger.Field("config", authMethod.Config), logger.Field("error", err.Error()))
+		l.Errorw("error unmarshal google config", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal google config failed")
 	}
 	client := google.New(&google.Config{
@@ -147,7 +155,13 @@ func (l *BindOAuthCallbackLogic) google(req *dto.BindOAuthCallbackRequest) error
 
 func (l *BindOAuthCallbackLogic) apple(req *dto.BindOAuthCallbackRequest) error {
 	// validate the state code
-	_, err := l.svcCtx.Redis.Get(l.ctx, fmt.Sprintf("apple:%s", req.Callback.(map[string]interface{})["state"])).Result()
+	callback := req.Callback.(map[string]interface{})
+	state, stateOK := callback["state"].(string)
+	code, codeOK := callback["code"].(string)
+	if !stateOK || state == "" || !codeOK || code == "" {
+		return errors.Wrap(xerr.NewErrCode(xerr.InvalidParams), "invalid Apple OAuth callback")
+	}
+	_, err := oauthstate.Consume(l.ctx, l.svcCtx.Redis, fmt.Sprintf("apple:%s", state))
 	if err != nil {
 		l.Errorw("[BindOAuthCallbackLogic] Get State code error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get apple state code failed: %v", err.Error())
@@ -160,7 +174,7 @@ func (l *BindOAuthCallbackLogic) apple(req *dto.BindOAuthCallbackRequest) error 
 	var appleCfg auth.AppleAuthConfig
 	err = json.Unmarshal([]byte(appleAuth.Config), &appleCfg)
 	if err != nil {
-		l.Errorw("[BindOAuthCallbackLogic] Unmarshal error", logger.Field("error", err.Error()), logger.Field("config", appleAuth.Config))
+		l.Errorw("[BindOAuthCallbackLogic] Unmarshal error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal apple config failed: %v", err.Error())
 	}
 
@@ -176,7 +190,7 @@ func (l *BindOAuthCallbackLogic) apple(req *dto.BindOAuthCallbackRequest) error 
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "new apple client failed: %v", err.Error())
 	}
 	// verify web token
-	resp, err := client.VerifyWebToken(l.ctx, req.Callback.(map[string]interface{})["code"].(string))
+	resp, err := client.VerifyWebToken(l.ctx, code)
 	if err != nil {
 		l.Errorw("[BindOAuthCallbackLogic] VerifyWebToken error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "verify web token failed: %v", err.Error())
@@ -250,7 +264,7 @@ func (l *BindOAuthCallbackLogic) telegram(req *dto.BindOAuthCallbackRequest) err
 	var cfg auth.TelegramAuthConfig
 	err = cfg.Unmarshal(authMethod.Config)
 	if err != nil {
-		l.Errorw("unmarshal telegram config failed", logger.Field("config", authMethod.Config), logger.Field("error", err.Error()))
+		l.Errorw("unmarshal telegram config failed", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal telegram config failed")
 	}
 
@@ -265,10 +279,12 @@ func (l *BindOAuthCallbackLogic) telegram(req *dto.BindOAuthCallbackRequest) err
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "invalid telegram callback payload")
 	}
 
-	if timeutil.Now().Unix()-*callbackData.AuthDate > telegramBindAuthExpire {
+	now := timeutil.Now().Unix()
+	const allowedClockSkew = int64(5 * 60)
+	if *callbackData.AuthDate > now+allowedClockSkew || now-*callbackData.AuthDate > telegramBindAuthExpire {
 		l.Errorw("telegram auth date expired",
 			logger.Field("auth_date", *callbackData.AuthDate),
-			logger.Field("current_time", timeutil.Now().Unix()),
+			logger.Field("current_time", now),
 			logger.Field("expire_seconds", telegramBindAuthExpire),
 		)
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "auth date expired")
@@ -331,7 +347,7 @@ func (l *BindOAuthCallbackLogic) github(req *dto.BindOAuthCallbackRequest) error
 	}
 
 	// validate the state code
-	redirect, err := l.svcCtx.Redis.Get(l.ctx, fmt.Sprintf("github:%s", request.State)).Result()
+	redirect, err := oauthstate.Consume(l.ctx, l.svcCtx.Redis, fmt.Sprintf("github:%s", request.State))
 	if err != nil {
 		l.Errorw("error get github state code: %v", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get github state code failed")
@@ -347,7 +363,7 @@ func (l *BindOAuthCallbackLogic) github(req *dto.BindOAuthCallbackRequest) error
 	var cfg auth.GithubAuthConfig
 	err = cfg.Unmarshal(authMethod.Config)
 	if err != nil {
-		l.Errorw("error unmarshal github config: %v", logger.Field("config", authMethod.Config), logger.Field("error", err.Error()))
+		l.Errorw("error unmarshal github config", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "unmarshal github config failed")
 	}
 

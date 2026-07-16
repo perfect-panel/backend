@@ -2,11 +2,11 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
 	"github.com/perfect-panel/server/internal/logic/common"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/log"
@@ -39,12 +39,12 @@ func NewTelephoneLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Te
 }
 
 func (l *TelephoneLoginLogic) TelephoneLogin(req *dto.TelephoneLoginRequest, ip, userAgent string) (resp *dto.LoginResponse, err error) {
+	if err := registerpolicy.EnsureMethodEnabled(l.ctx, l.svcCtx, registerpolicy.MethodMobile); err != nil {
+		return nil, err
+	}
 	phoneNumber, err := phone.FormatToE164(req.TelephoneAreaCode, req.Telephone)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TelephoneError), "Invalid phone number")
-	}
-	if !l.svcCtx.Config.Mobile.Enable {
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SmsNotEnabled), "sms login is not enabled")
 	}
 	loginStatus := false
 
@@ -102,25 +102,9 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *dto.TelephoneLoginRequest, ip,
 		}
 	} else {
 		cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeTelephoneCacheKey, constant.ParseVerifyType(uint8(constant.Security)), phoneNumber)
-		value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
-		if err != nil {
-			l.Errorw("Redis Error", logger.Field("error", err.Error()), logger.Field("cacheKey", cacheKey))
+		if err := common.ValidateVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, req.TelephoneCode, true); err != nil {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 		}
-
-		if value == "" {
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
-		}
-
-		var payload common.CacheKeyPayload
-		if err := json.Unmarshal([]byte(value), &payload); err != nil {
-			l.Errorw("[SendSmsCode]: Unmarshal Error", logger.Field("error", err.Error()), logger.Field("value", value))
-		}
-
-		if payload.Code != req.TelephoneCode {
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
-		}
-		l.svcCtx.Redis.Del(l.ctx, cacheKey)
 	}
 
 	// Bind device to user if identifier is provided

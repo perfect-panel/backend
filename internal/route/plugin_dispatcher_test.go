@@ -218,7 +218,7 @@ func TestApplyDeviceMiddleware_finalizesEncryptedResponse_whenDeviceLogin(t *tes
 	requestCtx := app.NewContext(0)
 	requestCtx.Request.Header.Set("Login-Type", "device")
 	requestCtx.Request.SetBodyString(`{"data":"` + ciphertext + `","time":"` + iv + `"}`)
-	svcCtx := &svc.ServiceContext{Config: appconfig.Config{Device: appconfig.DeviceConfig{Enable: true, SecuritySecret: secret}}}
+	svcCtx := &svc.ServiceContext{Config: appconfig.Config{Device: appconfig.DeviceConfig{Enable: true, EnableSecurity: true, SecuritySecret: secret}}}
 
 	// When
 	_, finalize, proceed := applyDeviceMiddleware(context.Background(), requestCtx, svcCtx)
