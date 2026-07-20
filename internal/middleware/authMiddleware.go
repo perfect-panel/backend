@@ -66,6 +66,9 @@ func AuthenticateRequest(ctx context.Context, svc *svc.ServiceContext, token str
 		logger.WithContext(ctx).Debug("[AuthMiddleware] UserModel FindOne", logger.Field("error", err.Error()), logger.Field("userId", userId))
 		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Database Query Error")
 	}
+	if userInfo.DeletedAt.Valid {
+		return ctx, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "User Deleted")
+	}
 
 	// Check if user is enabled
 	if !*userInfo.Enable {

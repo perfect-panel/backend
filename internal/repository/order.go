@@ -26,10 +26,12 @@ type OrderRepo interface {
 	Insert(ctx context.Context, data *order.Order, tx ...*gorm.DB) error
 	FindOne(ctx context.Context, id int64) (*order.Order, error)
 	FindOneByOrderNo(ctx context.Context, orderNo string) (*order.Order, error)
+	FindOneByOrderNoForUpdate(ctx context.Context, orderNo string) (*order.Order, error)
 	Update(ctx context.Context, data *order.Order, tx ...*gorm.DB) error
 	Delete(ctx context.Context, id int64, tx ...*gorm.DB) error
 	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	UpdateOrderStatus(ctx context.Context, orderNo string, status uint8, tx ...*gorm.DB) error
+	UpdateOrderStatusFrom(ctx context.Context, orderNo string, from, status uint8, tx ...*gorm.DB) (bool, error)
 	UpdatePaymentExpectation(ctx context.Context, orderNo string, amount int64, currency string, tx ...*gorm.DB) (bool, error)
 	MarkOrderPaid(ctx context.Context, orderNo, tradeNo string, tx ...*gorm.DB) (bool, error)
 	QueryOrdersByStatusAfterID(ctx context.Context, status uint8, afterID int64, limit int) ([]*order.Order, error)
@@ -100,6 +102,22 @@ func (m *orderRepo) FindOneByOrderNo(ctx context.Context, orderNo string) (*orde
 	var resp order.Order
 	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&order.Order{}).Where("order_no = ?", orderNo).First(&resp).Error
+	})
+	switch {
+	case err == nil:
+		return &resp, nil
+	default:
+		return nil, err
+	}
+}
+
+func (m *orderRepo) FindOneByOrderNoForUpdate(ctx context.Context, orderNo string) (*order.Order, error) {
+	var resp order.Order
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
+		return conn.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Model(&order.Order{}).
+			Where("order_no = ?", orderNo).
+			First(&resp).Error
 	})
 	switch {
 	case err == nil:
@@ -218,6 +236,25 @@ func (m *orderRepo) UpdateOrderStatus(ctx context.Context, orderNo string, statu
 		}
 		return conn.Model(&order.Order{}).Where("order_no = ?", orderNo).Update("status", status).Error
 	}, m.getCacheKeys(orderInfo)...)
+}
+
+func (m *orderRepo) UpdateOrderStatusFrom(ctx context.Context, orderNo string, from, status uint8, tx ...*gorm.DB) (bool, error) {
+	orderInfo, err := m.FindOneByOrderNo(ctx, orderNo)
+	if err != nil {
+		return false, err
+	}
+	var updated bool
+	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		if len(tx) > 0 {
+			conn = tx[0]
+		}
+		result := conn.Model(&order.Order{}).
+			Where("order_no = ? AND status = ?", orderNo, from).
+			Update("status", status)
+		updated = result.RowsAffected == 1
+		return result.Error
+	}, m.getCacheKeys(orderInfo)...)
+	return updated, err
 }
 
 // UpdatePaymentExpectation persists the exact amount and currency sent to a

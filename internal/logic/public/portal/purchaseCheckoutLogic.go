@@ -451,6 +451,7 @@ func (l *PurchaseCheckoutLogic) persistPaymentExpectation(info *order.Order, amo
 // It prioritizes using gift amount first, then regular balance, and creates proper audit logs
 func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) error {
 	var err error
+	var paidUser *user.User
 	if o.Amount == 0 {
 		// No payment required for zero-amount orders
 		l.Logger.Info(
@@ -458,7 +459,7 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			logger.Field("orderNo", o.OrderNo),
 			logger.Field("userId", u.Id),
 		)
-		err = l.svcCtx.Store.Order().UpdateOrderStatus(l.ctx, o.OrderNo, 2)
+		updated, err := l.svcCtx.Store.Order().UpdateOrderStatusFrom(l.ctx, o.OrderNo, 1, 2)
 		if err != nil {
 			l.Errorw("[PurchaseCheckout] Update order status error",
 				logger.Field("error", err.Error()),
@@ -466,12 +467,26 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 				logger.Field("userId", u.Id))
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Update order status error: %s", err.Error())
 		}
+		if !updated {
+			return errors.Wrapf(xerr.NewErrCode(xerr.OrderStatusError), "order is no longer pending")
+		}
 		goto activation
 	}
 
 	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
-		// Retrieve latest user information inside the transaction.
-		userInfo, err := store.User().FindOne(l.ctx, u.Id)
+		// Lock the order first so concurrent checkout requests for the same
+		// order cannot both reach the balance debit path.
+		orderInfo, err := store.Order().FindOneByOrderNoForUpdate(l.ctx, o.OrderNo)
+		if err != nil {
+			return err
+		}
+		if orderInfo.Status != 1 {
+			return errors.Wrapf(xerr.NewErrCode(xerr.OrderStatusError), "order is no longer pending")
+		}
+
+		// Retrieve the latest user information inside the transaction without
+		// Redis cache and lock the row before checking or changing balances.
+		userInfo, err := store.User().FindOneForUpdate(l.ctx, u.Id)
 		if err != nil {
 			return err
 		}
@@ -501,9 +516,8 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 		userInfo.GiftAmount -= giftUsed
 		userInfo.Balance -= balanceUsed
 
-		// Save updated user information
-		err = store.User().Update(l.ctx, userInfo)
-		if err != nil {
+		// Save only the balance fields; do not write back a cached/stale user row.
+		if err = store.User().UpdateBalanceFields(l.ctx, userInfo); err != nil {
 			return err
 		}
 
@@ -550,15 +564,25 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			}
 		}
 
-		// Store gift amount used in order for potential refund tracking
-		o.GiftAmount = giftUsed
-		err = store.Order().Update(l.ctx, o)
-		if err != nil {
-			return err
+		// Store gift amount used in order for potential refund tracking.
+		// Keep any gift amount that was already recorded at order creation.
+		if giftUsed > 0 {
+			orderInfo.GiftAmount += giftUsed
+			if err = store.Order().Update(l.ctx, orderInfo); err != nil {
+				return err
+			}
 		}
 
 		// Mark order as paid (status = 2)
-		return store.Order().UpdateOrderStatus(l.ctx, o.OrderNo, 2)
+		updated, err := store.Order().UpdateOrderStatusFrom(l.ctx, o.OrderNo, 1, 2)
+		if err != nil {
+			return err
+		}
+		if !updated {
+			return errors.Wrapf(xerr.NewErrCode(xerr.OrderStatusError), "order is no longer pending")
+		}
+		paidUser = userInfo
+		return nil
 	})
 
 	if err != nil {
@@ -567,6 +591,13 @@ func (l *PurchaseCheckoutLogic) balancePayment(u *user.User, o *order.Order) err
 			logger.Field("orderNo", o.OrderNo),
 			logger.Field("userId", u.Id))
 		return err
+	}
+	if paidUser != nil {
+		if cacheErr := l.svcCtx.Store.User().ClearUserCache(l.ctx, paidUser); cacheErr != nil {
+			l.Errorw("[PurchaseCheckout] Clear user cache error",
+				logger.Field("error", cacheErr.Error()),
+				logger.Field("userId", paidUser.Id))
+		}
 	}
 
 activation:
