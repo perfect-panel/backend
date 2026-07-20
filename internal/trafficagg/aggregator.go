@@ -21,10 +21,16 @@ import (
 const (
 	bucketLayout             = "200601021504"
 	bucketTTL                = 24 * time.Hour
+	deadLetterTTL            = 30 * 24 * time.Hour
+	bucketFailureThreshold   = 10
 	bucketIndexKey           = "traffic:agg:buckets"
 	bucketPrefix             = "traffic:agg:"
 	processingBucketPrefix   = "traffic:processing:"
 	processedBucketPrefix    = "traffic:processed:"
+	bucketFailurePrefix      = "traffic:failed:"
+	deadLetterBucketPrefix   = "traffic:deadletter:"
+	deadLetterMetaPrefix     = "traffic:deadletter:meta:"
+	deadLetterIndexKey       = "traffic:deadletter:buckets"
 	serverLastReportedKey    = "traffic:server:last_reported"
 	conditionalHDelLua       = `for i = 1, #ARGV, 2 do if redis.call("HGET", KEYS[1], ARGV[i]) == ARGV[i + 1] then redis.call("HDEL", KEYS[1], ARGV[i]) end end return 1`
 	trafficFieldUpload       = "u"
@@ -205,7 +211,10 @@ func (a *Aggregator) FlushServerReports(ctx context.Context) error {
 
 func (a *Aggregator) flushBucket(ctx context.Context, suffix string) error {
 	if _, err := parseBucketTime(suffix); err != nil {
-		_ = a.svc.Redis.ZRem(ctx, bucketIndexKey, suffix).Err()
+		pipe := a.svc.Redis.Pipeline()
+		pipe.ZRem(ctx, bucketIndexKey, suffix)
+		pipe.Del(ctx, bucketFailureKey(suffix))
+		_, _ = pipe.Exec(ctx)
 		return nil
 	}
 
@@ -252,7 +261,7 @@ func (a *Aggregator) flushBucket(ctx context.Context, suffix string) error {
 	}
 
 	if err := a.persistBucket(ctx, suffix, deltas); err != nil {
-		return err
+		return a.handleBucketFlushFailure(ctx, suffix, processingKey, err)
 	}
 	return a.markBucketProcessedAndCleanup(ctx, suffix, processingKey, processedKey)
 }
@@ -261,6 +270,7 @@ func (a *Aggregator) cleanupBucket(ctx context.Context, suffix, processingKey st
 	pipe := a.svc.Redis.Pipeline()
 	pipe.Del(ctx, processingKey)
 	pipe.ZRem(ctx, bucketIndexKey, suffix)
+	pipe.Del(ctx, bucketFailureKey(suffix))
 	_, err := pipe.Exec(ctx)
 	return err
 }
@@ -270,8 +280,102 @@ func (a *Aggregator) markBucketProcessedAndCleanup(ctx context.Context, suffix, 
 	pipe.Set(ctx, processedKey, "1", bucketTTL)
 	pipe.Del(ctx, processingKey)
 	pipe.ZRem(ctx, bucketIndexKey, suffix)
+	pipe.Del(ctx, bucketFailureKey(suffix))
 	_, err := pipe.Exec(ctx)
 	return err
+}
+
+func (a *Aggregator) handleBucketFlushFailure(ctx context.Context, suffix, processingKey string, cause error) error {
+	failures, err := a.recordBucketFlushFailure(ctx, suffix)
+	if err != nil {
+		return err
+	}
+	if failures < bucketFailureThreshold {
+		return cause
+	}
+
+	return a.moveBucketToDeadLetter(ctx, suffix, processingKey, failures, cause)
+}
+
+func (a *Aggregator) recordBucketFlushFailure(ctx context.Context, suffix string) (int64, error) {
+	failureKey := bucketFailureKey(suffix)
+	failures, err := a.svc.Redis.Incr(ctx, failureKey).Result()
+	if err != nil {
+		return 0, err
+	}
+	if err := a.svc.Redis.Expire(ctx, failureKey, deadLetterTTL).Err(); err != nil {
+		return 0, err
+	}
+	return failures, nil
+}
+
+func (a *Aggregator) moveBucketToDeadLetter(ctx context.Context, suffix, processingKey string, failures int64, cause error) error {
+	fieldCount, _ := a.svc.Redis.HLen(ctx, processingKey).Result()
+	deadLetterKey, err := a.renameProcessingBucketToDeadLetter(ctx, suffix, processingKey)
+	if err != nil {
+		return err
+	}
+
+	now := timeutil.Now()
+	causeText := ""
+	if cause != nil {
+		causeText = cause.Error()
+	}
+	metaKey := deadLetterMetaKey(deadLetterKey)
+	pipe := a.svc.Redis.Pipeline()
+	pipe.HSet(ctx, metaKey, map[string]interface{}{
+		"bucket":         suffix,
+		"source_key":     processingKey,
+		"deadletter_key": deadLetterKey,
+		"failure_count":  failures,
+		"field_count":    fieldCount,
+		"last_error":     causeText,
+		"moved_at":       now.Format(time.RFC3339Nano),
+	})
+	pipe.Expire(ctx, metaKey, deadLetterTTL)
+	pipe.Expire(ctx, deadLetterKey, deadLetterTTL)
+	pipe.ZAdd(ctx, deadLetterIndexKey, redis.Z{
+		Score:  bucketScore(suffix),
+		Member: deadLetterKey,
+	})
+	pipe.Expire(ctx, deadLetterIndexKey, deadLetterTTL)
+	pipe.ZRem(ctx, bucketIndexKey, suffix)
+	pipe.Del(ctx, bucketFailureKey(suffix))
+	if _, err := pipe.Exec(ctx); err != nil {
+		return err
+	}
+
+	logger.WithContext(ctx).Error("[TrafficAggregator] Bucket moved to deadletter",
+		logger.Field("bucket", suffix),
+		logger.Field("failures", failures),
+		logger.Field("deadletter_key", deadLetterKey),
+		logger.Field("field_count", fieldCount),
+		logger.Field("error", causeText),
+	)
+	return nil
+}
+
+func (a *Aggregator) renameProcessingBucketToDeadLetter(ctx context.Context, suffix, processingKey string) (string, error) {
+	deadLetterKey := deadLetterBucketKey(suffix)
+	renamed, err := a.svc.Redis.RenameNX(ctx, processingKey, deadLetterKey).Result()
+	if err != nil {
+		return "", err
+	}
+	if renamed {
+		return deadLetterKey, nil
+	}
+
+	for i := 0; i < 3; i++ {
+		candidate := fmt.Sprintf("%s:%d:%d", deadLetterKey, timeutil.Now().UnixNano(), i)
+		renamed, err = a.svc.Redis.RenameNX(ctx, processingKey, candidate).Result()
+		if err != nil {
+			return "", err
+		}
+		if renamed {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("deadletter key already exists for bucket %s", suffix)
 }
 
 func (a *Aggregator) persistBucket(ctx context.Context, suffix string, deltas []trafficDelta) error {
@@ -368,6 +472,26 @@ func trafficField(serverID, subscribeID int64, kind string) string {
 		strconv.FormatInt(subscribeID, 10),
 		kind,
 	}, trafficFieldSeparator)
+}
+
+func bucketFailureKey(suffix string) string {
+	return bucketFailurePrefix + suffix
+}
+
+func deadLetterBucketKey(suffix string) string {
+	return deadLetterBucketPrefix + suffix
+}
+
+func deadLetterMetaKey(deadLetterKey string) string {
+	return deadLetterMetaPrefix + strings.TrimPrefix(deadLetterKey, deadLetterBucketPrefix)
+}
+
+func bucketScore(suffix string) float64 {
+	timestamp, err := parseBucketTime(suffix)
+	if err != nil {
+		return float64(timeutil.Now().Unix())
+	}
+	return float64(timestamp.Unix())
 }
 
 func parseTrafficDeltas(ctx context.Context, values map[string]string) []trafficDelta {
