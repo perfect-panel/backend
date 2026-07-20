@@ -1099,7 +1099,27 @@ func userSubscribeTrafficIncrementExpr(db *gorm.DB, column string, deltas []traf
 			args = append(args, delta.Upload)
 		}
 	}
-	return fmt.Sprintf("%s + CASE %s %s ELSE 0 END", targetColumn, idColumn, strings.Join(parts, " ")), args
+	return fmt.Sprintf(
+		"%s + CASE %s %s ELSE %s END",
+		targetColumn,
+		idColumn,
+		strings.Join(parts, " "),
+		userSubscribeTrafficZeroExpr(db),
+	), args
+}
+
+func userSubscribeTrafficZeroExpr(db *gorm.DB) string {
+	if db == nil || db.Dialector == nil {
+		return "0"
+	}
+	switch db.Dialector.Name() {
+	case "postgres":
+		return "0::bigint"
+	case "mysql":
+		return "CAST(0 AS SIGNED)"
+	default:
+		return "0"
+	}
 }
 
 // FindOneSubscribeByToken  finds a record by token.

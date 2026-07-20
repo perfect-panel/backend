@@ -204,8 +204,8 @@ func TestUserSubscribeTrafficIncrementExprSQL(t *testing.T) {
 			}),
 			want: []string{
 				"UPDATE `user_subscribe`",
-				"`download`=`user_subscribe`.`download` + CASE `user_subscribe`.`id` WHEN ? THEN ? WHEN ? THEN ? ELSE 0 END",
-				"`upload`=`user_subscribe`.`upload` + CASE `user_subscribe`.`id` WHEN ? THEN ? WHEN ? THEN ? ELSE 0 END",
+				"`download`=`user_subscribe`.`download` + CASE `user_subscribe`.`id` WHEN ? THEN ? WHEN ? THEN ? ELSE CAST(0 AS SIGNED) END",
+				"`upload`=`user_subscribe`.`upload` + CASE `user_subscribe`.`id` WHEN ? THEN ? WHEN ? THEN ? ELSE CAST(0 AS SIGNED) END",
 				"WHERE id IN (?,?)",
 			},
 		},
@@ -217,8 +217,8 @@ func TestUserSubscribeTrafficIncrementExprSQL(t *testing.T) {
 			}),
 			want: []string{
 				`UPDATE "user_subscribe"`,
-				`"download"="user_subscribe"."download" + CASE "user_subscribe"."id" WHEN $1 THEN $2 WHEN $3 THEN $4 ELSE 0 END`,
-				`"upload"="user_subscribe"."upload" + CASE "user_subscribe"."id" WHEN $5 THEN $6 WHEN $7 THEN $8 ELSE 0 END`,
+				`"download"="user_subscribe"."download" + CASE "user_subscribe"."id" WHEN $1 THEN $2 WHEN $3 THEN $4 ELSE 0::bigint END`,
+				`"upload"="user_subscribe"."upload" + CASE "user_subscribe"."id" WHEN $5 THEN $6 WHEN $7 THEN $8 ELSE 0::bigint END`,
 				`WHERE id IN ($10,$11)`,
 			},
 		},
@@ -226,7 +226,7 @@ func TestUserSubscribeTrafficIncrementExprSQL(t *testing.T) {
 
 	deltas := mergeSubscribeTrafficDeltas([]trafficEntity.SubscribeTrafficDelta{
 		{SubscribeId: 2, Download: 20, Upload: 10},
-		{SubscribeId: 1, Download: 40, Upload: 30},
+		{SubscribeId: 1, Download: 2_508_079_104, Upload: 30},
 		{SubscribeId: 2, Download: 3, Upload: 4},
 	})
 	for _, tt := range tests {
@@ -253,8 +253,8 @@ func TestUserSubscribeTrafficIncrementExprSQL(t *testing.T) {
 					t.Fatalf("SQL missing %q:\n%s", want, sql)
 				}
 			}
-			if got := stmt.Vars[1]; got != int64(40) {
-				t.Fatalf("first download increment = %#v, want 40", got)
+			if got := stmt.Vars[1]; got != int64(2_508_079_104) {
+				t.Fatalf("first download increment = %#v, want 2508079104", got)
 			}
 			if got := stmt.Vars[3]; got != int64(23) {
 				t.Fatalf("second download increment = %#v, want 23", got)
