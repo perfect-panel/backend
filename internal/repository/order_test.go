@@ -49,6 +49,68 @@ func TestOrderRepoMarkOrderPaidUsesPendingCondition(t *testing.T) {
 	}
 }
 
+func TestOrderRepoFindOneByOrderNoForUpdateUsesRowLock(t *testing.T) {
+	var logs bytes.Buffer
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		DSN:                       "gorm:gorm@tcp(localhost:9910)/gorm?charset=utf8&parseTime=True&loc=Local",
+		SkipInitializeWithVersion: true,
+	}), &gorm.Config{
+		DryRun:                 true,
+		DisableAutomaticPing:   true,
+		SkipDefaultTransaction: true,
+		Logger:                 gormlogger.New(log.New(&logs, "", 0), gormlogger.Config{LogLevel: gormlogger.Info}),
+	})
+	if err != nil {
+		t.Fatalf("open gorm db: %v", err)
+	}
+	redisServer := miniredis.RunT(t)
+	redisClient := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})
+	t.Cleanup(func() { _ = redisClient.Close() })
+
+	if _, err := newOrderRepo(db, redisClient).FindOneByOrderNoForUpdate(context.Background(), "order-123"); err != nil {
+		t.Fatalf("FindOneByOrderNoForUpdate: %v", err)
+	}
+	sql := logs.String()
+	for _, want := range []string{"FROM `order`", "WHERE order_no = 'order-123'", "FOR UPDATE"} {
+		if !strings.Contains(sql, want) {
+			t.Fatalf("SQL missing %q:\n%s", want, sql)
+		}
+	}
+}
+
+func TestOrderRepoUpdateOrderStatusFromUsesPendingCondition(t *testing.T) {
+	var logs bytes.Buffer
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		DSN:                       "gorm:gorm@tcp(localhost:9910)/gorm?charset=utf8&parseTime=True&loc=Local",
+		SkipInitializeWithVersion: true,
+	}), &gorm.Config{
+		DryRun:                 true,
+		DisableAutomaticPing:   true,
+		SkipDefaultTransaction: true,
+		Logger:                 gormlogger.New(log.New(&logs, "", 0), gormlogger.Config{LogLevel: gormlogger.Info}),
+	})
+	if err != nil {
+		t.Fatalf("open gorm db: %v", err)
+	}
+	redisServer := miniredis.RunT(t)
+	redisClient := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})
+	t.Cleanup(func() { _ = redisClient.Close() })
+
+	updated, err := newOrderRepo(db, redisClient).UpdateOrderStatusFrom(context.Background(), "order-123", 1, 2)
+	if err != nil {
+		t.Fatalf("UpdateOrderStatusFrom: %v", err)
+	}
+	if updated {
+		t.Fatal("dry-run update must not report an affected row")
+	}
+	sql := logs.String()
+	for _, want := range []string{"UPDATE `order`", "`status`=2", "WHERE order_no = 'order-123' AND status = 1"} {
+		if !strings.Contains(sql, want) {
+			t.Fatalf("SQL missing %q:\n%s", want, sql)
+		}
+	}
+}
+
 func TestApplyOrderListFiltersSearchSQL(t *testing.T) {
 	tests := []struct {
 		name       string

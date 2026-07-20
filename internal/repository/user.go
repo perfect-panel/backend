@@ -36,9 +36,11 @@ type UserRepo interface {
 	// user
 	Insert(ctx context.Context, data *user.User, tx ...*gorm.DB) error
 	FindOne(ctx context.Context, id int64) (*user.User, error)
+	FindOneForUpdate(ctx context.Context, id int64) (*user.User, error)
 	FindOneByEmail(ctx context.Context, email string) (*user.User, error)
 	FindOneByReferCode(ctx context.Context, referCode string) (*user.User, error)
 	Update(ctx context.Context, data *user.User, tx ...*gorm.DB) error
+	UpdateBalanceFields(ctx context.Context, data *user.User, tx ...*gorm.DB) error
 	Delete(ctx context.Context, id int64, tx ...*gorm.DB) error
 	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	BatchDeleteUser(ctx context.Context, ids []int64, tx ...*gorm.DB) error
@@ -206,6 +208,19 @@ func (m *userRepo) FindOne(ctx context.Context, id int64) (*user.User, error) {
 	return &resp, err
 }
 
+func (m *userRepo) FindOneForUpdate(ctx context.Context, id int64) (*user.User, error) {
+	var resp user.User
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
+		return conn.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Model(&user.User{}).
+			Where("id = ?", id).
+			Preload("UserDevices").
+			Preload("AuthMethods").
+			First(&resp).Error
+	})
+	return &resp, err
+}
+
 func (m *userRepo) Update(ctx context.Context, data *user.User, tx ...*gorm.DB) error {
 	old, err := m.FindOne(ctx, data.Id)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -218,6 +233,20 @@ func (m *userRepo) Update(ctx context.Context, data *user.User, tx ...*gorm.DB) 
 		return conn.Save(data).Error
 	}, m.getCacheKeys(old)...)
 	return err
+}
+
+func (m *userRepo) UpdateBalanceFields(ctx context.Context, data *user.User, tx ...*gorm.DB) error {
+	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		if len(tx) > 0 {
+			conn = tx[0]
+		}
+		return conn.Model(&user.User{}).
+			Where("id = ?", data.Id).
+			Updates(map[string]interface{}{
+				"balance":     data.Balance,
+				"gift_amount": data.GiftAmount,
+			}).Error
+	}, m.getCacheKeys(data)...)
 }
 
 func (m *userRepo) Delete(ctx context.Context, id int64, tx ...*gorm.DB) error {

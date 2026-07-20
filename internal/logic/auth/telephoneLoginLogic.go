@@ -63,6 +63,12 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *dto.TelephoneLoginRequest, ip,
 		}
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
 	}
+	if userInfo.DeletedAt.Valid {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user telephone deleted: %v", req.Telephone)
+	}
+	if !*userInfo.Enable {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "user account is disabled")
+	}
 
 	// Record login status
 	defer func(svcCtx *svc.ServiceContext) {

@@ -43,9 +43,9 @@ func (l *RechargeLogic) Recharge(req *dto.RechargeOrderRequest) (resp *dto.Recha
 	}
 
 	// Validate recharge amount
-	if req.Amount <= 0 {
+	if req.Amount < MinRechargeAmount {
 		l.Errorw("[Recharge] Invalid recharge amount", logger.Field("amount", req.Amount), logger.Field("user_id", u.Id))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "recharge amount must be greater than 0")
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "recharge amount must be at least %d", MinRechargeAmount)
 	}
 
 	if req.Amount > MaxRechargeAmount {
