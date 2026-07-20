@@ -147,7 +147,7 @@ func TestNormalizeProtocolForStorageNormalizesShadowsocksPlugin(t *testing.T) {
 		Enable:        true,
 		Cipher:        "aes-128-gcm",
 		Plugin:        "simple-obfs",
-		PluginOptions: map[string]any{"obfs": "tls"},
+		PluginOptions: map[string]any{"obfs": "tls", "host": " edge.example "},
 	})
 	if err != nil {
 		t.Fatalf("NormalizeProtocolForStorage() error = %v", err)
@@ -156,8 +156,29 @@ func TestNormalizeProtocolForStorageNormalizesShadowsocksPlugin(t *testing.T) {
 		t.Fatalf("Plugin = %q, want obfs", protocol.Plugin)
 	}
 	options, ok := protocol.PluginOptions.(map[string]any)
-	if !ok || options["mode"] != "tls" {
-		t.Fatalf("PluginOptions = %#v, want mode tls", protocol.PluginOptions)
+	if !ok || options["mode"] != "tls" || options["host"] != "edge.example" {
+		t.Fatalf("PluginOptions = %#v, want normalized mode and host", protocol.PluginOptions)
+	}
+}
+
+func TestSanitizeProtocolsForNodeDistributionClearsShadowsocksObfsHost(t *testing.T) {
+	protocols := SanitizeProtocolsForNodeDistribution([]Protocol{{
+		Type:          "shadowsocks",
+		Port:          443,
+		Enable:        true,
+		Cipher:        "aes-128-gcm",
+		Plugin:        "obfs",
+		PluginOptions: map[string]any{"mode": "http", "host": "edge.example"},
+	}})
+	if len(protocols) != 1 {
+		t.Fatalf("SanitizeProtocolsForNodeDistribution() len = %d, want 1", len(protocols))
+	}
+	options, ok := protocols[0].PluginOptions.(map[string]any)
+	if !ok || options["mode"] != "http" {
+		t.Fatalf("PluginOptions = %#v, want mode http", protocols[0].PluginOptions)
+	}
+	if _, exists := options["host"]; exists {
+		t.Fatalf("node distribution PluginOptions = %#v, want host removed", options)
 	}
 }
 

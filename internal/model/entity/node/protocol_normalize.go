@@ -135,6 +135,7 @@ func sanitizeRuntimeProtocol(protocol *Protocol) bool {
 		clearStreamTransport(protocol)
 		clearQUICControls(protocol)
 		clearEncryption(protocol)
+		clearShadowsocksClientPluginOptions(protocol)
 		return protocol.Port > 0 && protocol.Cipher != "" && (!pluginTLS || hasTLSCertificate(*protocol))
 	case "shadowsocksr":
 		protocol.Security = ""
@@ -421,7 +422,13 @@ func normalizeShadowsocksPluginOptions(options *shadowsocksPluginValues) (map[st
 		if err != nil || mode != "http" && mode != "tls" {
 			return nil, false, options.invalid("mode")
 		}
-		return map[string]any{"mode": mode}, false, nil
+		normalized := map[string]any{"mode": mode}
+		if host, exists, err := options.optionalString("host"); err != nil {
+			return nil, false, err
+		} else if exists && strings.TrimSpace(host) != "" {
+			normalized["host"] = strings.TrimSpace(host)
+		}
+		return normalized, false, nil
 	case "v2ray-plugin", "gost-plugin":
 		return normalizeShadowsocksWebSocketPlugin(options)
 	case "shadow-tls":
@@ -610,6 +617,15 @@ func clearShadowsocksTLS(protocol *Protocol) {
 	clearCertificate(protocol)
 	clearTLSClient(protocol)
 	clearReality(protocol)
+}
+
+func clearShadowsocksClientPluginOptions(protocol *Protocol) {
+	if protocol.Plugin != "obfs" {
+		return
+	}
+	if options, ok := protocol.PluginOptions.(map[string]any); ok {
+		delete(options, "host")
+	}
 }
 
 func validPluginAddress(address string) bool {
