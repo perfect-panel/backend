@@ -25,6 +25,7 @@ type ServiceContext struct {
 	Redis        *redis.Client
 	Config       config.Config
 	Queue        *asynq.Client
+	Inspector    *asynq.Inspector
 	ExchangeRate float64
 	GeoIP        *IPLocation
 	Store        repository.Store
@@ -70,6 +71,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Redis:        rds,
 		Config:       c,
 		Queue:        NewAsynqClient(c),
+		Inspector:    NewAsynqInspector(c),
 		ExchangeRate: 0,
 		GeoIP:        geoIP,
 		Store:        store,
