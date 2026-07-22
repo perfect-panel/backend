@@ -17,6 +17,10 @@ import (
 	"github.com/perfect-panel/server/pkg/tool"
 )
 
+// ErrQueryNotSupported is returned when the payment gateway does not
+// implement the order query API (e.g., returns HTTP 404).
+var ErrQueryNotSupported = errors.New("gateway does not support order query API")
+
 type Client struct {
 	Pid        string
 	Url        string
@@ -148,6 +152,9 @@ func (c *Client) QueryOrder(orderNo string) (*QueryResult, error) {
 		return nil, errors.New("gateway query request failed")
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrQueryNotSupported
+	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, fmt.Errorf("query gateway returned HTTP %d", resp.StatusCode)
 	}

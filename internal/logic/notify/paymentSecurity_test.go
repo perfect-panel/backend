@@ -230,13 +230,30 @@ func TestActivationTaskIDIsDeterministicPerOrder(t *testing.T) {
 }
 
 func TestFinishedOrderDuplicateRequiresSameTradeNumber(t *testing.T) {
+	ctx := context.Background()
 	orderInfo := &order.Order{Status: orderStatusFinished, TradeNo: "trade-1"}
-	finished, err := finishedOrderDuplicate(orderInfo, "trade-1")
+	finished, err := finishedOrderDuplicate(ctx, orderInfo, "trade-1")
 	if err != nil || !finished {
 		t.Fatalf("matching finished duplicate rejected: finished=%t err=%v", finished, err)
 	}
-	if _, err := finishedOrderDuplicate(orderInfo, "trade-2"); err == nil {
+	if _, err := finishedOrderDuplicate(ctx, orderInfo, "trade-2"); err == nil {
 		t.Fatal("finished callback with another trade number must be rejected")
+	}
+}
+
+// TestFinishedOrderDuplicateToleratesEmptyTradeNo verifies that historical
+// orders which were completed before trade_no persistence was introduced are
+// treated as safe duplicates rather than blocking the payment callback.
+func TestFinishedOrderDuplicateToleratesEmptyTradeNo(t *testing.T) {
+	ctx := context.Background()
+	// Simulate a legacy finished order whose TradeNo was never persisted.
+	orderInfo := &order.Order{Status: orderStatusFinished, TradeNo: ""}
+	finished, err := finishedOrderDuplicate(ctx, orderInfo, "trade-abc")
+	if err != nil {
+		t.Fatalf("legacy finished order (empty TradeNo) must not return an error, got: %v", err)
+	}
+	if !finished {
+		t.Fatal("legacy finished order (empty TradeNo) must be treated as a duplicate")
 	}
 }
 
@@ -249,6 +266,7 @@ func TestCancelledOrFailedOrderCannotSettle(t *testing.T) {
 }
 
 func TestStripeCallbackRequiresBoundConfigAmountCurrencyAndMethod(t *testing.T) {
+	ctx := context.Background()
 	paymentConfig := &payment.Payment{Id: 20, Platform: "Stripe"}
 	stripeConfig := &payment.StripeConfig{Payment: "card"}
 	orderInfo := &order.Order{
@@ -256,27 +274,28 @@ func TestStripeCallbackRequiresBoundConfigAmountCurrencyAndMethod(t *testing.T) 
 		PaymentAmount: 1000, PaymentCurrency: "USD", TradeNo: "pi_1",
 	}
 	notify := &stripe.NotifyResult{TradeNo: "pi_1", Method: "card", Amount: 1000, Currency: "usd"}
-	if finished, err := validateStripeCallback(orderInfo, paymentConfig, stripeConfig, notify); err != nil || finished {
+	if finished, err := validateStripeCallback(ctx, orderInfo, paymentConfig, stripeConfig, notify); err != nil || finished {
 		t.Fatalf("valid Stripe callback rejected: finished=%t err=%v", finished, err)
 	}
 	changed := *notify
 	changed.Amount = 999
-	if _, err := validateStripeCallback(orderInfo, paymentConfig, stripeConfig, &changed); err == nil {
+	if _, err := validateStripeCallback(ctx, orderInfo, paymentConfig, stripeConfig, &changed); err == nil {
 		t.Fatal("Stripe amount mismatch must be rejected")
 	}
 	changed = *notify
 	changed.Currency = "eur"
-	if _, err := validateStripeCallback(orderInfo, paymentConfig, stripeConfig, &changed); err == nil {
+	if _, err := validateStripeCallback(ctx, orderInfo, paymentConfig, stripeConfig, &changed); err == nil {
 		t.Fatal("Stripe currency mismatch must be rejected")
 	}
 	changed = *notify
 	changed.Method = "wechat_pay"
-	if _, err := validateStripeCallback(orderInfo, paymentConfig, stripeConfig, &changed); err == nil {
+	if _, err := validateStripeCallback(ctx, orderInfo, paymentConfig, stripeConfig, &changed); err == nil {
 		t.Fatal("Stripe payment method mismatch must be rejected")
 	}
 }
 
 func TestAlipayCallbackRequiresBoundAppAndExactAmount(t *testing.T) {
+	ctx := context.Background()
 	paymentConfig := &payment.Payment{Id: 30, Platform: "AlipayF2F"}
 	alipayConfig := &payment.AlipayF2FConfig{AppId: "app-1"}
 	orderInfo := &order.Order{
@@ -284,17 +303,17 @@ func TestAlipayCallbackRequiresBoundAppAndExactAmount(t *testing.T) {
 		PaymentAmount: 1000, PaymentCurrency: "CNY",
 	}
 	notify := &alipay.Notification{TradeNo: "trade-1", AppId: "app-1", Amount: 1000}
-	if finished, err := validateAlipayCallback(orderInfo, paymentConfig, alipayConfig, notify); err != nil || finished {
+	if finished, err := validateAlipayCallback(ctx, orderInfo, paymentConfig, alipayConfig, notify); err != nil || finished {
 		t.Fatalf("valid Alipay callback rejected: finished=%t err=%v", finished, err)
 	}
 	changed := *notify
 	changed.AppId = "other-app"
-	if _, err := validateAlipayCallback(orderInfo, paymentConfig, alipayConfig, &changed); err == nil {
+	if _, err := validateAlipayCallback(ctx, orderInfo, paymentConfig, alipayConfig, &changed); err == nil {
 		t.Fatal("Alipay app id mismatch must be rejected")
 	}
 	changed = *notify
 	changed.Amount = 999
-	if _, err := validateAlipayCallback(orderInfo, paymentConfig, alipayConfig, &changed); err == nil {
+	if _, err := validateAlipayCallback(ctx, orderInfo, paymentConfig, alipayConfig, &changed); err == nil {
 		t.Fatal("Alipay amount mismatch must be rejected")
 	}
 }

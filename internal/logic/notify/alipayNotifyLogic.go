@@ -67,7 +67,7 @@ func (l *AlipayNotifyLogic) AlipayNotify(form url.Values) error {
 			return errors.Wrapf(xerr.NewErrCode(xerr.OrderNotExist), "order not exist: %v", notify.OrderNo)
 		}
 
-		if finished, err := validateAlipayCallback(orderInfo, data, &config, notify); err != nil {
+		if finished, err := validateAlipayCallback(l.ctx, orderInfo, data, &config, notify); err != nil {
 			return err
 		} else if finished {
 			return nil
@@ -89,7 +89,7 @@ func (l *AlipayNotifyLogic) AlipayNotify(form url.Values) error {
 	return nil
 }
 
-func validateAlipayCallback(orderInfo *order.Order, paymentConfig *payment.Payment, config *payment.AlipayF2FConfig, notify *alipay.Notification) (bool, error) {
+func validateAlipayCallback(ctx context.Context, orderInfo *order.Order, paymentConfig *payment.Payment, config *payment.AlipayF2FConfig, notify *alipay.Notification) (bool, error) {
 	if notify == nil {
 		return false, errors.New("Alipay callback is missing")
 	}
@@ -99,7 +99,7 @@ func validateAlipayCallback(orderInfo *order.Order, paymentConfig *payment.Payme
 	if notify.AppId != config.AppId {
 		return false, errors.New("Alipay app id mismatch")
 	}
-	if finished, err := finishedOrderDuplicate(orderInfo, notify.TradeNo); err != nil || finished {
+	if finished, err := finishedOrderDuplicate(ctx, orderInfo, notify.TradeNo); err != nil || finished {
 		return finished, err
 	}
 	if err := validateOrderCanSettle(orderInfo); err != nil {
