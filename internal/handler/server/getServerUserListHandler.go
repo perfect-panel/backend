@@ -17,13 +17,14 @@ import (
 // @Summary Get user list
 // @Tags node
 // @Accept json
-// @Produce json
+// @Produce json,application/protobuf
 // @Security NodeSecret
 // @Param request query dto.GetServerUserListRequest false "Request parameters"
 // @Success 200 {object} dto.GetServerUserListResponse
 // @Router /v1/server/user [get]
 func GetServerUserListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(c context.Context, ctx *app.RequestContext) {
+		acceptsProtobuf := acceptsProtobuf(ctx)
 		commonReq, err := serverCommonRequest(ctx)
 		if err != nil {
 			writeParamError(ctx, err)
@@ -35,8 +36,9 @@ func GetServerUserListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
+		ifNoneMatch := string(ctx.GetHeader("If-None-Match"))
 		l := server.NewGetServerUserListLogic(c, svcCtx, server.RequestMeta{
-			IfNoneMatch: string(ctx.GetHeader("If-None-Match")),
+			IfNoneMatch: ifNoneMatchForRepresentation(ifNoneMatch, acceptsProtobuf),
 		})
 		resp, err := l.GetServerUserList(&req)
 		writeHeaders(ctx, l.ResponseMeta().Headers)
@@ -45,7 +47,13 @@ func GetServerUserListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 				ctx.String(consts.StatusNotModified, "Not Modified")
 				return
 			}
-			ctx.String(consts.StatusNotFound, "Not Found")
+			writeServerText(ctx, consts.StatusNotFound, "Not Found")
+			return
+		}
+		if acceptsProtobuf {
+			if err := writeServerProtobufWithETag(ctx, serverUserListResponseToProtobuf(resp), ifNoneMatch); err != nil {
+				writeServerReportResult(ctx, err)
+			}
 			return
 		}
 		ctx.JSON(consts.StatusOK, resp)

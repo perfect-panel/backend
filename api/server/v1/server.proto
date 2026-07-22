@@ -1,0 +1,228 @@
+syntax = "proto3";
+
+package ppanel.server.v1;
+
+option go_package = "github.com/perfect-panel/server/api/server/v1;serverv1";
+
+import "google/protobuf/struct.proto";
+
+// Node reporting messages for PPanel's HTTP server API.
+//
+// These messages are transported as a raw protobuf body with
+// Content-Type: application/protobuf. Node identity and authentication remain
+// HTTP query parameters (server_id, protocol, and secret_key), matching the
+// JSON API.
+
+message OnlineUser {
+  int64 user_id = 1;
+  string ip = 2;
+}
+
+message PushOnlineUsersRequest {
+  repeated OnlineUser users = 1;
+}
+
+message UserTraffic {
+  int64 user_id = 1;
+  int64 upload = 2;
+  int64 download = 3;
+}
+
+message PushUserTrafficRequest {
+  repeated UserTraffic traffic = 1;
+}
+
+message PushServerStatusRequest {
+  double cpu = 1;
+  double mem = 2;
+  double disk = 3;
+  int64 updated_at = 4;
+}
+
+// Result is the common error and no-data response envelope. Its fields match
+// the JSON API's code and msg fields.
+message Result {
+  uint32 code = 1;
+  string message = 2;
+}
+
+message ServerBasic {
+  int64 push_interval = 1;
+  int64 pull_interval = 2;
+}
+
+// Config is intentionally dynamic because the fields depend on the selected
+// node protocol. It has the same object shape as the JSON config property.
+message ServerConfigData {
+  ServerBasic basic = 1;
+  string protocol = 2;
+  google.protobuf.Struct config = 3;
+}
+
+message GetServerConfigResponse {
+  uint32 code = 1;
+  string message = 2;
+  ServerConfigData data = 3;
+}
+
+message ServerUser {
+  int64 id = 1;
+  string uuid = 2;
+  int64 speed_limit = 3;
+  int64 device_limit = 4;
+}
+
+message ServerUserListData {
+  repeated ServerUser users = 1;
+}
+
+message GetServerUserListResponse {
+  uint32 code = 1;
+  string message = 2;
+  ServerUserListData data = 3;
+}
+
+// DNSResolver is one DNS resolver used by the node runtime.
+message DNSResolver {
+  string proto = 1;
+  string address = 2;
+  string server_name = 3;
+  repeated string domains = 4;
+}
+
+// Outbound is one normalized outbound configuration. plugin_options preserves
+// both object and SIP003 string forms accepted by the existing JSON API.
+message Outbound {
+  string name = 1;
+  string protocol = 2;
+  string address = 3;
+  int64 port = 4;
+  string user = 5;
+  string password = 6;
+  string uuid = 7;
+  string cipher = 8;
+  string plugin = 9;
+  google.protobuf.Value plugin_options = 10;
+  string security = 11;
+  string sni = 12;
+  repeated string alpn = 13;
+  bool allow_insecure = 14;
+  string fingerprint = 15;
+  string transport = 16;
+  string host = 17;
+  string path = 18;
+  string service_name = 19;
+  string xhttp_mode = 20;
+  string xhttp_extra = 21;
+  string flow = 22;
+  string encryption = 23;
+  string encryption_mode = 24;
+  string encryption_rtt = 25;
+  string encryption_ticket = 26;
+  string encryption_client_padding = 27;
+  string encryption_password = 28;
+  string multiplex = 29;
+  bool uot = 30;
+  int64 uot_version = 31;
+  string congestion_controller = 32;
+  bool udp_stream = 33;
+  bool reduce_rtt = 34;
+  int64 heartbeat = 35;
+  string reality_public_key = 36;
+  string reality_short_id = 37;
+  string spider_x = 38;
+  string settings = 39;
+  string stream_settings = 40;
+  repeated string rules = 41;
+}
+
+// ServerProtocol is PPanel's normalized, flat protocol configuration. The
+// protocol type identifies which fields are consumed by a node runtime; a flat
+// model matches the established PPanel and Star-Node integration contract.
+message ServerProtocol {
+  string type = 1;
+  uint32 port = 2;
+  int64 version = 3;
+  string mode = 4;
+  bool enable = 5;
+  string security = 6;
+  string network = 7;
+  string sni = 8;
+  repeated string alpn = 9;
+  bool allow_insecure = 10;
+  string fingerprint = 11;
+  string reality_server_addr = 12;
+  int64 reality_server_port = 13;
+  string reality_private_key = 14;
+  string reality_public_key = 15;
+  string reality_short_id = 16;
+  string transport = 17;
+  string host = 18;
+  string path = 19;
+  string service_name = 20;
+  string cipher = 21;
+  string server_key = 22;
+  string plugin = 23;
+  google.protobuf.Value plugin_options = 24;
+  string flow = 25;
+  bool uot = 26;
+  int64 uot_version = 27;
+  bool accept_proxy_protocol = 28;
+  string hop_ports = 29;
+  int64 hop_interval = 30;
+  string obfs_password = 31;
+  bool disable_sni = 32;
+  bool reduce_rtt = 33;
+  int64 heartbeat = 34;
+  string udp_relay_mode = 35;
+  string congestion_controller = 36;
+  string quic_congestion_control = 37;
+  string multiplex = 38;
+  string padding_scheme = 39;
+  string traffic_pattern = 40;
+  bool user_hint_is_mandatory = 41;
+  int64 up_mbps = 42;
+  int64 down_mbps = 43;
+  string obfs = 44;
+  string ssr_protocol = 45;
+  string protocol_param = 46;
+  string obfs_param = 47;
+  string obfs_host = 48;
+  string obfs_path = 49;
+  string xhttp_mode = 50;
+  string xhttp_extra = 51;
+  string encryption = 52;
+  string encryption_mode = 53;
+  string encryption_rtt = 54;
+  string encryption_ticket = 55;
+  string encryption_server_padding = 56;
+  string encryption_private_key = 57;
+  string encryption_client_padding = 58;
+  string encryption_password = 59;
+  bool ech_enable = 60;
+  string ech_server_name = 61;
+  double ratio = 62;
+  string cert_mode = 63;
+  string cert_dns_provider = 64;
+  string cert_dns_env = 65;
+}
+
+// QueryServerProtocolConfigData is the strongly typed data payload returned
+// by GET /v2/server/{server_id}.
+message QueryServerProtocolConfigData {
+  int64 traffic_report_threshold = 1;
+  int64 push_interval = 2;
+  int64 pull_interval = 3;
+  string ip_strategy = 4;
+  repeated DNSResolver dns = 5;
+  repeated string block = 6;
+  repeated Outbound outbound = 7;
+  repeated ServerProtocol protocols = 8;
+  int64 total = 9;
+}
+
+message QueryServerProtocolConfigResponse {
+  uint32 code = 1;
+  string message = 2;
+  QueryServerProtocolConfigData data = 3;
+}

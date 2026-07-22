@@ -18,7 +18,7 @@ import (
 //
 // @Summary Get Server Protocol Config
 // @Tags node
-// @Produce json
+// @Produce json,application/protobuf
 // @Security NodeSecret
 // @Param server_id path int true "Server ID"
 // @Param protocols query []string false "Protocols to include" collectionFormat(multi)
@@ -26,10 +26,12 @@ import (
 // @Router /v2/server/{server_id} [get]
 func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(c context.Context, ctx *app.RequestContext) {
+		ctx.Header("Vary", "Accept")
+		acceptsProtobuf := acceptsProtobuf(ctx)
 		serverID, err := strconv.ParseInt(ctx.Param("server_id"), 10, 64)
 		if err != nil {
 			logger.WithContext(c).Debugf("[QueryServerProtocolConfigHandler] Parse server_id error: %v, Param: %s", err, ctx.Param("server_id"))
-			ctx.String(consts.StatusBadRequest, "Invalid Params")
+			writeServerText(ctx, consts.StatusBadRequest, "Invalid Params")
 			ctx.Abort()
 			return
 		}
@@ -39,7 +41,7 @@ func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) app.HandlerFun
 			Protocols: queryValues(ctx, "protocols", "protocols[]"),
 		}
 		if svcCtx.Config.Node.NodeSecret != req.SecretKey {
-			ctx.String(consts.StatusUnauthorized, "Unauthorized")
+			writeServerText(ctx, consts.StatusUnauthorized, "Unauthorized")
 			ctx.Abort()
 			return
 		}
@@ -47,7 +49,18 @@ func QueryServerProtocolConfigHandler(svcCtx *svc.ServiceContext) app.HandlerFun
 		l := server.NewQueryServerProtocolConfigLogic(c, svcCtx)
 		resp, err := l.QueryServerProtocolConfig(&req)
 		if err != nil {
-			writeHTTPResult(ctx, nil, err)
+			writeServerReportResult(ctx, err)
+			return
+		}
+		if acceptsProtobuf {
+			message, err := queryServerProtocolConfigResponseToProtobuf(resp)
+			if err != nil {
+				writeServerReportResult(ctx, err)
+				return
+			}
+			if err := writeServerProtobufWithETag(ctx, message, string(ctx.GetHeader("If-None-Match"))); err != nil {
+				writeServerReportResult(ctx, err)
+			}
 			return
 		}
 		body, err := json.Marshal(resp)
