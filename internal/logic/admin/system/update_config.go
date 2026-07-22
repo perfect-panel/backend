@@ -56,7 +56,7 @@ func configFieldType(value reflect.Value) string {
 	}
 }
 
-func updateConfigFields(ctx context.Context, svcCtx *svc.ServiceContext, category string, fields []configFieldValue, cacheKeys ...string) error {
+func updateConfigFields(ctx context.Context, svcCtx *svc.ServiceContext, category string, fields []configFieldValue) error {
 	return svcCtx.Store.InTx(ctx, func(store repository.Store) error {
 		systemStore := store.System()
 		for _, field := range fields {
@@ -64,9 +64,6 @@ func updateConfigFields(ctx context.Context, svcCtx *svc.ServiceContext, categor
 				return err
 			}
 		}
-		if len(cacheKeys) == 0 {
-			return nil
-		}
-		return svcCtx.Redis.Del(ctx, cacheKeys...).Err()
+		return nil
 	})
 }

@@ -14,6 +14,16 @@ import (
 var (
 	// ErrNotFound is the error when cache not found.
 	ErrNotFound = redis.Nil
+
+	cacheVersionPrefix = "cache:version:"
+	setIfVersionScript = redis.NewScript(`
+local current = redis.call('GET', KEYS[1])
+if not current then current = '0' end
+if current == ARGV[1] then
+  return redis.call('SET', KEYS[2], ARGV[2], 'PX', ARGV[3])
+end
+return 0
+`)
 )
 
 type (
@@ -31,6 +41,7 @@ type (
 		cache          *redis.Client
 		expiry         time.Duration
 		notFoundExpiry time.Duration
+		invalidations  *InvalidationQueue
 	}
 )
 
@@ -42,17 +53,22 @@ func NewConn(db *gorm.DB, c *redis.Client, opts ...Option) CachedConn {
 		cache:          c,
 		expiry:         o.Expiry,
 		notFoundExpiry: o.NotFoundExpiry,
+		invalidations:  o.Invalidations,
 	}
 }
 
 // DelCache deletes cache with keys.
 func (cc CachedConn) DelCache(keys ...string) error {
-	return cc.cache.Del(context.Background(), keys...).Err()
+	return cc.DelCacheCtx(context.Background(), keys...)
 }
 
 // DelCacheCtx deletes cache with keys.
 func (cc CachedConn) DelCacheCtx(ctx context.Context, keys ...string) error {
-	return cc.cache.Del(ctx, keys...).Err()
+	if cc.invalidations != nil {
+		cc.invalidations.Add(keys...)
+		return nil
+	}
+	return cc.invalidateCacheKeys(ctx, keys...)
 }
 
 // GetCacheCtx unmarshals cache with given key and context into v.
@@ -68,13 +84,37 @@ func (cc CachedConn) GetCacheCtx(ctx context.Context, key string, v interface{})
 
 // SetCacheCtx sets cache with key, value, and context.
 func (cc CachedConn) SetCacheCtx(ctx context.Context, key string, v interface{}) error {
-	// marshal value
-	val, err := json.Marshal(v)
+	version, err := cc.cacheVersion(ctx, key)
 	if err != nil {
 		return err
 	}
-	// set redis key
-	return cc.cache.Set(ctx, key, val, cc.expiry).Err()
+	return cc.setCacheIfVersion(ctx, key, version, v)
+}
+
+func cacheVersionKey(key string) string {
+	return cacheVersionPrefix + key
+}
+
+func (cc CachedConn) cacheVersion(ctx context.Context, key string) (string, error) {
+	version, err := cc.cache.Get(ctx, cacheVersionKey(key)).Result()
+	if errors.Is(err, redis.Nil) {
+		return "0", nil
+	}
+	return version, err
+}
+
+func (cc CachedConn) setCacheIfVersion(ctx context.Context, key, version string, v interface{}) error {
+	value, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	_, err = setIfVersionScript.Run(ctx, cc.cache,
+		[]string{cacheVersionKey(key), key}, version, value, cc.expiry.Milliseconds()).Result()
+	return err
+}
+
+func (cc CachedConn) invalidateCacheKeys(ctx context.Context, keys ...string) error {
+	return invalidateCacheKeys(ctx, cc.cache, keys...)
 }
 
 // GetCache unmarshals cache with given key into v.
@@ -95,9 +135,11 @@ func (cc CachedConn) ExecCtx(ctx context.Context, execCtx ExecCtxFn, keys ...str
 	if err != nil {
 		return err
 	}
-	if err := cc.DelCacheCtx(ctx, keys...); err != nil {
-		return err
-	}
+	// The database mutation is already durable at this point (unless the
+	// connection belongs to Store.InTx, where invalidation is queued). Cache
+	// invalidation is best-effort so a Redis outage must not make callers retry
+	// an operation that has already succeeded in the database.
+	_ = cc.DelCacheCtx(ctx, keys...)
 	return nil
 }
 
@@ -112,17 +154,31 @@ func (cc CachedConn) ExecNoCacheCtx(ctx context.Context, execCtx ExecCtxFn) (err
 }
 
 func (cc CachedConn) QueryCtx(ctx context.Context, v interface{}, key string, query QueryCtxFn) (err error) {
+	// A transaction must always read through its GORM connection. Reading Redis
+	// here could return a value from before an earlier write in the same
+	// transaction, violating read-your-writes semantics.
+	if cc.invalidations != nil {
+		return query(cc.db.WithContext(ctx), v)
+	}
+
 	err = cc.GetCacheCtx(ctx, key, v)
+	if err == nil {
+		return nil
+	}
+
+	cacheVersion, versionErr := cc.cacheVersion(ctx, key)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			// Cache miss (redis.Nil): query DB and cache result
+			// Cache miss (redis.Nil): query DB and cache result. The version
+			// fence prevents a read that started before a concurrent committed
+			// write from repopulating an invalidated key afterwards.
 			err = query(cc.db.WithContext(ctx), v)
 			if err != nil {
 				return err
 			}
-			// Set cache best-effort; a successful DB read must not fail just
-			// because Redis is unavailable or the write times out.
-			_ = cc.SetCacheCtx(ctx, key, v)
+			if versionErr == nil {
+				_ = cc.setCacheIfVersion(ctx, key, cacheVersion, v)
+			}
 			return nil
 		}
 
@@ -135,7 +191,7 @@ func (cc CachedConn) QueryCtx(ctx context.Context, v interface{}, key string, qu
 		var jsonTypeErr *json.UnmarshalTypeError
 		if errors.As(err, &jsonSynErr) || errors.As(err, &jsonTypeErr) {
 			// Delete corrupt cache key best-effort
-			_ = cc.cache.Del(ctx, key).Err()
+			_ = cc.invalidateCacheKeys(ctx, key)
 		}
 
 		// Fallback to DB query
@@ -144,13 +200,12 @@ func (cc CachedConn) QueryCtx(ctx context.Context, v interface{}, key string, qu
 			return err
 		}
 
-		// Set cache best-effort; do NOT fail the request if set fails.
-		if setErr := cc.SetCacheCtx(ctx, key, v); setErr != nil {
-			// TODO: consider logging setErr with structured logger
+		if versionErr == nil {
+			_ = cc.setCacheIfVersion(ctx, key, cacheVersion, v)
 		}
 		return nil
 	}
-	return
+	return nil
 }
 
 // TODO(notFoundExpiry): notFoundExpiry (negative caching of

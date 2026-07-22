@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -34,6 +33,7 @@ func (l *UpdateNodeLogic) UpdateNode(req *dto.UpdateNodeRequest) error {
 		l.Errorw("[UpdateNode] Query Database Error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "[UpdateNode] Query Database Error")
 	}
+	oldServerID := data.ServerId
 	data.Name = req.Name
 	data.Tags = tool.StringSliceToString(req.Tags)
 	data.ServerId = req.ServerId
@@ -46,10 +46,11 @@ func (l *UpdateNodeLogic) UpdateNode(req *dto.UpdateNodeRequest) error {
 		l.Errorw("[UpdateNode] Update Database Error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "[UpdateNode] Update Database Error")
 	}
-	return nodeStore.ClearNodeCache(l.ctx, &node.FilterNodeParams{
-		Page:     1,
-		Size:     1000,
-		ServerId: []int64{data.ServerId},
-		Search:   "",
-	})
+	if err := nodeStore.ClearServerCache(l.ctx, oldServerID); err != nil {
+		return err
+	}
+	if oldServerID != data.ServerId {
+		return nodeStore.ClearServerCache(l.ctx, data.ServerId)
+	}
+	return nil
 }

@@ -58,6 +58,10 @@ func (l *GetServerConfigLogic) GetServerConfig(req *dto.GetServerConfigRequest) 
 			return resp, nil
 		}
 	}
+	generation, err := l.svcCtx.Store.Node().ServerCacheGeneration(l.ctx, req.ServerId)
+	if err != nil {
+		return nil, err
+	}
 	data, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.ServerId)
 	if err != nil {
 		l.Errorw("[GetServerConfig] FindOne error", logger.Field("error", err.Error()))
@@ -101,8 +105,8 @@ func (l *GetServerConfigLogic) GetServerConfig(req *dto.GetServerConfigRequest) 
 	}
 	etag := tool.GenerateETag(c)
 	l.response.SetHeader("ETag", etag)
-	if err = l.svcCtx.Redis.Set(l.ctx, cacheKey, c, node.ServerCacheTTL).Err(); err != nil {
-		l.Errorw("[GetServerConfig] redis set error", logger.Field("error", err.Error()))
+	if err = l.svcCtx.Store.Node().SetServerCache(l.ctx, req.ServerId, cacheKey, c, generation); err != nil {
+		l.Errorw("[GetServerConfig] cache set error", logger.Field("error", err.Error()))
 	}
 	//  Check If-None-Match header
 	match := l.request.IfNoneMatch

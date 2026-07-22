@@ -23,7 +23,6 @@ type PaymentRepo interface {
 	FindOne(ctx context.Context, id int64) (*payment.Payment, error)
 	Update(ctx context.Context, data *payment.Payment, tx ...*gorm.DB) error
 	Delete(ctx context.Context, id int64, tx ...*gorm.DB) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	FindOneByPaymentToken(ctx context.Context, token string) (*payment.Payment, error)
 	FindAll(ctx context.Context) ([]*payment.Payment, error)
 	FindListByPage(ctx context.Context, page, size int, req *payment.Filter) (int64, []*payment.Payment, error)
@@ -37,9 +36,9 @@ type paymentRepo struct {
 	table string
 }
 
-func newPaymentRepo(db *gorm.DB, c *redis.Client) PaymentRepo {
+func newPaymentRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) PaymentRepo {
 	return &paymentRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "Payment",
 	}
 }
@@ -105,10 +104,6 @@ func (m *paymentRepo) Delete(ctx context.Context, id int64, tx ...*gorm.DB) erro
 		}
 		return conn.Delete(&payment.Payment{}, id).Error
 	}, m.getCacheKeys(data)...)
-}
-
-func (m *paymentRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }
 
 func (m *paymentRepo) FindOneByPaymentToken(ctx context.Context, token string) (*payment.Payment, error) {

@@ -21,7 +21,6 @@ type DocumentRepo interface {
 	FindOne(ctx context.Context, id int64) (*document.Document, error)
 	Update(ctx context.Context, data *document.Document) error
 	Delete(ctx context.Context, id int64) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	QueryDocumentDetail(ctx context.Context, id int64) (*document.Document, error)
 	QueryDocumentList(ctx context.Context, page, size int, tag string, search string) (int64, []*document.Document, error)
 	GetDocumentListByAll(ctx context.Context) (int64, []*document.Document, error)
@@ -34,9 +33,9 @@ type documentRepo struct {
 	table string
 }
 
-func newDocumentRepo(db *gorm.DB, c *redis.Client) DocumentRepo {
+func newDocumentRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) DocumentRepo {
 	return &documentRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "document",
 	}
 }
@@ -107,10 +106,6 @@ func (m *documentRepo) Delete(ctx context.Context, id int64) error {
 		return db.Delete(&document.Document{}, id).Error
 	}, m.getCacheKeys(data)...)
 	return err
-}
-
-func (m *documentRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }
 
 // QueryDocumentDetail queries the details of a document.

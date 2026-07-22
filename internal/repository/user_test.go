@@ -85,6 +85,33 @@ func TestUserRepoUpdateBalanceFieldsOnlyWritesBalanceColumns(t *testing.T) {
 	}
 }
 
+func TestFindDeviceOnlineRecordUsesCreatedAt(t *testing.T) {
+	var logs bytes.Buffer
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		DSN:                       "gorm:gorm@tcp(localhost:9910)/gorm?charset=utf8&parseTime=True&loc=Local",
+		SkipInitializeWithVersion: true,
+	}), &gorm.Config{
+		DryRun:               true,
+		DisableAutomaticPing: true,
+		Logger:               gormlogger.New(log.New(&logs, "", 0), gormlogger.Config{LogLevel: gormlogger.Info}),
+	})
+	if err != nil {
+		t.Fatalf("open gorm db: %v", err)
+	}
+	redisServer := miniredis.RunT(t)
+	redisClient := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})
+	t.Cleanup(func() { _ = redisClient.Close() })
+
+	_, err = newUserRepo(db, redisClient).FindDeviceOnlineRecord(context.Background(), 42, "2026-07-21 00:00:00", "2026-07-22 00:00:00")
+	if err != nil {
+		t.Fatalf("FindDeviceOnlineRecord: %v", err)
+	}
+	sql := logs.String()
+	if !strings.Contains(sql, "created_at >=") || strings.Contains(sql, "create_at") {
+		t.Fatalf("expected created_at time predicate, got:\n%s", sql)
+	}
+}
+
 func TestApplyUserPageFiltersSearchSQL(t *testing.T) {
 	tests := []struct {
 		name       string

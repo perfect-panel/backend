@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/initialize"
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 
@@ -29,7 +28,7 @@ func NewUpdateCurrencyConfigLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *UpdateCurrencyConfigLogic) UpdateCurrencyConfig(req *dto.CurrencyConfig) error {
-	err := updateConfigFields(l.ctx, l.svcCtx, "currency", convertedConfigFields(*req), config.CurrencyConfigKey, config.GlobalConfigKey)
+	err := updateConfigFields(l.ctx, l.svcCtx, "currency", convertedConfigFields(*req))
 	initialize.Currency(l.svcCtx)
 	if err != nil {
 		l.Errorw("[UpdateCurrencyConfig] update currency config error", logger.Field("error", err.Error()))

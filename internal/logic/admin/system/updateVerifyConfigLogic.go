@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/initialize"
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -28,7 +27,7 @@ func NewUpdateVerifyConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext)
 }
 
 func (l *UpdateVerifyConfigLogic) UpdateVerifyConfig(req *dto.VerifyConfig) error {
-	err := updateConfigFields(l.ctx, l.svcCtx, "verify", convertedConfigFields(*req), config.VerifyConfigKey, config.GlobalConfigKey)
+	err := updateConfigFields(l.ctx, l.svcCtx, "verify", convertedConfigFields(*req))
 	if err != nil {
 		l.Errorw("[UpdateVerifyConfigLogic] update verify config error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update verify config error: %v", err)

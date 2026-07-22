@@ -22,7 +22,6 @@ type AuthRepo interface {
 	FindOne(ctx context.Context, id int64) (*auth.Auth, error)
 	Update(ctx context.Context, data *auth.Auth) error
 	Delete(ctx context.Context, id int64) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	GetAuthListByPage(ctx context.Context) ([]*auth.Auth, error)
 	FindOneByMethod(ctx context.Context, platform string) (*auth.Auth, error)
 	FindAll(ctx context.Context) ([]*auth.Auth, error)
@@ -35,9 +34,9 @@ type authRepo struct {
 	table string
 }
 
-func newAuthRepo(db *gorm.DB, c *redis.Client) AuthRepo {
+func newAuthRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) AuthRepo {
 	return &authRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "auth_config",
 	}
 }
@@ -109,10 +108,6 @@ func (m *authRepo) Delete(ctx context.Context, id int64) error {
 		return db.Delete(&auth.Auth{}, id).Error
 	}, m.getCacheKeys(data)...)
 	return err
-}
-
-func (m *authRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }
 
 // GetAuthListByPage get auth list by page

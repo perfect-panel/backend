@@ -21,7 +21,6 @@ type AdsRepo interface {
 	Update(ctx context.Context, data *ads.Ads) error
 	Delete(ctx context.Context, id int64) error
 	GetAdsListByPage(ctx context.Context, page, size int, filter ads.Filter) (int64, []*ads.Ads, error)
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 }
 
 var _ AdsRepo = (*adsRepo)(nil)
@@ -31,9 +30,9 @@ type adsRepo struct {
 	table string
 }
 
-func newAdsRepo(db *gorm.DB, c *redis.Client) AdsRepo {
+func newAdsRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) AdsRepo {
 	return &adsRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "ads",
 	}
 }
@@ -101,8 +100,4 @@ func (m *adsRepo) GetAdsListByPage(ctx context.Context, page, size int, filter a
 		return conn.Count(&total).Offset((page - 1) * size).Limit(size).Find(v).Error
 	})
 	return total, list, err
-}
-
-func (m *adsRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }

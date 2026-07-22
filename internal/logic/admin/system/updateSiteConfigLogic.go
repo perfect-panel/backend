@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/initialize"
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -27,7 +26,7 @@ func NewUpdateSiteConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *UpdateSiteConfigLogic) UpdateSiteConfig(req *dto.SiteConfig) error {
-	err := updateConfigFields(l.ctx, l.svcCtx, "site", stringConfigFields(*req), config.SiteConfigKey, config.GlobalConfigKey)
+	err := updateConfigFields(l.ctx, l.svcCtx, "site", stringConfigFields(*req))
 	if err != nil {
 		l.Logger.Error("[UpdateSiteConfig] update site config error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update site config error: %v", err.Error())

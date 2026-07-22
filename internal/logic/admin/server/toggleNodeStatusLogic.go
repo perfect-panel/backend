@@ -2,10 +2,8 @@ package server
 
 import (
 	"context"
-	"strings"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -42,11 +40,5 @@ func (l *ToggleNodeStatusLogic) ToggleNodeStatus(req *dto.ToggleNodeStatusReques
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "[ToggleNodeStatus] Update Database Error")
 	}
 
-	return nodeStore.ClearNodeCache(l.ctx, &node.FilterNodeParams{
-		Page:     1,
-		Size:     1000,
-		ServerId: []int64{data.ServerId},
-		Tag:      strings.Split(data.Tags, ","),
-		Search:   "",
-	})
+	return nodeStore.ClearServerCache(l.ctx, data.ServerId)
 }

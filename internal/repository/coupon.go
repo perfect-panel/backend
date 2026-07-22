@@ -25,7 +25,6 @@ type CouponRepo interface {
 	FindOneByCode(ctx context.Context, code string) (*coupon.Coupon, error)
 	Update(ctx context.Context, data *coupon.Coupon) error
 	Delete(ctx context.Context, id int64) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	UpdateCount(ctx context.Context, code string) error
 	QueryCouponListByPage(ctx context.Context, page, size int, subscribe int64, search string) (total int64, list []*coupon.Coupon, err error)
 	BatchDelete(ctx context.Context, ids []int64) error
@@ -38,9 +37,9 @@ type couponRepo struct {
 	table string
 }
 
-func newCouponRepo(db *gorm.DB, c *redis.Client) CouponRepo {
+func newCouponRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) CouponRepo {
 	return &couponRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "coupon",
 	}
 }
@@ -126,10 +125,6 @@ func (m *couponRepo) Delete(ctx context.Context, id int64) error {
 		return db.Delete(&coupon.Coupon{}, id).Error
 	}, m.getCacheKeys(data)...)
 	return err
-}
-
-func (m *couponRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }
 
 // QueryCouponListByPage query coupon list by page

@@ -2,7 +2,10 @@ package repository
 
 import (
 	"context"
+	"time"
 
+	"github.com/perfect-panel/server/pkg/cache"
+	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -37,8 +40,11 @@ var _ Store = (*GormStore)(nil)
 
 // GormStore is the Store implementation backed by GORM + Redis.
 type GormStore struct {
-	db    *gorm.DB
-	redis *redis.Client
+	db            *gorm.DB
+	redis         *redis.Client
+	invalidations *cache.InvalidationQueue
+	retrier       *cache.InvalidationRetrier
+	nodeRetrier   *serverCacheInvalidationRetrier
 
 	ads          AdsRepo
 	announcement AnnouncementRepo
@@ -63,26 +69,40 @@ func (s *GormStore) DB() *gorm.DB { return s.db }
 
 // NewGormStore creates a new GormStore with all domain repositories initialized.
 func NewGormStore(db *gorm.DB, rds *redis.Client) *GormStore {
+	return newGormStore(db, rds, nil, cache.NewInvalidationRetrier(rds), newServerCacheInvalidationRetrier(rds))
+}
+
+func newGormStore(db *gorm.DB, rds *redis.Client, invalidations *cache.InvalidationQueue, retrier *cache.InvalidationRetrier, nodeRetrier *serverCacheInvalidationRetrier) *GormStore {
 	return &GormStore{
-		db:           db,
-		redis:        rds,
-		ads:          newAdsRepo(db, rds),
-		announcement: newAnnouncementRepo(db, rds),
-		auth:         newAuthRepo(db, rds),
-		client:       newClientRepo(db),
-		coupon:       newCouponRepo(db, rds),
-		document:     newDocumentRepo(db, rds),
-		log:          newLogRepo(db),
-		node:         newNodeRepo(db, rds),
-		order:        newOrderRepo(db, rds),
-		payment:      newPaymentRepo(db, rds),
-		subscribe:    newSubscribeRepo(db, rds),
-		system:       newSystemRepo(db, rds),
-		task:         newTaskRepo(db),
-		ticket:       newTicketRepo(db, rds),
-		trafficLog:   newTrafficRepo(db),
-		user:         newUserRepo(db, rds),
+		db:            db,
+		redis:         rds,
+		invalidations: invalidations,
+		retrier:       retrier,
+		nodeRetrier:   nodeRetrier,
+		ads:           newAdsRepo(db, rds, invalidations),
+		announcement:  newAnnouncementRepo(db, rds, invalidations),
+		auth:          newAuthRepo(db, rds, invalidations),
+		client:        newClientRepo(db),
+		coupon:        newCouponRepo(db, rds, invalidations),
+		document:      newDocumentRepo(db, rds, invalidations),
+		log:           newLogRepo(db),
+		node:          newNodeRepo(db, rds, nodeRetrier),
+		order:         newOrderRepo(db, rds, invalidations),
+		payment:       newPaymentRepo(db, rds, invalidations),
+		subscribe:     newSubscribeRepo(db, rds, invalidations),
+		system:        newSystemRepo(db, rds, invalidations),
+		task:          newTaskRepo(db),
+		ticket:        newTicketRepo(db, rds, invalidations),
+		trafficLog:    newTrafficRepo(db),
+		user:          newUserRepo(db, rds, invalidations),
 	}
+}
+
+func newCachedConn(db *gorm.DB, rds *redis.Client, invalidations ...*cache.InvalidationQueue) cache.CachedConn {
+	if len(invalidations) > 0 && invalidations[0] != nil {
+		return cache.NewConn(db, rds, cache.WithInvalidationQueue(invalidations[0]))
+	}
+	return cache.NewConn(db, rds)
 }
 
 func (s *GormStore) Ads() AdsRepo                   { return s.ads }
@@ -106,7 +126,28 @@ func (s *GormStore) User() UserRepo                 { return s.user }
 // transaction is passed to fn, so all repository operations inside fn share
 // the same transaction.
 func (s *GormStore) InTx(ctx context.Context, fn func(store Store) error) error {
-	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return fn(NewGormStore(tx, s.redis))
+	invalidations := s.invalidations
+	owner := invalidations == nil
+	if owner {
+		invalidations = cache.NewInvalidationQueue()
+	}
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return fn(newGormStore(tx, s.redis, invalidations, s.retrier, s.nodeRetrier))
 	})
+	if err != nil || !owner {
+		return err
+	}
+	s.flushInvalidations(ctx, invalidations)
+	return nil
+}
+
+func (s *GormStore) flushInvalidations(ctx context.Context, invalidations *cache.InvalidationQueue) {
+	flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	err := invalidations.Flush(flushCtx, s.redis)
+	cancel()
+	if err == nil {
+		return
+	}
+	logger.Errorf("cache invalidation after transaction commit failed; queued for retry: %v", err)
+	s.retrier.Enqueue(invalidations.Keys()...)
 }

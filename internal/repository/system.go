@@ -25,7 +25,6 @@ type SystemRepo interface {
 	FindOneByKey(ctx context.Context, email string) (*system.System, error)
 	Update(ctx context.Context, data *system.System) error
 	Delete(ctx context.Context, id int64) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	GetSmsConfig(ctx context.Context) ([]*system.System, error)
 	GetSiteConfig(ctx context.Context) ([]*system.System, error)
 	GetEmailConfig(ctx context.Context) ([]*system.System, error)
@@ -51,9 +50,9 @@ type systemRepo struct {
 	table string
 }
 
-func newSystemRepo(db *gorm.DB, c *redis.Client) SystemRepo {
+func newSystemRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) SystemRepo {
 	return &systemRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "System",
 	}
 }
@@ -62,11 +61,42 @@ func (m *systemRepo) getCacheKeys(data *system.System) []string {
 	if data == nil {
 		return []string{}
 	}
-	SystemIdKey := fmt.Sprintf("%s%v", cacheSystemIdPrefix, data.Id)
-	cacheKeys := []string{
-		SystemIdKey,
+	keys := []string{fmt.Sprintf("%s%v", cacheSystemIdPrefix, data.Id)}
+	if data.Key != "" {
+		keys = append(keys, fmt.Sprintf("%s%v", cacheSystemKeyPrefix, data.Key))
 	}
-	return cacheKeys
+	return append(keys, systemCategoryCacheKeys(data.Category)...)
+}
+
+func systemCategoryCacheKeys(category string) []string {
+	switch category {
+	case "sms":
+		return []string{config.SmsConfigKey}
+	case "site":
+		return []string{config.SiteConfigKey, config.GlobalConfigKey}
+	case "email":
+		return []string{config.EmailSmtpConfigKey}
+	case "subscribe":
+		return []string{config.SubscribeConfigKey, config.GlobalConfigKey}
+	case "register":
+		return []string{config.RegisterConfigKey, config.GlobalConfigKey}
+	case "verify":
+		return []string{config.VerifyConfigKey, config.GlobalConfigKey}
+	case "server":
+		return []string{config.NodeConfigKey}
+	case "invite":
+		return []string{config.InviteConfigKey, config.GlobalConfigKey}
+	case "telegram":
+		return []string{config.TelegramConfigKey}
+	case "tos":
+		return []string{config.TosConfigKey}
+	case "currency":
+		return []string{config.CurrencyConfigKey, config.GlobalConfigKey}
+	case "verify_code":
+		return []string{config.VerifyCodeConfigKey}
+	default:
+		return nil
+	}
 }
 
 func (m *systemRepo) FindOneByKey(ctx context.Context, key string) (*system.System, error) {
@@ -104,10 +134,11 @@ func (m *systemRepo) Update(ctx context.Context, data *system.System) error {
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return err
 	}
+	keys := append(m.getCacheKeys(old), m.getCacheKeys(data)...)
 	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
 		db := conn
 		return db.Save(data).Error
-	}, m.getCacheKeys(old)...)
+	}, keys...)
 	return err
 }
 
@@ -124,10 +155,6 @@ func (m *systemRepo) Delete(ctx context.Context, id int64) error {
 		return db.Delete(&system.System{}, id).Error
 	}, m.getCacheKeys(data)...)
 	return err
-}
-
-func (m *systemRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }
 
 // GetSmsConfig returns the sms config.
@@ -230,7 +257,7 @@ func (m *systemRepo) GetCurrencyConfig(ctx context.Context) ([]*system.System, e
 }
 
 func (m *systemRepo) UpdateValueByCategoryKey(ctx context.Context, category, key, value string, valueType ...string) error {
-	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+	err := m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		result := conn.Model(&system.System{}).
 			Scopes(systemWhereCategoryKey(category, key)).
 			Update("value", value)
@@ -249,14 +276,26 @@ func (m *systemRepo) UpdateValueByCategoryKey(ctx context.Context, category, key
 			Desc:     key,
 		}).Error
 	})
+	if err != nil {
+		return err
+	}
+	// Cache invalidation is best-effort and is deferred automatically when the
+	// repository is used through Store.InTx.
+	_ = m.DelCacheCtx(ctx, append([]string{fmt.Sprintf("%s%v", cacheSystemKeyPrefix, key)}, systemCategoryCacheKeys(category)...)...)
+	return nil
 }
 
 func (m *systemRepo) UpdateNodeMultiplierConfig(ctx context.Context, config string) error {
-	return m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
+	err := m.ExecNoCacheCtx(ctx, func(conn *gorm.DB) error {
 		return conn.Model(&system.System{}).
 			Scopes(systemWhereCategoryKey("server", "NodeMultiplierConfig")).
 			Update("value", config).Error
 	})
+	if err != nil {
+		return err
+	}
+	_ = m.DelCacheCtx(ctx, systemCategoryCacheKeys("server")...)
+	return nil
 }
 
 func (m *systemRepo) FindNodeMultiplierConfig(ctx context.Context) (*system.System, error) {

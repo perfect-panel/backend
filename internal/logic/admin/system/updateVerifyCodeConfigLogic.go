@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/initialize"
-	"github.com/perfect-panel/server/internal/config"
 
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -30,7 +29,7 @@ func NewUpdateVerifyCodeConfigLogic(ctx context.Context, svcCtx *svc.ServiceCont
 }
 
 func (l *UpdateVerifyCodeConfigLogic) UpdateVerifyCodeConfig(req *dto.VerifyCodeConfig) error {
-	err := updateConfigFields(l.ctx, l.svcCtx, "verify_code", convertedConfigFields(*req), config.VerifyCodeConfigKey)
+	err := updateConfigFields(l.ctx, l.svcCtx, "verify_code", convertedConfigFields(*req))
 	if err != nil {
 		l.Errorw("[UpdateRegisterConfig] update verify code config error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update register config error: %v", err.Error())

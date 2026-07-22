@@ -12,6 +12,7 @@ type (
 	Options struct {
 		Expiry         time.Duration
 		NotFoundExpiry time.Duration
+		Invalidations  *InvalidationQueue
 	}
 
 	// Option defines the method to customize an Options.
@@ -45,5 +46,14 @@ func WithExpiry(expiry time.Duration) Option {
 func WithNotFoundExpiry(expiry time.Duration) Option {
 	return func(o *Options) {
 		o.NotFoundExpiry = expiry
+	}
+}
+
+// WithInvalidationQueue defers cache-key invalidation until the owner flushes
+// the queue. It is used by database transactions so cache entries cannot be
+// repopulated from data that has not committed yet.
+func WithInvalidationQueue(queue *InvalidationQueue) Option {
+	return func(o *Options) {
+		o.Invalidations = queue
 	}
 }

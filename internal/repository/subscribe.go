@@ -27,7 +27,6 @@ type SubscribeRepo interface {
 	FindOne(ctx context.Context, id int64) (*subscribe.Subscribe, error)
 	Update(ctx context.Context, data *subscribe.Subscribe, tx ...*gorm.DB) error
 	Delete(ctx context.Context, id int64, tx ...*gorm.DB) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	FilterList(ctx context.Context, params *subscribe.FilterParams) (int64, []*subscribe.Subscribe, error)
 	ClearCache(ctx context.Context, id ...int64) error
 	QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error)
@@ -47,9 +46,9 @@ type subscribeRepo struct {
 	table string
 }
 
-func newSubscribeRepo(db *gorm.DB, c *redis.Client) SubscribeRepo {
+func newSubscribeRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) SubscribeRepo {
 	return &subscribeRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "subscribe",
 	}
 }
@@ -185,10 +184,6 @@ func (m *subscribeRepo) Delete(ctx context.Context, id int64, tx ...*gorm.DB) er
 		}
 		return db.Delete(&subscribe.Subscribe{}, id).Error
 	}, cacheKeys...)
-}
-
-func (m *subscribeRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }
 
 func (m *subscribeRepo) QuerySubscribeMinSortByIds(ctx context.Context, ids []int64) (int64, error) {

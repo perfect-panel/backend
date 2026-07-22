@@ -19,7 +19,6 @@ type TrafficRepo interface {
 	FindOne(ctx context.Context, id int64) (*traffic.TrafficLog, error)
 	Update(ctx context.Context, data *traffic.TrafficLog) error
 	Delete(ctx context.Context, id int64) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	QueryServerTrafficByDay(ctx context.Context, serverId int64, date time.Time) (*traffic.TotalTraffic, error)
 	QueryTrafficByDay(ctx context.Context, date time.Time) (*traffic.TotalTraffic, error)
 	QueryTrafficByMonthly(ctx context.Context, date time.Time) (*traffic.TotalTraffic, error)
@@ -87,10 +86,6 @@ func (m *trafficRepo) Delete(ctx context.Context, id int64) error {
 	}
 
 	return m.Conn.WithContext(ctx).Delete(&traffic.TrafficLog{}, id).Error
-}
-
-func (m *trafficRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.Conn.WithContext(ctx).Transaction(fn)
 }
 
 func (m *trafficRepo) QueryServerTrafficByDay(ctx context.Context, serverId int64, date time.Time) (*traffic.TotalTraffic, error) {

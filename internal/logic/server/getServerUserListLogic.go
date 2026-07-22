@@ -113,6 +113,10 @@ func (l *GetServerUserListLogic) GetServerUserList(req *dto.GetServerUserListReq
 		}
 		return resp, nil
 	}
+	generation, err := l.svcCtx.Store.Node().ServerCacheGeneration(l.ctx, req.ServerId)
+	if err != nil {
+		return nil, err
+	}
 	server, err := l.svcCtx.Store.Node().FindOneServer(l.ctx, req.ServerId)
 	if err != nil {
 		return nil, err
@@ -146,7 +150,7 @@ func (l *GetServerUserListLogic) GetServerUserList(req *dto.GetServerUserListReq
 		resp = &dto.GetServerUserListResponse{
 			Users: []dto.ServerUser{placeholderServerUser(req.ServerId, req.Protocol, l.svcCtx.Config.Node.NodeSecret)},
 		}
-		return l.storeUserListResponse(cacheKey, resp)
+		return l.storeUserListResponse(req.ServerId, generation, cacheKey, resp)
 	}
 	users := make([]dto.ServerUser, 0)
 	for _, sub := range subs {
@@ -172,15 +176,15 @@ func (l *GetServerUserListLogic) GetServerUserList(req *dto.GetServerUserListReq
 	resp = &dto.GetServerUserListResponse{
 		Users: users,
 	}
-	return l.storeUserListResponse(cacheKey, resp)
+	return l.storeUserListResponse(req.ServerId, generation, cacheKey, resp)
 }
 
-func (l *GetServerUserListLogic) storeUserListResponse(cacheKey string, resp *dto.GetServerUserListResponse) (*dto.GetServerUserListResponse, error) {
+func (l *GetServerUserListLogic) storeUserListResponse(serverID, generation int64, cacheKey string, resp *dto.GetServerUserListResponse) (*dto.GetServerUserListResponse, error) {
 	val, _ := json.Marshal(resp)
 	etag := tool.GenerateETag(val)
 	l.response.SetHeader("ETag", etag)
-	if err := l.svcCtx.Redis.Set(l.ctx, cacheKey, string(val), node.ServerCacheTTL).Err(); err != nil {
-		l.Errorw("[ServerUserListCacheKey] redis set error", logger.Field("error", err.Error()))
+	if err := l.svcCtx.Store.Node().SetServerCache(l.ctx, serverID, cacheKey, string(val), generation); err != nil {
+		l.Errorw("[ServerUserListCacheKey] cache set error", logger.Field("error", err.Error()))
 	}
 	//  Check If-None-Match header
 	if match := l.request.IfNoneMatch; match == etag {

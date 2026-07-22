@@ -14,7 +14,6 @@ type ClientRepo interface {
 	Update(ctx context.Context, data *client.SubscribeApplication) error
 	Delete(ctx context.Context, id int64) error
 	List(ctx context.Context) ([]*client.SubscribeApplication, error)
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 }
 
 var _ ClientRepo = (*clientRepo)(nil)
@@ -59,17 +58,6 @@ func (m *clientRepo) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 	return nil
-}
-
-func (m *clientRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	tx := m.WithContext(ctx).Begin()
-	if err := fn(tx); err != nil {
-		if rbErr := tx.Rollback().Error; rbErr != nil {
-			return rbErr
-		}
-		return err
-	}
-	return tx.Commit().Error
 }
 
 func (m *clientRepo) List(ctx context.Context) ([]*client.SubscribeApplication, error) {

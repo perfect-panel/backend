@@ -29,7 +29,6 @@ type OrderRepo interface {
 	FindOneByOrderNoForUpdate(ctx context.Context, orderNo string) (*order.Order, error)
 	Update(ctx context.Context, data *order.Order, tx ...*gorm.DB) error
 	Delete(ctx context.Context, id int64, tx ...*gorm.DB) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	UpdateOrderStatus(ctx context.Context, orderNo string, status uint8, tx ...*gorm.DB) error
 	UpdateOrderStatusFrom(ctx context.Context, orderNo string, from, status uint8, tx ...*gorm.DB) (bool, error)
 	UpdatePaymentExpectation(ctx context.Context, orderNo string, amount int64, currency string, tx ...*gorm.DB) (bool, error)
@@ -57,9 +56,9 @@ type orderRepo struct {
 	table string
 }
 
-func newOrderRepo(db *gorm.DB, c *redis.Client) OrderRepo {
+func newOrderRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) OrderRepo {
 	return &orderRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "order",
 	}
 }
@@ -154,10 +153,6 @@ func (m *orderRepo) Delete(ctx context.Context, id int64, tx ...*gorm.DB) error 
 		}
 		return conn.Delete(&order.Order{}, id).Error
 	}, m.getCacheKeys(data)...)
-}
-
-func (m *orderRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }
 
 func (m *orderRepo) CountUserCouponUsage(ctx context.Context, userID int64, coupon string) (int64, error) {

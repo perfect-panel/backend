@@ -23,7 +23,6 @@ type TicketRepo interface {
 	FindOne(ctx context.Context, id int64) (*ticket.Ticket, error)
 	Update(ctx context.Context, data *ticket.Ticket) error
 	Delete(ctx context.Context, id int64) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	QueryTicketDetail(ctx context.Context, id int64) (*ticket.Details, error)
 	InsertTicketFollow(ctx context.Context, data *ticket.Follow) error
 	QueryTicketList(ctx context.Context, page, size int, userId int64, status *uint8, search string) (int64, []*ticket.Ticket, error)
@@ -38,9 +37,9 @@ type ticketRepo struct {
 	table string
 }
 
-func newTicketRepo(db *gorm.DB, c *redis.Client) TicketRepo {
+func newTicketRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) TicketRepo {
 	return &ticketRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "ticket",
 	}
 }
@@ -112,10 +111,6 @@ func (m *ticketRepo) Delete(ctx context.Context, id int64) error {
 		return db.Delete(&ticket.Ticket{}, id).Error
 	}, m.getCacheKeys(data)...)
 	return err
-}
-
-func (m *ticketRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }
 
 // QueryTicketDetail returns the ticket details.

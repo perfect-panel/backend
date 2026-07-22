@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/initialize"
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -27,7 +26,7 @@ func NewUpdateSubscribeConfigLogic(ctx context.Context, svcCtx *svc.ServiceConte
 }
 
 func (l *UpdateSubscribeConfigLogic) UpdateSubscribeConfig(req *dto.SubscribeConfig) error {
-	err := updateConfigFields(l.ctx, l.svcCtx, "subscribe", convertedConfigFields(*req), config.SubscribeConfigKey, config.GlobalConfigKey)
+	err := updateConfigFields(l.ctx, l.svcCtx, "subscribe", convertedConfigFields(*req))
 
 	if err != nil {
 		l.Errorw("[UpdateSubscribeConfigLogic] update subscribe config error: ", logger.Field("error", err.Error()))

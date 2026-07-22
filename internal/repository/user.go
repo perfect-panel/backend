@@ -42,7 +42,6 @@ type UserRepo interface {
 	Update(ctx context.Context, data *user.User, tx ...*gorm.DB) error
 	UpdateBalanceFields(ctx context.Context, data *user.User, tx ...*gorm.DB) error
 	Delete(ctx context.Context, id int64, tx ...*gorm.DB) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	BatchDeleteUser(ctx context.Context, ids []int64, tx ...*gorm.DB) error
 	QueryPageList(ctx context.Context, page, size int, filter *user.UserFilterParams) ([]*user.User, int64, error)
 	FindUsersByIds(ctx context.Context, ids []int64) ([]*user.User, error)
@@ -134,9 +133,9 @@ type userRepo struct {
 	table string
 }
 
-func newUserRepo(db *gorm.DB, c *redis.Client) UserRepo {
+func newUserRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) UserRepo {
 	return &userRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "user",
 	}
 }
@@ -277,10 +276,6 @@ func (m *userRepo) Delete(ctx context.Context, id int64, tx ...*gorm.DB) error {
 
 		return nil
 	})
-}
-
-func (m *userRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }
 
 // --- user queries / page list ---
@@ -736,7 +731,10 @@ func (m *userRepo) InsertUserAuthMethods(ctx context.Context, data *user.AuthMet
 		if err = conn.Model(&user.AuthMethods{}).Create(data).Error; err != nil {
 			return err
 		}
-		return m.ClearUserCache(ctx, u)
+		// The database write is the source of truth. Cache invalidation is queued
+		// for Store.InTx and best-effort for standalone writes.
+		_ = m.ClearUserCache(ctx, u)
+		return nil
 	})
 }
 
@@ -762,7 +760,10 @@ func (m *userRepo) UpdateUserAuthMethods(ctx context.Context, data *user.AuthMet
 		if err != nil {
 			return err
 		}
-		return m.ClearUserCache(ctx, u)
+		// See InsertUserAuthMethods: never report a committed database update as
+		// failed solely because Redis is unavailable.
+		_ = m.ClearUserCache(ctx, u)
+		return nil
 	})
 }
 
@@ -1328,7 +1329,7 @@ func (m *userRepo) FindDeviceOnlineRecord(ctx context.Context, userId int64, sta
 	var record user.DeviceOnlineRecord
 	err := m.QueryNoCacheCtx(ctx, &record, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&user.DeviceOnlineRecord{}).
-			Where("user_id = ? AND create_at >= ? AND create_at < ?", userId, startTime, endTime).
+			Where("user_id = ? AND created_at >= ? AND created_at < ?", userId, startTime, endTime).
 			First(&record).Error
 	})
 	return &record, err

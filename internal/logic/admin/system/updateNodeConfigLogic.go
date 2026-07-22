@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/initialize"
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -28,7 +27,7 @@ func NewUpdateNodeConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *UpdateNodeConfigLogic) UpdateNodeConfig(req *dto.NodeConfig) error {
-	err := updateConfigFields(l.ctx, l.svcCtx, "server", convertedConfigFields(*req), config.NodeConfigKey)
+	err := updateConfigFields(l.ctx, l.svcCtx, "server", convertedConfigFields(*req))
 	if err != nil {
 		l.Errorw("[UpdateNodeConfig] update node config error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update server config error: %v", err)

@@ -22,7 +22,6 @@ type AnnouncementRepo interface {
 	Update(ctx context.Context, data *announcement.Announcement) error
 	Delete(ctx context.Context, id int64) error
 	GetAnnouncementListByPage(ctx context.Context, page, size int, filter announcement.Filter) (int64, []*announcement.Announcement, error)
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 }
 
 var _ AnnouncementRepo = (*announcementRepo)(nil)
@@ -32,9 +31,9 @@ type announcementRepo struct {
 	table string
 }
 
-func newAnnouncementRepo(db *gorm.DB, c *redis.Client) AnnouncementRepo {
+func newAnnouncementRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) AnnouncementRepo {
 	return &announcementRepo{
-		CachedConn: cache.NewConn(db, c),
+		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "announcement",
 	}
 }
@@ -116,8 +115,4 @@ func (m *announcementRepo) GetAnnouncementListByPage(ctx context.Context, page, 
 		return conn.Count(&total).Offset((page - 1) * size).Limit(size).Find(&list).Error
 	})
 	return total, list, err
-}
-
-func (m *announcementRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.TransactCtx(ctx, fn)
 }

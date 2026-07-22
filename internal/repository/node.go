@@ -12,7 +12,6 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/pkg/orm"
-	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -29,7 +28,6 @@ type NodeRepo interface {
 	FindServerConfigOverride(ctx context.Context, serverId int64) (*node.ServerConfigOverride, error)
 	SaveServerConfigOverride(ctx context.Context, data *node.ServerConfigOverride, tx ...*gorm.DB) error
 	DeleteServerConfigOverride(ctx context.Context, serverId int64, tx ...*gorm.DB) error
-	Transaction(ctx context.Context, fn func(db *gorm.DB) error) error
 	QueryServerList(ctx context.Context, ids []int64) (servers []*node.Server, err error)
 	// node
 	InsertNode(ctx context.Context, data *node.Node, tx ...*gorm.DB) error
@@ -56,19 +54,48 @@ type NodeRepo interface {
 	QueryServerAddresses(ctx context.Context) ([]string, error)
 	QueryEnabledNodeProtocols(ctx context.Context) ([]string, error)
 	ClearNodeCache(ctx context.Context, params *node.FilterNodeParams) error
+	ClearServerCache(ctx context.Context, serverId int64) error
+	ServerCacheGeneration(ctx context.Context, serverId int64) (int64, error)
+	SetServerCache(ctx context.Context, serverId int64, key string, value interface{}, generation int64) error
 }
 
 var _ NodeRepo = (*nodeRepo)(nil)
 
 type nodeRepo struct {
 	*gorm.DB
-	Cache *redis.Client
+	Cache        *redis.Client
+	cacheRetrier *serverCacheInvalidationRetrier
 }
 
-func newNodeRepo(db *gorm.DB, cache *redis.Client) NodeRepo {
+var (
+	setServerCacheIfGenerationScript = redis.NewScript(`
+local current = redis.call('GET', KEYS[1])
+if not current then current = '0' end
+if current ~= ARGV[1] then return 0 end
+redis.call('SET', KEYS[2], ARGV[2], 'PX', ARGV[3])
+redis.call('SADD', KEYS[3], KEYS[2])
+redis.call('PEXPIRE', KEYS[3], ARGV[3])
+return 1
+`)
+	clearServerCacheScript = redis.NewScript(`
+redis.call('INCR', KEYS[1])
+local keys = redis.call('SMEMBERS', KEYS[2])
+for _, key in ipairs(keys) do redis.call('DEL', key) end
+redis.call('DEL', KEYS[2])
+for _, key in ipairs(ARGV) do redis.call('DEL', key) end
+return #keys
+`)
+)
+
+func newNodeRepo(db *gorm.DB, cache *redis.Client, retriers ...*serverCacheInvalidationRetrier) NodeRepo {
+	var retrier *serverCacheInvalidationRetrier
+	if len(retriers) > 0 {
+		retrier = retriers[0]
+	}
 	return &nodeRepo{
-		DB:    db,
-		Cache: cache,
+		DB:           db,
+		Cache:        cache,
+		cacheRetrier: retrier,
 	}
 }
 
@@ -232,10 +259,6 @@ func (m *nodeRepo) DeleteNode(ctx context.Context, id int64, tx ...*gorm.DB) err
 		db = tx[0]
 	}
 	return db.WithContext(ctx).Where("id = ?", id).Delete(&node.Node{}).Error
-}
-
-func (m *nodeRepo) Transaction(ctx context.Context, fn func(db *gorm.DB) error) error {
-	return m.WithContext(ctx).Transaction(fn)
 }
 
 // UpdateStatusCache Update server status to cache
@@ -484,25 +507,80 @@ func (m *nodeRepo) QueryEnabledNodeProtocols(ctx context.Context) ([]string, err
 	return protocols, err
 }
 
+func (m *nodeRepo) ServerCacheGeneration(ctx context.Context, serverId int64) (int64, error) {
+	if serverId <= 0 {
+		return 0, nil
+	}
+	generation, err := m.Cache.Get(ctx, fmt.Sprintf(node.ServerCacheGenerationKey, serverId)).Int64()
+	if errors.Is(err, redis.Nil) {
+		return 0, nil
+	}
+	return generation, err
+}
+
+// SetServerCache stores a response only when the generation captured before
+// the database read still matches. This prevents pre-update readers from
+// repopulating stale data after ClearServerCache runs.
+func (m *nodeRepo) SetServerCache(ctx context.Context, serverId int64, key string, value interface{}, generation int64) error {
+	if serverId <= 0 || key == "" {
+		return nil
+	}
+	indexKey := fmt.Sprintf(node.ServerCacheIndexKey, serverId)
+	_, err := setServerCacheIfGenerationScript.Run(ctx, m.Cache,
+		[]string{fmt.Sprintf(node.ServerCacheGenerationKey, serverId), key, indexKey},
+		strconv.FormatInt(generation, 10), value, node.ServerCacheTTL.Milliseconds()).Result()
+	return err
+}
+
 // ClearNodeCache Clear Node Cache
 func (m *nodeRepo) ClearNodeCache(ctx context.Context, params *node.FilterNodeParams) error {
 	_, nodes, err := m.FilterNodeList(ctx, params)
 	if err != nil {
 		return err
 	}
-	var cacheKeys []string
+	serverIDs := make(map[int64]struct{}, len(nodes))
 	for _, n := range nodes {
-		// Scan all protocol variants of user list and config cache
-		patterns := []string{
-			fmt.Sprintf("%s%d:*", node.ServerUserListCacheKey, n.ServerId),
-			fmt.Sprintf("%s%d:*", node.ServerConfigCacheKey, n.ServerId),
+		serverIDs[n.ServerId] = struct{}{}
+	}
+	for serverID := range serverIDs {
+		if err := m.ClearServerCache(ctx, serverID); err != nil {
+			return err
 		}
-		// Also delete legacy user-list key written before protocol was added to the key.
-		cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, n.ServerId))
+	}
+	return nil
+}
+
+// ClearServerCache Clear Server Cache
+func (m *nodeRepo) ClearServerCache(ctx context.Context, serverId int64) error {
+	err := clearServerCache(ctx, m.Cache, serverId)
+	if err == nil || m.cacheRetrier == nil {
+		return err
+	}
+	// The database write has already committed at every caller. Queue Redis
+	// recovery rather than returning a failed write response that clients may
+	// retry despite the durable change succeeding.
+	m.cacheRetrier.Enqueue(serverId)
+	return nil
+}
+
+func clearServerCache(ctx context.Context, client *redis.Client, serverId int64) error {
+	indexKey := fmt.Sprintf(node.ServerCacheIndexKey, serverId)
+	cacheKeys, err := client.SMembers(ctx, indexKey).Result()
+	if err != nil {
+		return err
+	}
+	// Entries created before the exact-key index was introduced are short-lived
+	// (five minutes). Scan only when no index exists, preserving immediate
+	// invalidation during a rolling upgrade without penalizing steady state.
+	if len(cacheKeys) == 0 {
+		patterns := []string{
+			fmt.Sprintf("%s%d:*", node.ServerUserListCacheKey, serverId),
+			fmt.Sprintf("%s%d:*", node.ServerConfigCacheKey, serverId),
+		}
 		for _, pattern := range patterns {
 			var cursor uint64
 			for {
-				keys, newCursor, err := m.Cache.Scan(ctx, cursor, pattern, 100).Result()
+				keys, newCursor, err := client.Scan(ctx, cursor, pattern, 100).Result()
 				if err != nil {
 					return err
 				}
@@ -516,44 +594,12 @@ func (m *nodeRepo) ClearNodeCache(ctx context.Context, params *node.FilterNodePa
 			}
 		}
 	}
-
-	if len(cacheKeys) > 0 {
-		cacheKeys = tool.RemoveDuplicateElements(cacheKeys...)
-		return m.Cache.Del(ctx, cacheKeys...).Err()
-	}
-	return nil
-}
-
-// ClearServerCache Clear Server Cache
-func (m *nodeRepo) ClearServerCache(ctx context.Context, serverId int64) error {
-	var cacheKeys []string
-	// Scan all protocol variants of both user list and config cache
-	patterns := []string{
-		fmt.Sprintf("%s%d:*", node.ServerUserListCacheKey, serverId),
-		fmt.Sprintf("%s%d:*", node.ServerConfigCacheKey, serverId),
-	}
-	// Also delete legacy user-list key written before protocol was added to the key.
 	cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, serverId))
-	for _, pattern := range patterns {
-		var cursor uint64
-		for {
-			keys, newCursor, err := m.Cache.Scan(ctx, cursor, pattern, 100).Result()
-			if err != nil {
-				return err
-			}
-			if len(keys) > 0 {
-				cacheKeys = append(cacheKeys, keys...)
-			}
-			cursor = newCursor
-			if cursor == 0 {
-				break
-			}
-		}
+	args := make([]interface{}, len(cacheKeys))
+	for i, key := range cacheKeys {
+		args[i] = key
 	}
-
-	if len(cacheKeys) > 0 {
-		cacheKeys = tool.RemoveDuplicateElements(cacheKeys...)
-		return m.Cache.Del(ctx, cacheKeys...).Err()
-	}
-	return nil
+	_, err = clearServerCacheScript.Run(ctx, client,
+		[]string{fmt.Sprintf(node.ServerCacheGenerationKey, serverId), indexKey}, args...).Result()
+	return err
 }

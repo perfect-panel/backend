@@ -11,6 +11,14 @@ const (
 
 	// ServerConfigCacheKey Server Config Cache Key
 	ServerConfigCacheKey = "server:config:"
+
+	// ServerCacheIndexKey tracks the exact response-cache keys generated for a
+	// server so invalidation does not need to scan the entire Redis keyspace.
+	ServerCacheIndexKey = "server:cache:index:%d"
+
+	// ServerCacheGenerationKey fences response-cache fills that started before
+	// a server configuration mutation completed.
+	ServerCacheGenerationKey = "server:cache:generation:%d"
 )
 
 // FilterParams Filter Server Params

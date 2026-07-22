@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/perfect-panel/server/initialize"
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 
@@ -29,7 +28,7 @@ func NewUpdateRegisterConfigLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *UpdateRegisterConfigLogic) UpdateRegisterConfig(req *dto.RegisterConfig) error {
-	err := updateConfigFields(l.ctx, l.svcCtx, "register", convertedConfigFields(*req), config.RegisterConfigKey, config.GlobalConfigKey)
+	err := updateConfigFields(l.ctx, l.svcCtx, "register", convertedConfigFields(*req))
 	if err != nil {
 		l.Errorw("[UpdateRegisterConfig] update register config error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update register config error: %v", err.Error())

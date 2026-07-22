@@ -3,7 +3,6 @@ package system
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -26,7 +25,7 @@ func NewUpdateTosConfigLogic(ctx context.Context, svcCtx *svc.ServiceContext) *U
 }
 
 func (l *UpdateTosConfigLogic) UpdateTosConfig(req *dto.TosConfig) error {
-	err := updateConfigFields(l.ctx, l.svcCtx, "tos", convertedConfigFields(*req), config.TosConfigKey)
+	err := updateConfigFields(l.ctx, l.svcCtx, "tos", convertedConfigFields(*req))
 	if err != nil {
 		l.Errorw("[UpdateTosConfigLogic] update tos config error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update tos config error: %v", err)
