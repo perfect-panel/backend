@@ -61,7 +61,7 @@ func (l *StripeNotifyLogic) StripeNotify(payload []byte, signature string) error
 		l.Logger.Error("[StripeNotify] Find order failed", logger.Field("error", err.Error()), logger.Field("orderNo", notify.OrderNo))
 		return errors.Wrapf(xerr.NewErrCode(xerr.OrderNotExist), "order not exist: %v", notify.OrderNo)
 	}
-	if finished, err := validateStripeCallback(orderInfo, stripeConfig, &config, notify); err != nil {
+	if finished, err := validateStripeCallback(l.ctx, orderInfo, stripeConfig, &config, notify); err != nil {
 		return err
 	} else if finished {
 		return nil
@@ -80,7 +80,7 @@ func (l *StripeNotifyLogic) StripeNotify(payload []byte, signature string) error
 	return nil
 }
 
-func validateStripeCallback(orderInfo *order.Order, paymentConfig *payment.Payment, config *payment.StripeConfig, notify *stripe.NotifyResult) (bool, error) {
+func validateStripeCallback(ctx context.Context, orderInfo *order.Order, paymentConfig *payment.Payment, config *payment.StripeConfig, notify *stripe.NotifyResult) (bool, error) {
 	if notify == nil {
 		return false, errors.New("Stripe callback is missing")
 	}
@@ -90,7 +90,7 @@ func validateStripeCallback(orderInfo *order.Order, paymentConfig *payment.Payme
 	if notify.Method == "" || notify.Method != config.Payment {
 		return false, errors.New("Stripe payment method mismatch")
 	}
-	if finished, err := finishedOrderDuplicate(orderInfo, notify.TradeNo); err != nil || finished {
+	if finished, err := finishedOrderDuplicate(ctx, orderInfo, notify.TradeNo); err != nil || finished {
 		return finished, err
 	}
 	if err := validateOrderCanSettle(orderInfo); err != nil {

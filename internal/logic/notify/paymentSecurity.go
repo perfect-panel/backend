@@ -12,6 +12,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/model/entity/payment"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/logger"
 	queueType "github.com/perfect-panel/server/queue/types"
 )
 
@@ -56,14 +57,31 @@ func validateTradeNo(tradeNo string) error {
 	return nil
 }
 
-func finishedOrderDuplicate(orderInfo *order.Order, tradeNo string) (bool, error) {
+// finishedOrderDuplicate reports whether the order is already in the finished
+// state and the incoming callback is a safe duplicate.
+//
+// Historical orders created before trade_no persistence was introduced may
+// have an empty TradeNo field.  Blocking those retried callbacks would
+// permanently prevent them from being acknowledged.  Instead, a warning is
+// emitted so the gap can be audited, and the callback is treated as a known
+// duplicate so the gateway stops retrying.
+func finishedOrderDuplicate(ctx context.Context, orderInfo *order.Order, tradeNo string) (bool, error) {
 	if orderInfo.Status != orderStatusFinished {
 		return false, nil
 	}
 	if err := validateTradeNo(tradeNo); err != nil {
 		return false, err
 	}
-	if orderInfo.TradeNo == "" || orderInfo.TradeNo != tradeNo {
+	if orderInfo.TradeNo == "" {
+		// Legacy order: trade_no was not persisted at payment time.
+		// Warn for audit purposes and accept the duplicate gracefully.
+		logger.WithContext(ctx).Infow("[finishedOrderDuplicate] finished order has no trade_no recorded; treating callback as duplicate",
+			logger.Field("orderNo", orderInfo.OrderNo),
+			logger.Field("incomingTradeNo", tradeNo),
+		)
+		return true, nil
+	}
+	if orderInfo.TradeNo != tradeNo {
 		return false, errors.New("order trade number mismatch")
 	}
 	return true, nil
