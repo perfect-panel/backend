@@ -77,6 +77,11 @@ func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 		if err = store.User().UpdateSubscribe(l.ctx, userSub); err != nil {
 			return err
 		}
+		// Subscriptions created by an administrator have no associated order.
+		// They can be cancelled, but there is no payment to refund.
+		if userSub.OrderId == 0 {
+			return nil
+		}
 
 		// Query the original order information to determine refund strategy
 		orderInfo, err := store.Order().FindOne(l.ctx, userSub.OrderId)
