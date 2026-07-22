@@ -25,10 +25,12 @@ var (
 	cacheUserIdPrefix             = "cache:user:id:"
 	cacheUserEmailPrefix          = "cache:user:email:v2:"
 	cacheUserSubscribeTokenPrefix = "cache:user:subscribe:token:"
-	cacheUserSubscribeUserPrefix  = "cache:user:subscribe:user:"
-	cacheUserSubscribeIdPrefix    = "cache:user:subscribe:id:"
-	cacheUserDeviceNumberPrefix   = "cache:user:device:number:"
-	cacheUserDeviceIdPrefix       = "cache:user:device:id:"
+	// v2 stores the status-unfiltered subscription list. Status-specific callers
+	// filter this shared value in memory so cache entries cannot collide.
+	cacheUserSubscribeUserPrefix = "cache:user:subscribe:user:v2:"
+	cacheUserSubscribeIdPrefix   = "cache:user:subscribe:id:"
+	cacheUserDeviceNumberPrefix  = "cache:user:device:number:"
+	cacheUserDeviceIdPrefix      = "cache:user:device:id:"
 )
 
 // UserRepo user 数据访问接口
@@ -974,24 +976,49 @@ func (m *userRepo) CountUserSubscribesByUserAndSubscribe(ctx context.Context, us
 
 // QueryUserSubscribe returns a list of records that meet the conditions.
 func (m *userRepo) QueryUserSubscribe(ctx context.Context, userId int64, status ...int64) ([]*user.SubscribeDetails, error) {
-	var list []*user.SubscribeDetails
+	var all []*user.SubscribeDetails
 	key := fmt.Sprintf("%s%d", cacheUserSubscribeUserPrefix, userId)
-	err := m.QueryCtx(ctx, &list, key, func(conn *gorm.DB, v interface{}) error {
+	err := m.QueryCtx(ctx, &all, key, func(conn *gorm.DB, v interface{}) error {
 		// 获取当前时间
 		now := timeutil.Now()
 		// 获取当前时间向前推 7 天
-		sevenDaysAgo := timeutil.Now().Add(-7 * 24 * time.Hour)
+		sevenDaysAgo := now.Add(-7 * 24 * time.Hour)
 		// 基础条件查询
 		conn = conn.Model(&user.Subscribe{}).Where("user_id = ?", userId)
-		if len(status) > 0 {
-			conn = conn.Where("status IN ?", status)
-		}
 		// 订阅过期时间大于当前时间或者订阅结束时间大于当前时间
 		return conn.Where("expire_time > ? OR finished_at >= ? OR expire_time = ?", now, sevenDaysAgo, time.UnixMilli(0)).
 			Preload("Subscribe").
-			Find(&list).Error
+			Order("CASE WHEN status = 1 THEN 0 ELSE 1 END ASC").
+			Order("expire_time DESC").
+			Order("id DESC").
+			Find(&all).Error
 	})
-	return list, err
+	if err != nil {
+		return nil, err
+	}
+	return filterUserSubscribeByStatus(all, status), nil
+}
+
+func filterUserSubscribeByStatus(list []*user.SubscribeDetails, status []int64) []*user.SubscribeDetails {
+	if len(status) == 0 {
+		return list
+	}
+
+	allowed := make(map[int64]struct{}, len(status))
+	for _, value := range status {
+		allowed[value] = struct{}{}
+	}
+
+	filtered := make([]*user.SubscribeDetails, 0, len(list))
+	for _, item := range list {
+		if item == nil {
+			continue
+		}
+		if _, ok := allowed[int64(item.Status)]; ok {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
 }
 
 // FindOneUserSubscribe  finds a subscribeDetails by id.

@@ -39,3 +39,14 @@ func TestAuthMethodCacheKeysOnlyCreateEmailKeysForEmail(t *testing.T) {
 		t.Fatalf("non-email auth method keys = %#v", nonEmailKeys)
 	}
 }
+
+func TestSubscribeCacheKeyUsesV2UserListKey(t *testing.T) {
+	keys := (&Subscribe{Id: 8, UserId: 7, Token: "token"}).GetCacheKeys()
+	want := "cache:user:subscribe:user:v2:7"
+	for _, key := range keys {
+		if key == want {
+			return
+		}
+	}
+	t.Fatalf("subscription cache keys = %#v, want %q", keys, want)
+}

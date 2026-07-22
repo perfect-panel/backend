@@ -12,7 +12,7 @@ const (
 	cacheUserIdPrefix             = "cache:user:id:"
 	cacheUserEmailPrefix          = "cache:user:email:v2:"
 	cacheUserSubscribeTokenPrefix = "cache:user:subscribe:token:"
-	cacheUserSubscribeUserPrefix  = "cache:user:subscribe:user:"
+	cacheUserSubscribeUserPrefix  = "cache:user:subscribe:user:v2:"
 	cacheUserSubscribeIdPrefix    = "cache:user:subscribe:id:"
 	cacheUserDeviceNumberPrefix   = "cache:user:device:number:"
 	cacheUserDeviceIdPrefix       = "cache:user:device:id:"
