@@ -137,25 +137,3 @@ func (l *EPayConfig) Unmarshal(data []byte) error {
 	aux := (*Alias)(l)
 	return json.Unmarshal(data, &aux)
 }
-
-type CryptoSaaSConfig struct {
-	Endpoint  string `json:"endpoint"`
-	AccountID string `json:"account_id"`
-	SecretKey string `json:"secret_key"`
-	Type      string `json:"type"`
-}
-
-func (l *CryptoSaaSConfig) Marshal() ([]byte, error) {
-	type Alias CryptoSaaSConfig
-	return json.Marshal(&struct {
-		*Alias
-	}{
-		Alias: (*Alias)(l),
-	})
-}
-
-func (l *CryptoSaaSConfig) Unmarshal(data []byte) error {
-	type Alias CryptoSaaSConfig
-	aux := (*Alias)(l)
-	return json.Unmarshal(data, &aux)
-}

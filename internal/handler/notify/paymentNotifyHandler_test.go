@@ -81,6 +81,22 @@ func TestPaymentNotifyHandler_acknowledgesEPayFormFailure_whenPaymentIsMissing(t
 	}
 }
 
+func TestPaymentNotifyHandlerRejectsRemovedCryptoSaaSPlatform(t *testing.T) {
+	engine := server.Default()
+	ctx := engine.NewContext()
+	ctx.Request.SetRequestURI("/payment/notify")
+	ctx.Request.Header.SetMethod(http.MethodPost)
+
+	PaymentNotifyHandler(&svc.ServiceContext{})(context.WithValue(context.Background(), constant.CtxKeyPlatform, "CryptoSaaS"), ctx)
+
+	if got := ctx.Response.StatusCode(); got != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, got)
+	}
+	if got := string(ctx.Response.Body()); got != "unsupported payment platform" {
+		t.Fatalf("unexpected response: %q", got)
+	}
+}
+
 func TestNativeFormValues_prioritizesPostValue_whenQueryDuplicatesKey(t *testing.T) {
 	// Given
 	engine := server.Default()

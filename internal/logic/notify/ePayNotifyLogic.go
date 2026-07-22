@@ -143,17 +143,6 @@ func epayCredentialsForPayment(data *payment.Payment) (epayCredentials, error) {
 			key:         config.Key,
 			paymentType: config.Type,
 		}
-	case paymentPlatform.CryptoSaaS:
-		var config payment.CryptoSaaSConfig
-		if err := json.Unmarshal([]byte(data.Config), &config); err != nil {
-			return result, err
-		}
-		result = epayCredentials{
-			merchantID:  config.AccountID,
-			endpoint:    config.Endpoint,
-			key:         config.SecretKey,
-			paymentType: config.Type,
-		}
 	default:
 		return result, errors.New("unsupported EPay callback platform")
 	}

@@ -47,7 +47,7 @@ func PaymentNotifyHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 		}
 
 		switch payment.ParsePlatform(platform) {
-		case payment.EPay, payment.CryptoSaaS:
+		case payment.EPay:
 			params, err := uniqueFormValues(nativeFormValues(ctx))
 			if err != nil {
 				logger.WithContext(c).Errorw("[PaymentNotifyHandler] ShouldBind failed", logger.Field("error", err.Error()))
@@ -89,6 +89,7 @@ func PaymentNotifyHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 
 		default:
 			logger.WithContext(c).Errorf("platform %s not support", platform)
+			ctx.String(consts.StatusBadRequest, "unsupported payment platform")
 		}
 	}
 }

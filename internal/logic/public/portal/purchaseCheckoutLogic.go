@@ -115,17 +115,6 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *dto.CheckoutOrderRequest) 
 			CheckoutUrl: url,
 		}
 
-	case paymentPlatform.CryptoSaaS:
-		// Process EPay payment - generates payment URL for redirect
-		url, err := l.CryptoSaaSPayment(paymentConfig, orderInfo, req.ReturnUrl)
-		if err != nil {
-			return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "epayPayment error: %v", err.Error())
-		}
-		resp = &dto.CheckoutOrderResponse{
-			CheckoutUrl: url,
-			Type:        "url", // Client should redirect to URL
-		}
-
 	case paymentPlatform.Balance:
 		// Process balance payment - validate user and process payment immediately
 		if orderInfo.UserId == 0 {
@@ -371,73 +360,6 @@ func (l *PurchaseCheckoutLogic) epayPayment(config *payment.Payment, info *order
 		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
 	}
 
-	// Create payment URL for user redirection
-	url := client.CreatePayUrl(epay.Order{
-		Name:      l.svcCtx.Config.Site.SiteName,
-		Amount:    amount,
-		OrderNo:   info.OrderNo,
-		SignType:  "MD5",
-		NotifyUrl: notifyUrl,
-		ReturnUrl: returnUrl,
-	})
-	return url, nil
-}
-
-// CryptoSaaSPayment processes CryptoSaaSPayment payment by generating a payment URL for redirect
-// It handles currency conversion and creates a payment URL for external payment processing
-func (l *PurchaseCheckoutLogic) CryptoSaaSPayment(config *payment.Payment, info *order.Order, returnUrl string) (string, error) {
-	var err error
-	// Parse EPay configuration from payment settings
-	epayConfig := &payment.CryptoSaaSConfig{}
-	if err := epayConfig.Unmarshal([]byte(config.Config)); err != nil {
-		l.Errorw("[PurchaseCheckout] Unmarshal EPay config error", logger.Field("error", err.Error()))
-		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Unmarshal error: %s", err.Error())
-	}
-	// Initialize EPay client with merchant credentials
-	client := epay.NewClient(epayConfig.AccountID, epayConfig.Endpoint, epayConfig.SecretKey, epayConfig.Type)
-
-	var amount float64
-
-	if l.svcCtx.Config.Currency.Unit != "CNY" {
-		// Convert order amount to CNY using current exchange rate
-		amount, err = l.queryExchangeRate("CNY", info.Amount)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		amount = float64(info.Amount) / float64(100)
-	}
-	expectedAmount, err := epay.ParseMoney(epay.FormatMoney(amount))
-	if err != nil {
-		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "invalid CryptoSaaS amount: %v", err)
-	}
-	if err := l.persistPaymentExpectation(info, expectedAmount, "CNY"); err != nil {
-		return "", err
-	}
-
-	// gateway mod
-	isGatewayMod := report.IsGatewayMode()
-
-	// Build notification URL for payment status callbacks
-	notifyUrl := ""
-	if config.Domain != "" {
-		notifyUrl = strings.TrimSuffix(config.Domain, "/")
-		if isGatewayMod {
-			notifyUrl += "/api/"
-		}
-		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
-	} else {
-		host, ok := l.ctx.Value(constant.CtxKeyRequestHost).(string)
-		if !ok {
-			host = l.svcCtx.Config.Host
-		}
-
-		notifyUrl = "https://" + strings.TrimSuffix(host, "/")
-		if isGatewayMod {
-			notifyUrl += "/api"
-		}
-		notifyUrl = strings.TrimSuffix(notifyUrl, "/") + "/v1/notify/" + config.Platform + "/" + config.Token
-	}
 	// Create payment URL for user redirection
 	url := client.CreatePayUrl(epay.Order{
 		Name:      l.svcCtx.Config.Site.SiteName,

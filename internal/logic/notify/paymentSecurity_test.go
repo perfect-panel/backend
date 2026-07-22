@@ -82,28 +82,6 @@ func TestEPayNotifyRejectsInvalidSignatureWhenDebugEnabled(t *testing.T) {
 	}
 }
 
-func TestCryptoSaaSNotifyRejectsInvalidSignatureWhenDebugEnabled(t *testing.T) {
-	paymentConfig := &payment.Payment{
-		Id:       11,
-		Platform: "CryptoSaaS",
-		Config:   `{"endpoint":"https://crypto.example","account_id":"account-1","secret_key":"secret","type":"usdt"}`,
-	}
-	ctx := context.WithValue(context.Background(), constant.CtxKeyPayment, paymentConfig)
-	logic := NewEPayNotifyLogic(ctx, &svc.ServiceContext{Config: config.Config{Debug: true}}, EPayNotifyMeta{
-		Method: "POST",
-		Params: map[string]string{
-			"out_trade_no": "order-1",
-			"trade_status": "TRADE_SUCCESS",
-			"sign":         "invalid",
-		},
-	})
-
-	err := logic.EPayNotify(&dto.EPayNotifyRequest{OutTradeNo: "order-1", TradeStatus: "TRADE_SUCCESS", Sign: "invalid"})
-	if err == nil || !strings.Contains(err.Error(), "verify sign failed") {
-		t.Fatalf("debug mode must still reject invalid CryptoSaaS signature, got %v", err)
-	}
-}
-
 func TestEPayNotifySettlesOnlyAfterSignedAndQueriedDetailsMatch(t *testing.T) {
 	queryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
@@ -237,16 +215,10 @@ func TestEPayNotifyRejectsAmountMismatchWhenQueryUnsupported(t *testing.T) {
 	}
 }
 
-func TestEPayCredentialsUseCryptoSaaSConfiguration(t *testing.T) {
-	credentials, err := epayCredentialsForPayment(&payment.Payment{
-		Platform: "CryptoSaaS",
-		Config:   `{"endpoint":"https://crypto.example","account_id":"account-1","secret_key":"secret","type":"usdt"}`,
-	})
-	if err != nil {
-		t.Fatalf("epayCredentialsForPayment: %v", err)
-	}
-	if credentials.merchantID != "account-1" || credentials.endpoint != "https://crypto.example" || credentials.key != "secret" || credentials.paymentType != "usdt" {
-		t.Fatalf("unexpected credentials: %+v", credentials)
+func TestEPayCredentialsRejectUnsupportedPlatform(t *testing.T) {
+	_, err := epayCredentialsForPayment(&payment.Payment{Platform: "CryptoSaaS"})
+	if err == nil || !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("unsupported platform must be rejected, got %v", err)
 	}
 }
 

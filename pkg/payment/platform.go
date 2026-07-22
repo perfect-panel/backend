@@ -9,12 +9,10 @@ const (
 	AlipayF2F
 	EPay
 	Balance
-	CryptoSaaS
 	UNSUPPORTED Platform = -1
 )
 
 var platformNames = map[string]Platform{
-	"CryptoSaaS":  CryptoSaaS,
 	"Stripe":      Stripe,
 	"AlipayF2F":   AlipayF2F,
 	"EPay":        EPay,
@@ -36,6 +34,14 @@ func ParsePlatform(s string) Platform {
 		return p
 	}
 	return UNSUPPORTED
+}
+
+// SupportedPlatformNames lists every platform that may be exposed for a new
+// checkout. Keep this separate from GetSupportedPlatforms because balance is
+// an internal checkout method rather than an administrator-configurable
+// gateway.
+func SupportedPlatformNames() []string {
+	return []string{Stripe.String(), AlipayF2F.String(), EPay.String(), Balance.String()}
 }
 
 func GetSupportedPlatforms() []dto.PlatformInfo {
@@ -69,15 +75,6 @@ func GetSupportedPlatforms() []dto.PlatformInfo {
 				"url":  "URL",
 				"key":  "Key",
 				"type": "Type",
-			},
-		},
-		{
-			Platform:    CryptoSaaS.String(),
-			PlatformUrl: "https://t.me/CryptoSaaSBot",
-			PlatformFieldDescription: map[string]string{
-				"endpoint":   "API Endpoint",
-				"account_id": "Account ID",
-				"secret_key": "Secret Key",
 			},
 		},
 	}
