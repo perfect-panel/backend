@@ -3,12 +3,14 @@ package order
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/pkg/payment/stripe"
 	"github.com/perfect-panel/server/pkg/timeutil"
 
+	"github.com/perfect-panel/server/internal/logic/notify"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/model/entity/payment"
@@ -16,6 +18,7 @@ import (
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
+	paymentPlatform "github.com/perfect-panel/server/pkg/payment"
 	"github.com/perfect-panel/server/pkg/payment/alipay"
 )
 
@@ -53,6 +56,13 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 		)
 		return nil
 	}
+	settled, err := l.settleOrCancelStripeOrder(orderInfo)
+	if err != nil {
+		return err
+	}
+	if settled {
+		return nil
+	}
 
 	// Only query subscribe info if SubscribeId is valid
 	var sub *subscribe.Subscribe
@@ -68,8 +78,10 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 	}
 
 	err = store.InTx(l.ctx, func(txStore repository.Store) error {
-		// update order status
-		err := txStore.Order().UpdateOrderStatus(l.ctx, req.OrderNo, 3)
+		// Only the still-pending order may be closed.  A payment callback can
+		// race this task, so an unconditional status write would otherwise turn
+		// a paid order back into a closed order.
+		closed, err := txStore.Order().UpdateOrderStatusFrom(l.ctx, req.OrderNo, 1, 3)
 		if err != nil {
 			l.Errorw("[CloseOrder] Update order status failed",
 				logger.Field("error", err.Error()),
@@ -77,18 +89,12 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 			)
 			return err
 		}
-		// If User ID is 0, it means that the order is a guest order and does not need to be refunded, the order can be deleted directly
-		if orderInfo.UserId == 0 {
-			err = txStore.Order().Delete(l.ctx, orderInfo.Id)
-			if err != nil {
-				l.Errorw("[CloseOrder] Delete order failed",
-					logger.Field("error", err.Error()),
-					logger.Field("orderNo", req.OrderNo),
-				)
-				return err
-			}
+		if !closed {
 			return nil
 		}
+		// Keep closed guest orders for payment audit and reconciliation.  Deleting
+		// them used to discard evidence of a late provider payment and, because
+		// of the early return, also skipped restoration of reserved inventory.
 		// refund deduction amount to user deduction balance
 		if orderInfo.GiftAmount > 0 {
 			userInfo, err := txStore.User().FindOne(l.ctx, orderInfo.UserId)
@@ -138,7 +144,6 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 				)
 				return err
 			}
-			return nil
 		}
 		// Restore subscribe inventory if subscribe exists
 		if sub != nil {
@@ -161,6 +166,63 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 		return err
 	}
 	return nil
+}
+
+// settleOrCancelStripeOrder closes the provider-side authorization before the
+// local order is closed.  Without this, a user can complete an old Stripe
+// client secret after the 15-minute local expiry and be charged for an order
+// the callback is no longer allowed to settle.
+func (l *CloseOrderLogic) settleOrCancelStripeOrder(orderInfo *order.Order) (bool, error) {
+	if paymentPlatform.ParsePlatform(orderInfo.Method) != paymentPlatform.Stripe || orderInfo.TradeNo == "" {
+		return false, nil
+	}
+	paymentConfig, err := l.svcCtx.Store.Payment().FindOne(l.ctx, orderInfo.PaymentId)
+	if err != nil {
+		return false, err
+	}
+	config := payment.StripeConfig{}
+	if err := json.Unmarshal([]byte(paymentConfig.Config), &config); err != nil {
+		return false, err
+	}
+	client := stripe.NewClient(stripe.Config{
+		PublicKey:     config.PublicKey,
+		SecretKey:     config.SecretKey,
+		WebhookSecret: config.WebhookSecret,
+	})
+	stripeOrder := &stripe.Order{
+		OrderNo:   orderInfo.OrderNo,
+		Subscribe: "", // subscribe metadata is informational; immutable payment fields below are authoritative.
+		Amount:    orderInfo.Amount,
+		Currency:  l.svcCtx.Config.Currency.Unit,
+		Payment:   config.Payment,
+	}
+	paid, err := client.VerifyPaymentIntent(stripeOrder, orderInfo.TradeNo)
+	if err != nil {
+		return false, err
+	}
+	if paid {
+		if err := notify.SettleVerifiedPayment(l.ctx, l.svcCtx, orderInfo, orderInfo.TradeNo); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	if err := client.CancelPaymentIntent(orderInfo.TradeNo); err == nil {
+		return false, nil
+	}
+
+	// A payment can finish between the status query and cancellation.  Recheck
+	// once so that case is settled rather than closed locally.
+	paid, err = client.VerifyPaymentIntent(stripeOrder, orderInfo.TradeNo)
+	if err != nil {
+		return false, err
+	}
+	if !paid {
+		return false, fmt.Errorf("cancel Stripe payment intent %s failed", orderInfo.TradeNo)
+	}
+	if err := notify.SettleVerifiedPayment(l.ctx, l.svcCtx, orderInfo, orderInfo.TradeNo); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // confirmationPayment Determine whether the payment is successful

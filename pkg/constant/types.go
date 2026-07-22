@@ -37,11 +37,12 @@ func (v VerifyType) String() string {
 const TempOrderCacheKey = "temp_order:%s"
 
 type TemporaryOrderInfo struct {
-	OrderNo    string `json:"order_no"`
-	Identifier string `json:"identifier"`
-	AuthType   string `json:"auth_type"`
-	Password   string `json:"password"`
-	InviteCode string `json:"invite_code,omitempty"`
+	OrderNo       string `json:"order_no"`
+	CheckoutToken string `json:"checkout_token"`
+	Identifier    string `json:"identifier"`
+	AuthType      string `json:"auth_type"`
+	Password      string `json:"password"`
+	InviteCode    string `json:"invite_code,omitempty"`
 }
 
 func (t *TemporaryOrderInfo) Unmarshal(data []byte) error {

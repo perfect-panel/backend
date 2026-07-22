@@ -1,8 +1,9 @@
 package dto
 
 type CheckoutOrderRequest struct {
-	OrderNo   string `json:"orderNo"`
-	ReturnUrl string `json:"returnUrl,omitempty"`
+	OrderNo       string `json:"orderNo"`
+	CheckoutToken string `json:"checkout_token,omitempty"`
+	ReturnUrl     string `json:"returnUrl,omitempty"`
 }
 
 type CheckoutOrderResponse struct {
@@ -113,7 +114,8 @@ type PortalPurchaseRequest struct {
 }
 
 type PortalPurchaseResponse struct {
-	OrderNo string `json:"order_no"`
+	OrderNo       string `json:"order_no"`
+	CheckoutToken string `json:"checkout_token"`
 }
 
 type PreOrderResponse struct {

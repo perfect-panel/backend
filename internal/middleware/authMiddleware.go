@@ -29,6 +29,29 @@ func AuthMiddleware(svc *svc.ServiceContext) app.HandlerFunc {
 	}
 }
 
+// OptionalAuthMiddleware authenticates a request when it supplies an
+// Authorization header, while preserving anonymous access for routes that
+// intentionally support guest checkout.  Handlers on those routes must still
+// explicitly require an authenticated user before operating on a user-owned
+// resource.
+func OptionalAuthMiddleware(svc *svc.ServiceContext) app.HandlerFunc {
+	return func(ctx context.Context, requestCtx *app.RequestContext) {
+		token := string(requestCtx.GetHeader("Authorization"))
+		if token == "" {
+			requestCtx.Next(ctx)
+			return
+		}
+
+		authenticatedCtx, err := AuthenticateRequest(ctx, svc, token, string(requestCtx.Path()))
+		if err != nil {
+			result.HttpResult(requestCtx, nil, err)
+			requestCtx.Abort()
+			return
+		}
+		requestCtx.Next(authenticatedCtx)
+	}
+}
+
 func AuthenticateRequest(ctx context.Context, svc *svc.ServiceContext, token string, path string) (context.Context, error) {
 	jwtConfig := svc.Config.JwtAuth
 	if token == "" {

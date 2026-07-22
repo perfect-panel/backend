@@ -56,6 +56,19 @@ type ActivateOrderLogic struct {
 	svc *svc.ServiceContext // Service context containing dependencies
 }
 
+// activationResult contains only post-commit work.  All financial and
+// subscription mutations are committed with the order transition first; cache
+// invalidation and notifications are deliberately kept outside that
+// transaction because they are retryable side effects rather than settlement
+// state.
+type activationResult struct {
+	order      *order.Order
+	user       *user.User
+	subscribe  *subscribe.Subscribe
+	userSub    *user.Subscribe
+	notifyType string
+}
+
 // NewActivateOrderLogic creates a new instance of ActivateOrderLogic
 func NewActivateOrderLogic(svc *svc.ServiceContext) *ActivateOrderLogic {
 	return &ActivateOrderLogic{
@@ -72,21 +85,297 @@ func (l *ActivateOrderLogic) ProcessTask(ctx context.Context, task *asynq.Task) 
 		return err
 	}
 
-	orderInfo, err := l.validateAndGetOrder(ctx, payload.OrderNo)
-	if err != nil {
-		return err
-	}
-	if orderInfo == nil {
-		return nil
-	}
+	var result *activationResult
+	err = l.svc.Store.InTx(ctx, func(store repository.Store) error {
+		// The Paid -> Finished transition, user/subscription mutations and coupon
+		// accounting share one transaction.  This is the idempotency boundary for
+		// Asynq's at-least-once delivery: a committed activation is never run
+		// again, while a rolled-back activation has no partial database effects.
+		orderInfo, err := store.Order().FindOneByOrderNoForUpdate(ctx, payload.OrderNo)
+		if err != nil {
+			return err
+		}
+		if orderInfo.Status == OrderStatusFinished {
+			return nil
+		}
+		if orderInfo.Status != OrderStatusPaid {
+			return ErrInvalidOrderStatus
+		}
 
-	if err = l.processOrderByType(ctx, orderInfo); err != nil {
+		result, err = l.processOrderByTypeInTx(ctx, store, orderInfo)
+		if err != nil {
+			return err
+		}
+		if orderInfo.Coupon != "" {
+			if err := store.Coupon().UpdateCount(ctx, orderInfo.Coupon); err != nil {
+				return err
+			}
+		}
+		updated, err := store.Order().UpdateOrderStatusFrom(ctx, orderInfo.OrderNo, OrderStatusPaid, OrderStatusFinished)
+		if err != nil {
+			return err
+		}
+		if !updated {
+			return ErrInvalidOrderStatus
+		}
+		return nil
+	})
+	if err != nil {
 		logger.WithContext(ctx).Error("[ActivateOrderLogic] Process task failed", logger.Field("error", err.Error()))
 		return err
 	}
-
-	l.finalizeCouponAndOrder(ctx, orderInfo)
+	if result == nil {
+		return nil
+	}
+	l.afterActivationCommit(ctx, result)
 	return nil
+}
+
+func (l *ActivateOrderLogic) processOrderByTypeInTx(ctx context.Context, store repository.Store, orderInfo *order.Order) (*activationResult, error) {
+	switch orderInfo.Type {
+	case OrderTypeSubscribe:
+		return l.activateNewPurchaseTx(ctx, store, orderInfo)
+	case OrderTypeRenewal:
+		return l.activateRenewalTx(ctx, store, orderInfo)
+	case OrderTypeResetTraffic:
+		return l.activateResetTrafficTx(ctx, store, orderInfo)
+	case OrderTypeRecharge:
+		return l.activateRechargeTx(ctx, store, orderInfo)
+	default:
+		return nil, ErrInvalidOrderType
+	}
+}
+
+func (l *ActivateOrderLogic) activateNewPurchaseTx(ctx context.Context, store repository.Store, orderInfo *order.Order) (*activationResult, error) {
+	var (
+		userInfo *user.User
+		err      error
+	)
+	if orderInfo.UserId != 0 {
+		userInfo, err = store.User().FindOne(ctx, orderInfo.UserId)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		tempOrder, err := l.getTempOrderInfo(ctx, orderInfo.OrderNo)
+		if err != nil {
+			return nil, err
+		}
+		userInfo = &user.User{Password: tool.EncodePassWord(tempOrder.Password), Algo: "default"}
+		if err := store.User().Insert(ctx, userInfo); err != nil {
+			return nil, err
+		}
+		userInfo.ReferCode = uuidx.UserInviteCode(userInfo.Id)
+		if err := store.User().Update(ctx, userInfo); err != nil {
+			return nil, err
+		}
+		if err := store.User().InsertUserAuthMethods(ctx, &user.AuthMethods{
+			UserId:         userInfo.Id,
+			AuthType:       tempOrder.AuthType,
+			AuthIdentifier: tempOrder.Identifier,
+		}); err != nil {
+			return nil, err
+		}
+		if tempOrder.InviteCode != "" {
+			if referer, findErr := store.User().FindOneByReferCode(ctx, tempOrder.InviteCode); findErr == nil {
+				userInfo.RefererId = referer.Id
+				if err := store.User().Update(ctx, userInfo); err != nil {
+					return nil, err
+				}
+			} else {
+				logger.WithContext(ctx).Error("Find referer failed", logger.Field("error", findErr.Error()), logger.Field("refer_code", tempOrder.InviteCode))
+			}
+		}
+		orderInfo.UserId = userInfo.Id
+		if err := store.Order().Update(ctx, orderInfo); err != nil {
+			return nil, err
+		}
+	}
+
+	sub, err := store.Subscribe().FindOne(ctx, orderInfo.SubscribeId)
+	if err != nil {
+		return nil, err
+	}
+	userSub, err := l.createUserSubscriptionTx(ctx, store, orderInfo, sub)
+	if err != nil {
+		return nil, err
+	}
+	return &activationResult{order: orderInfo, user: userInfo, subscribe: sub, userSub: userSub, notifyType: telegram.PurchaseNotify}, nil
+}
+
+func (l *ActivateOrderLogic) createUserSubscriptionTx(ctx context.Context, store repository.Store, orderInfo *order.Order, sub *subscribe.Subscribe) (*user.Subscribe, error) {
+	if sub.Quota > 0 {
+		count, err := store.User().CountUserSubscribesByUserAndSubscribe(ctx, orderInfo.UserId, orderInfo.SubscribeId)
+		if err != nil {
+			return nil, err
+		}
+		if count >= sub.Quota {
+			return nil, fmt.Errorf("subscribe quota limit exceeded")
+		}
+	}
+	now := timeutil.Now()
+	userSub := &user.Subscribe{
+		UserId:      orderInfo.UserId,
+		OrderId:     orderInfo.Id,
+		SubscribeId: orderInfo.SubscribeId,
+		StartTime:   now,
+		ExpireTime:  tool.AddTime(sub.UnitTime, orderInfo.Quantity, now),
+		Traffic:     sub.Traffic,
+		Token:       uuidx.SubscribeToken(orderInfo.OrderNo),
+		UUID:        uuid.New().String(),
+		Status:      1,
+	}
+	if err := store.User().InsertSubscribe(ctx, userSub); err != nil {
+		return nil, err
+	}
+	return userSub, nil
+}
+
+func (l *ActivateOrderLogic) activateRenewalTx(ctx context.Context, store repository.Store, orderInfo *order.Order) (*activationResult, error) {
+	userInfo, err := store.User().FindOne(ctx, orderInfo.UserId)
+	if err != nil {
+		return nil, err
+	}
+	userSub, err := store.User().FindOneSubscribeByToken(ctx, orderInfo.SubscribeToken)
+	if err != nil {
+		return nil, err
+	}
+	if userSub.UserId != orderInfo.UserId {
+		return nil, fmt.Errorf("renewal subscription ownership mismatch")
+	}
+	sub, err := store.Subscribe().FindOne(ctx, orderInfo.SubscribeId)
+	if err != nil {
+		return nil, err
+	}
+	if err := l.updateSubscriptionForRenewalTx(ctx, store, userSub, sub, orderInfo); err != nil {
+		return nil, err
+	}
+	return &activationResult{order: orderInfo, user: userInfo, subscribe: sub, userSub: userSub, notifyType: telegram.RenewalNotify}, nil
+}
+
+func (l *ActivateOrderLogic) updateSubscriptionForRenewalTx(ctx context.Context, store repository.Store, userSub *user.Subscribe, sub *subscribe.Subscribe, orderInfo *order.Order) error {
+	now := timeutil.Now()
+	if userSub.ExpireTime.Before(now) {
+		userSub.ExpireTime = now
+	}
+	today := now.Day()
+	resetDay := userSub.ExpireTime.Day()
+	if (sub.RenewalReset != nil && *sub.RenewalReset) || today == resetDay {
+		userSub.Download = 0
+		userSub.Upload = 0
+	}
+	if userSub.FinishedAt != nil {
+		if userSub.FinishedAt.Before(now) && today > resetDay {
+			userSub.Download = 0
+			userSub.Upload = 0
+		}
+		userSub.FinishedAt = nil
+	}
+	userSub.ExpireTime = tool.AddTime(sub.UnitTime, orderInfo.Quantity, userSub.ExpireTime)
+	userSub.Status = 1
+	return store.User().UpdateSubscribe(ctx, userSub)
+}
+
+func (l *ActivateOrderLogic) activateResetTrafficTx(ctx context.Context, store repository.Store, orderInfo *order.Order) (*activationResult, error) {
+	userInfo, err := store.User().FindOne(ctx, orderInfo.UserId)
+	if err != nil {
+		return nil, err
+	}
+	userSub, err := store.User().FindOneSubscribeByToken(ctx, orderInfo.SubscribeToken)
+	if err != nil {
+		return nil, err
+	}
+	if userSub.UserId != orderInfo.UserId {
+		return nil, fmt.Errorf("reset subscription ownership mismatch")
+	}
+	userSub.Download = 0
+	userSub.Upload = 0
+	userSub.Status = 1
+	if err := store.User().UpdateSubscribe(ctx, userSub); err != nil {
+		return nil, err
+	}
+	sub, err := store.Subscribe().FindOne(ctx, userSub.SubscribeId)
+	if err != nil {
+		return nil, err
+	}
+	resetLog := &log.ResetSubscribe{
+		Type:      log.ResetSubscribeTypePaid,
+		UserId:    userInfo.Id,
+		OrderNo:   orderInfo.OrderNo,
+		Timestamp: timeutil.Now().UnixMilli(),
+	}
+	content, err := resetLog.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	if err := store.Log().Insert(ctx, &log.SystemLog{
+		Type:     log.TypeResetSubscribe.Uint8(),
+		Date:     timeutil.Now().Format(time.DateOnly),
+		ObjectID: userSub.Id,
+		Content:  string(content),
+	}); err != nil {
+		return nil, err
+	}
+	return &activationResult{order: orderInfo, user: userInfo, subscribe: sub, userSub: userSub, notifyType: telegram.ResetTrafficNotify}, nil
+}
+
+func (l *ActivateOrderLogic) activateRechargeTx(ctx context.Context, store repository.Store, orderInfo *order.Order) (*activationResult, error) {
+	userInfo, err := store.User().FindOneForUpdate(ctx, orderInfo.UserId)
+	if err != nil {
+		return nil, err
+	}
+	userInfo.Balance += orderInfo.Price
+	if err := store.User().Update(ctx, userInfo); err != nil {
+		return nil, err
+	}
+	balanceLog := &log.Balance{
+		Amount:    orderInfo.Price,
+		Type:      log.BalanceTypeRecharge,
+		OrderNo:   orderInfo.OrderNo,
+		Balance:   userInfo.Balance,
+		Timestamp: timeutil.Now().UnixMilli(),
+	}
+	content, err := balanceLog.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	if err := store.Log().Insert(ctx, &log.SystemLog{
+		Type:     log.TypeBalance.Uint8(),
+		Date:     timeutil.Now().Format(time.DateOnly),
+		ObjectID: userInfo.Id,
+		Content:  string(content),
+	}); err != nil {
+		return nil, err
+	}
+	return &activationResult{order: orderInfo, user: userInfo}, nil
+}
+
+func (l *ActivateOrderLogic) afterActivationCommit(ctx context.Context, result *activationResult) {
+	if result == nil || result.order == nil || result.user == nil {
+		return
+	}
+	switch result.order.Type {
+	case OrderTypeSubscribe, OrderTypeRenewal, OrderTypeResetTraffic:
+		if result.userSub != nil {
+			if err := l.svc.Store.User().ClearSubscribeCache(ctx, result.userSub); err != nil {
+				logger.WithContext(ctx).Error("Clear user subscribe cache failed", logger.Field("error", err.Error()))
+			}
+		}
+		if result.subscribe != nil {
+			l.clearServerCache(ctx, result.subscribe)
+		}
+		if result.order.Type == OrderTypeSubscribe || result.order.Type == OrderTypeRenewal {
+			go l.handleCommission(context.Background(), result.user, result.order)
+		}
+		if result.subscribe != nil {
+			l.sendNotifications(ctx, result.order, result.user, result.subscribe, result.userSub, result.notifyType)
+		}
+	case OrderTypeRecharge:
+		if err := l.svc.Store.User().UpdateUserCache(ctx, result.user); err != nil {
+			logger.WithContext(ctx).Error("[Recharge] Update user cache failed", logger.Field("error", err.Error()))
+		}
+		l.sendRechargeNotifications(ctx, result.order, result.user)
+	}
 }
 
 // parsePayload unMarshals the task payload into a structured format

@@ -47,4 +47,6 @@ func RegisterHandlers(mux *asynq.ServeMux, serverCtx *svc.ServiceContext) {
 
 	// ForthwithQuotaTask
 	mux.Handle(types.ForthwithQuotaTask, task.NewQuotaTaskLogic(serverCtx))
+	// SchedulerExchangeRate
+	mux.Handle(types.SchedulerExchangeRate, task.NewRateLogic(serverCtx))
 }

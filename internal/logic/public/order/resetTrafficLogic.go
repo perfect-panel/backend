@@ -50,6 +50,9 @@ func (l *ResetTrafficLogic) ResetTraffic(req *dto.ResetTrafficOrderRequest) (res
 		l.Errorw("[ResetTraffic] Database query error", logger.Field("error", err.Error()), logger.Field("UserSubscribeID", req.UserSubscribeID))
 		return nil, errors.Wrapf(err, "find user subscribe error: %v", err.Error())
 	}
+	if userSubscribe.UserId != u.Id {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "subscription does not belong to the current user")
+	}
 	if userSubscribe.Subscribe == nil {
 		l.Errorw("[ResetTraffic] subscribe not found", logger.Field("UserSubscribeID", req.UserSubscribeID))
 		return nil, errors.New("subscribe not found")

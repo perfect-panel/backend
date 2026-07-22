@@ -24,7 +24,7 @@ func registerPublicDocumentRoutes(router *server.Hertz, serverCtx *svc.ServiceCo
 
 func registerPublicPortalRoutes(router *server.Hertz, serverCtx *svc.ServiceContext) {
 	group := router.Group("/v1/public/portal")
-	group.Use(middleware.DeviceMiddleware(serverCtx))
+	group.Use(middleware.OptionalAuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
 	group.POST("/order/checkout", publicPortal.PurchaseCheckoutHandler(serverCtx))
 	group.GET("/order/status", publicPortal.QueryPurchaseOrderHandler(serverCtx))
 	group.GET("/payment-method", publicPortal.GetAvailablePaymentMethodsHandler(serverCtx))

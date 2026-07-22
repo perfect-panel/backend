@@ -58,7 +58,7 @@ func (m *Service) Start() {
 	}
 
 	// schedule update exchange rate task: every day at 01:00
-	rateTask := asynq.NewTask(types.ForthwithQuotaTask, nil)
+	rateTask := asynq.NewTask(types.SchedulerExchangeRate, nil)
 	if _, err := m.server.Register("0 1 * * *", rateTask, asynq.MaxRetry(3)); err != nil {
 		logger.Errorf("register update exchange rate task failed: %s", err.Error())
 	}

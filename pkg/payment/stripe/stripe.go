@@ -2,8 +2,10 @@ package stripe
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/stripe/stripe-go/v81/webhookendpoint"
 
@@ -64,51 +66,99 @@ func NewClient(config Config) *Client {
 }
 
 func (c *Client) CreatePaymentSheet(order *Order, user *User) (*PaymentSheet, error) {
-	stripe.Key = c.SecretKey
-	// Create a new Stripe customer if it does not exist
-	customerDataRes, err := c.SearchStripeCustomer(user)
-	if err != nil {
-		return nil, err
+	if order == nil || order.OrderNo == "" || order.Amount < 0 || order.Currency == "" || order.Payment == "" {
+		return nil, errors.New("invalid Stripe order")
 	}
-	if customerDataRes == nil {
-		customerDataRes, err = c.CreateCustomer(user)
+	stripe.Key = c.SecretKey
+	var customerDataRes *stripe.Customer
+	var err error
+	var userID int64
+	if user != nil {
+		userID = user.UserId
+	}
+	// A guest checkout has no stable Stripe customer identity.  Do not reuse
+	// the synthetic user_id=0 customer across unrelated buyers.
+	if user != nil && (user.Email != "" || user.UserId != 0) {
+		customerDataRes, err = c.SearchStripeCustomer(user)
 		if err != nil {
 			return nil, err
 		}
-	}
-	// Create Ephemeral Key
-	ekParams := &stripe.EphemeralKeyParams{
-		Customer:      stripe.String(customerDataRes.ID),
-		StripeVersion: stripe.String(APIVersion),
-	}
-	ek, err := ephemeralkey.New(ekParams)
-	if err != nil {
-		return nil, err
+		if customerDataRes == nil {
+			customerDataRes, err = c.CreateCustomer(user)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	// Create Payment Intent
 	params := &stripe.PaymentIntentParams{
 		Amount:   stripe.Int64(order.Amount),
-		Customer: stripe.String(customerDataRes.ID),
 		Currency: stripe.String(order.Currency),
 		PaymentMethodTypes: []*string{
 			stripe.String(order.Payment),
 		},
 		Metadata: map[string]string{
 			"order_no":  order.OrderNo,
-			"user_id":   strconv.FormatInt(user.UserId, 10),
+			"user_id":   strconv.FormatInt(userID, 10),
 			"subscribe": order.Subscribe,
 		},
 	}
+	if customerDataRes != nil {
+		params.Customer = stripe.String(customerDataRes.ID)
+	}
+	// Retrying the checkout after a network timeout must return the same
+	// PaymentIntent rather than creating another chargeable transaction.
+	params.SetIdempotencyKey("ppanel:payment-intent:" + order.OrderNo)
 	result, err := paymentintent.New(params)
 	if err != nil {
 		return nil, err
 	}
-	return &PaymentSheet{
+	sheet := &PaymentSheet{
 		ClientSecret:   result.ClientSecret,
-		EphemeralKey:   ek.Secret,
-		Customer:       customerDataRes.ID,
 		PublishableKey: c.PublicKey,
 		TradeNo:        result.ID,
+	}
+	if customerDataRes != nil {
+		// Preserve the original mobile-SDK support for identified users.  Guest
+		// checkouts intentionally have no customer or ephemeral key.
+		ekParams := &stripe.EphemeralKeyParams{
+			Customer:      stripe.String(customerDataRes.ID),
+			StripeVersion: stripe.String(APIVersion),
+		}
+		ek, err := ephemeralkey.New(ekParams)
+		if err != nil {
+			return nil, err
+		}
+		sheet.EphemeralKey = ek.Secret
+		sheet.Customer = customerDataRes.ID
+	}
+	return sheet, nil
+}
+
+// GetPaymentSheet returns the already-created PaymentIntent for a repeat
+// checkout.  It validates the immutable fields recorded in Stripe before
+// exposing its client secret again.
+func (c *Client) GetPaymentSheet(order *Order, tradeNo string) (*PaymentSheet, error) {
+	if order == nil || tradeNo == "" {
+		return nil, errors.New("invalid Stripe payment intent lookup")
+	}
+	stripe.Key = c.SecretKey
+	intent, err := paymentintent.Get(tradeNo, nil)
+	if err != nil {
+		return nil, err
+	}
+	if intent.Metadata["order_no"] != order.OrderNo || intent.Amount != order.Amount ||
+		!strings.EqualFold(string(intent.Currency), order.Currency) ||
+		len(intent.PaymentMethodTypes) != 1 || intent.PaymentMethodTypes[0] != order.Payment {
+		return nil, errors.New("stored Stripe payment intent does not match order")
+	}
+	if intent.Status == stripe.PaymentIntentStatusCanceled {
+		return nil, errors.New("stored Stripe payment intent is canceled")
+	}
+	return &PaymentSheet{
+		ClientSecret:   intent.ClientSecret,
+		PublishableKey: c.PublicKey,
+		TradeNo:        intent.ID,
 	}, nil
 }
 
@@ -152,6 +202,27 @@ func (c *Client) QueryOrderStatus(orderNo string) (bool, error) {
 		return false, err
 	}
 	return intent.Status == "succeeded", err
+}
+
+// VerifyPaymentIntent checks that the stored intent still belongs to the
+// order before returning its payment state.  It is used by expiry handling so
+// a successful intent can be settled instead of being closed locally.
+func (c *Client) VerifyPaymentIntent(order *Order, tradeNo string) (bool, error) {
+	if _, err := c.GetPaymentSheet(order, tradeNo); err != nil {
+		return false, err
+	}
+	return c.QueryOrderStatus(tradeNo)
+}
+
+// CancelPaymentIntent prevents a still-pending client secret from being paid
+// after the local order has expired.
+func (c *Client) CancelPaymentIntent(tradeNo string) error {
+	if tradeNo == "" {
+		return errors.New("Stripe payment intent is missing")
+	}
+	stripe.Key = c.SecretKey
+	_, err := paymentintent.Cancel(tradeNo, nil)
+	return err
 }
 
 // ParseNotify

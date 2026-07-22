@@ -13,6 +13,7 @@ import (
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment"
+	"github.com/perfect-panel/server/pkg/random"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -125,7 +126,9 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 	if amount > 0 {
 		feeAmount = calculateFee(amount, paymentConfig)
 	}
+	amount += feeAmount
 	// create order
+	checkoutToken := random.KeyNew(32, 1)
 	orderInfo := &order.Order{
 		OrderNo:        tool.GenerateTradeNo(),
 		Type:           1,
@@ -147,11 +150,12 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// save guest order and user information
 		tempOrder := constant.TemporaryOrderInfo{
-			OrderNo:    orderInfo.OrderNo,
-			Identifier: req.Identifier,
-			AuthType:   req.AuthType,
-			Password:   req.Password,
-			InviteCode: req.InviteCode,
+			OrderNo:       orderInfo.OrderNo,
+			CheckoutToken: checkoutToken,
+			Identifier:    req.Identifier,
+			AuthType:      req.AuthType,
+			Password:      req.Password,
+			InviteCode:    req.InviteCode,
 		}
 		content, _ := tempOrder.Marshal()
 
@@ -195,6 +199,6 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 	} else {
 		l.Infow("[CloseOrder Task] Enqueue task success", logger.Field("TaskID", taskInfo.ID))
 	}
-	resp = &dto.PortalPurchaseResponse{OrderNo: orderInfo.OrderNo}
+	resp = &dto.PortalPurchaseResponse{OrderNo: orderInfo.OrderNo, CheckoutToken: checkoutToken}
 	return resp, nil
 }

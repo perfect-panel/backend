@@ -72,6 +72,10 @@ func (c *Client) PreCreateTrade(ctx context.Context, order Order) (string, error
 			TotalAmount: amountString,
 			Subject:     c.InvoiceName,
 			NotifyURL:   c.NotifyURL,
+			// Keep Alipay's payment window aligned with the local deferred
+			// close task.  Otherwise a QR code could still be paid after the
+			// order was closed and any reserved balance/inventory was restored.
+			TimeoutExpress: "15m",
 		},
 	})
 	if err != nil {

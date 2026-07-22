@@ -2,7 +2,9 @@ package portal
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -65,6 +67,9 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *dto.CheckoutOrderRequest) 
 	if orderInfo.Status != 1 {
 		l.Logger.Error("[PurchaseCheckout] Order status error", logger.Field("status", orderInfo.Status))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.OrderStatusError), "order status error: %v", orderInfo.Status)
+	}
+	if err := l.authorizeCheckout(orderInfo, req); err != nil {
+		return nil, err
 	}
 
 	// Retrieve payment method configuration
@@ -151,6 +156,37 @@ func (l *PurchaseCheckoutLogic) PurchaseCheckout(req *dto.CheckoutOrderRequest) 
 	return
 }
 
+// authorizeCheckout keeps user-owned orders bound to their authenticated
+// owner while guest orders use a short-lived, cryptographically-random
+// checkout capability kept only in the temporary-order record.
+func (l *PurchaseCheckoutLogic) authorizeCheckout(orderInfo *order.Order, req *dto.CheckoutOrderRequest) error {
+	if orderInfo.UserId != 0 {
+		currentUser, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
+		if !ok || currentUser.Id != orderInfo.UserId {
+			return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "order does not belong to the current user")
+		}
+		return nil
+	}
+
+	if req.CheckoutToken == "" {
+		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "guest checkout token is required")
+	}
+	cacheKey := fmt.Sprintf(constant.TempOrderCacheKey, orderInfo.OrderNo)
+	value, err := l.svcCtx.Redis.Get(l.ctx, cacheKey).Result()
+	if err != nil {
+		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "guest checkout token is invalid")
+	}
+	var tempOrder constant.TemporaryOrderInfo
+	if err := tempOrder.Unmarshal([]byte(value)); err != nil {
+		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "guest checkout token is invalid")
+	}
+	if tempOrder.OrderNo != orderInfo.OrderNo || tempOrder.CheckoutToken == "" ||
+		subtle.ConstantTimeCompare([]byte(tempOrder.CheckoutToken), []byte(req.CheckoutToken)) != 1 {
+		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "guest checkout token is invalid")
+	}
+	return nil
+}
+
 // alipayF2fPayment processes Alipay Face-to-Face payment by generating a QR code
 // It handles currency conversion and creates a pre-payment trade for QR code scanning
 func (l *PurchaseCheckoutLogic) alipayF2fPayment(pay *payment.Payment, info *order.Order) (string, error) {
@@ -233,20 +269,31 @@ func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, 
 		return nil, err
 	}
 
-	// Create Stripe payment sheet for client-side processing
-	result, err := client.CreatePaymentSheet(&stripe.Order{
+	stripeOrder := &stripe.Order{
 		OrderNo:   info.OrderNo,
 		Subscribe: strconv.FormatInt(info.SubscribeId, 10),
 		Amount:    info.Amount,
 		Currency:  strings.ToLower(l.svcCtx.Config.Currency.Unit),
 		Payment:   stripeConfig.Payment,
-	},
-		&stripe.User{
-			Email: identifier,
+	}
+	// A pending order owns exactly one Stripe PaymentIntent.  Reusing it is
+	// essential: accepting two client secrets would allow a user to pay an
+	// older intent whose callback no longer matches the stored trade number.
+	var (
+		result *stripe.PaymentSheet
+		err    error
+	)
+	if info.TradeNo != "" {
+		result, err = client.GetPaymentSheet(stripeOrder, info.TradeNo)
+	} else {
+		result, err = client.CreatePaymentSheet(stripeOrder, &stripe.User{
+			UserId: info.UserId,
+			Email:  identifier,
 		})
+	}
 	if err != nil {
-		l.Errorw("[PurchaseCheckout] CreatePaymentSheet error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "CreatePaymentSheet error: %s", err.Error())
+		l.Errorw("[PurchaseCheckout] create or retrieve Stripe payment sheet error", logger.Field("error", err.Error()))
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Stripe payment sheet error: %s", err.Error())
 	}
 
 	// Prepare response data for client-side Stripe integration
@@ -256,12 +303,16 @@ func (l *PurchaseCheckoutLogic) stripePayment(config string, info *order.Order, 
 		Method:         stripeConfig.Payment,
 	}
 
-	// Save Stripe trade number to order for tracking
-	info.TradeNo = result.TradeNo
-	err = l.svcCtx.Store.Order().Update(l.ctx, info)
-	if err != nil {
-		l.Errorw("[PurchaseCheckout] Update order error", logger.Field("error", err.Error()))
-		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Update error: %s", err.Error())
+	// Save the generated trade number once.  Repeated checkout requests reuse
+	// the stored transaction above and therefore cannot invalidate an earlier
+	// client secret.
+	if info.TradeNo == "" {
+		info.TradeNo = result.TradeNo
+		err = l.svcCtx.Store.Order().Update(l.ctx, info)
+		if err != nil {
+			l.Errorw("[PurchaseCheckout] Update order error", logger.Field("error", err.Error()))
+			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Update error: %s", err.Error())
+		}
 	}
 	return stripePayment, nil
 }

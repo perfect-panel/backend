@@ -3,16 +3,20 @@ package portal
 import (
 	"context"
 	stderrors "errors"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/hibiken/asynq"
+	"github.com/perfect-panel/server/internal/model/dto"
 	logEntity "github.com/perfect-panel/server/internal/model/entity/log"
 	orderEntity "github.com/perfect-panel/server/internal/model/entity/order"
 	userEntity "github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/constant"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -169,5 +173,40 @@ func TestBalancePaymentDoesNotDebitNonPendingOrder(t *testing.T) {
 	}
 	if len(store.logs.logs) != 0 {
 		t.Fatalf("unexpected logs: %d", len(store.logs.logs))
+	}
+}
+
+func TestAuthorizeCheckoutRequiresOwnerForUserOrder(t *testing.T) {
+	logic := NewPurchaseCheckoutLogic(
+		context.WithValue(context.Background(), constant.CtxKeyUser, &userEntity.User{Id: 7}),
+		&svc.ServiceContext{},
+	)
+	err := logic.authorizeCheckout(&orderEntity.Order{OrderNo: "order-1", UserId: 8}, &dto.CheckoutOrderRequest{OrderNo: "order-1"})
+	if err == nil || !strings.Contains(err.Error(), "does not belong") {
+		t.Fatalf("authorizeCheckout error = %v, want owner mismatch", err)
+	}
+}
+
+func TestAuthorizeCheckoutValidatesGuestCheckoutToken(t *testing.T) {
+	redisServer := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})
+	t.Cleanup(func() { _ = client.Close() })
+
+	info := constant.TemporaryOrderInfo{OrderNo: "guest-order", CheckoutToken: "secure-checkout-token"}
+	encoded, err := info.Marshal()
+	if err != nil {
+		t.Fatalf("marshal temporary order: %v", err)
+	}
+	if err := client.Set(context.Background(), fmt.Sprintf(constant.TempOrderCacheKey, info.OrderNo), encoded, 0).Err(); err != nil {
+		t.Fatalf("store temporary order: %v", err)
+	}
+
+	logic := NewPurchaseCheckoutLogic(context.Background(), &svc.ServiceContext{Redis: client})
+	orderInfo := &orderEntity.Order{OrderNo: info.OrderNo}
+	if err := logic.authorizeCheckout(orderInfo, &dto.CheckoutOrderRequest{OrderNo: info.OrderNo, CheckoutToken: info.CheckoutToken}); err != nil {
+		t.Fatalf("valid guest checkout rejected: %v", err)
+	}
+	if err := logic.authorizeCheckout(orderInfo, &dto.CheckoutOrderRequest{OrderNo: info.OrderNo, CheckoutToken: "wrong-token"}); err == nil {
+		t.Fatal("invalid guest checkout token was accepted")
 	}
 }
