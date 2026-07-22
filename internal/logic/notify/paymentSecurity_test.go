@@ -153,6 +153,90 @@ func TestEPayNotifySettlesOnlyAfterSignedAndQueriedDetailsMatch(t *testing.T) {
 	}
 }
 
+func TestEPayNotifySettlesWithSignedCallbackWhenQueryUnsupported(t *testing.T) {
+	queryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer queryServer.Close()
+
+	redisServer := miniredis.RunT(t)
+	queue := asynq.NewClient(asynq.RedisClientOpt{Addr: redisServer.Addr()})
+	t.Cleanup(func() { _ = queue.Close() })
+
+	paymentConfig := &payment.Payment{
+		Id:       10,
+		Platform: "EPay",
+		Config:   `{"pid":"1001","url":"` + queryServer.URL + `","key":"secret","type":"alipay"}`,
+	}
+	orders := &callbackOrderRepo{order: &order.Order{
+		OrderNo: "order-1", PaymentId: 10, Method: "EPay", Status: orderStatusPending,
+		PaymentAmount: 1000, PaymentCurrency: "CNY",
+	}}
+	params := map[string]string{
+		"pid": "1001", "trade_no": "trade-1", "out_trade_no": "order-1", "type": "alipay",
+		"name": "product", "money": "10.00", "trade_status": "TRADE_SUCCESS", "param": "", "sign_type": "MD5",
+	}
+	params["sign"] = signEPayTestParams(params, "secret")
+	ctx := context.WithValue(context.Background(), constant.CtxKeyPayment, paymentConfig)
+	logic := NewEPayNotifyLogic(ctx, &svc.ServiceContext{
+		Store: callbackStore{orders: orders},
+		Queue: queue,
+	}, EPayNotifyMeta{Method: "POST", Params: params})
+
+	req := &dto.EPayNotifyRequest{
+		Pid: "1001", TradeNo: "trade-1", OutTradeNo: "order-1", Type: "alipay", Name: "product",
+		Money: "10.00", TradeStatus: "TRADE_SUCCESS", Sign: params["sign"], SignType: "MD5",
+	}
+	if err := logic.EPayNotify(req); err != nil {
+		t.Fatalf("EPayNotify: %v", err)
+	}
+	if orders.markCount != 1 || orders.order.Status != orderStatusPaid || orders.order.TradeNo != "trade-1" {
+		t.Fatalf("signed fallback callback did not settle order: %+v, marks=%d", orders.order, orders.markCount)
+	}
+}
+
+func TestEPayNotifyRejectsAmountMismatchWhenQueryUnsupported(t *testing.T) {
+	queryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer queryServer.Close()
+
+	redisServer := miniredis.RunT(t)
+	queue := asynq.NewClient(asynq.RedisClientOpt{Addr: redisServer.Addr()})
+	t.Cleanup(func() { _ = queue.Close() })
+
+	paymentConfig := &payment.Payment{
+		Id:       10,
+		Platform: "EPay",
+		Config:   `{"pid":"1001","url":"` + queryServer.URL + `","key":"secret","type":"alipay"}`,
+	}
+	orders := &callbackOrderRepo{order: &order.Order{
+		OrderNo: "order-1", PaymentId: 10, Method: "EPay", Status: orderStatusPending,
+		PaymentAmount: 1000, PaymentCurrency: "CNY",
+	}}
+	params := map[string]string{
+		"pid": "1001", "trade_no": "trade-1", "out_trade_no": "order-1", "type": "alipay",
+		"name": "product", "money": "9.99", "trade_status": "TRADE_SUCCESS", "param": "", "sign_type": "MD5",
+	}
+	params["sign"] = signEPayTestParams(params, "secret")
+	ctx := context.WithValue(context.Background(), constant.CtxKeyPayment, paymentConfig)
+	logic := NewEPayNotifyLogic(ctx, &svc.ServiceContext{
+		Store: callbackStore{orders: orders},
+		Queue: queue,
+	}, EPayNotifyMeta{Method: "POST", Params: params})
+
+	req := &dto.EPayNotifyRequest{
+		Pid: "1001", TradeNo: "trade-1", OutTradeNo: "order-1", Type: "alipay", Name: "product",
+		Money: "9.99", TradeStatus: "TRADE_SUCCESS", Sign: params["sign"], SignType: "MD5",
+	}
+	if err := logic.EPayNotify(req); err == nil {
+		t.Fatal("callback amount mismatch must be rejected even when order queries are unsupported")
+	}
+	if orders.markCount != 0 || orders.order.Status != orderStatusPending {
+		t.Fatalf("amount-mismatched callback settled order: %+v, marks=%d", orders.order, orders.markCount)
+	}
+}
+
 func TestEPayCredentialsUseCryptoSaaSConfiguration(t *testing.T) {
 	credentials, err := epayCredentialsForPayment(&payment.Payment{
 		Platform: "CryptoSaaS",

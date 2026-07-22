@@ -2,6 +2,7 @@ package epay
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -103,5 +104,29 @@ func TestQueryOrderRejectsUnsuccessfulLookup(t *testing.T) {
 	client := NewClient("1001", server.URL, "secret", "alipay")
 	if _, err := client.QueryOrder("order-1"); err == nil {
 		t.Fatal("unsuccessful gateway lookup must be rejected")
+	}
+}
+
+func TestQueryOrderReportsUnsupportedWhenGatewayReturnsNotFound(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	client := NewClient("1001", server.URL, "secret", "alipay")
+	if _, err := client.QueryOrder("order-1"); !errors.Is(err, ErrQueryNotSupported) {
+		t.Fatalf("QueryOrder error=%v, want ErrQueryNotSupported", err)
+	}
+}
+
+func TestQueryOrderDoesNotTreatOtherHTTPFailuresAsUnsupported(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "gateway failure", http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	client := NewClient("1001", server.URL, "secret", "alipay")
+	if _, err := client.QueryOrder("order-1"); errors.Is(err, ErrQueryNotSupported) {
+		t.Fatal("only a 404 response may be treated as an unsupported query API")
 	}
 }
