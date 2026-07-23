@@ -1,10 +1,13 @@
 package epay
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 )
 
@@ -63,6 +66,72 @@ func TestParseMoneyUsesExactMinorUnits(t *testing.T) {
 				t.Fatalf("ParseMoney(%q)=%d, want %d", test.value, got, test.want)
 			}
 		})
+	}
+}
+
+func TestCreatePaymentSubmitKeepsLegacyRedirect(t *testing.T) {
+	client := NewClient("1001", "https://pay.example/", "secret", "alipay", ModeSubmit)
+	result, err := client.CreatePayment(context.Background(), Order{
+		Name: "product", OrderNo: "order-1", Amount: 10,
+		NotifyUrl: "https://merchant.example/notify", ReturnUrl: "https://merchant.example/return",
+	})
+	if err != nil {
+		t.Fatalf("CreatePayment: %v", err)
+	}
+	if result.Type != "url" || !strings.HasPrefix(result.URL, "https://pay.example/submit.php?") {
+		t.Fatalf("unexpected submit result: %+v", result)
+	}
+	parsed, err := url.Parse(result.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	params := make(map[string]string, len(parsed.Query()))
+	for name := range parsed.Query() {
+		params[name] = parsed.Query().Get(name)
+	}
+	if params["sign_type"] != "MD5" || !client.VerifySign(params) {
+		t.Fatalf("submit redirect has invalid signature: %+v", params)
+	}
+}
+
+func TestCreatePaymentMAPIUsesFormPOST(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("method=%s, want POST", r.Method)
+		}
+		if r.URL.Path != "/gateway/mapi.php" {
+			t.Errorf("path=%q", r.URL.Path)
+		}
+		if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+			t.Errorf("content-type=%q", r.Header.Get("Content-Type"))
+		}
+		if err := r.ParseForm(); err != nil {
+			t.Fatal(err)
+		}
+		params := make(map[string]string, len(r.PostForm))
+		for name := range r.PostForm {
+			params[name] = r.PostForm.Get(name)
+		}
+		client := NewClient("1001", "https://gateway.example", "secret", "alipay", ModeMAPI)
+		if params["clientip"] != "203.0.113.9" || !client.VerifySign(params) {
+			t.Errorf("unexpected mapi params: %+v", params)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"code": 1, "trade_no": "trade-1", "qrcode": "weixin://pay/example",
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient("1001", server.URL+"/gateway", "secret", "alipay", ModeMAPI)
+	result, err := client.CreatePayment(context.Background(), Order{
+		Name: "product", OrderNo: "order-1", Amount: 10,
+		NotifyUrl: "https://merchant.example/notify", ClientIP: "203.0.113.9",
+	})
+	if err != nil {
+		t.Fatalf("CreatePayment: %v", err)
+	}
+	if result.Type != "qr" || result.URL != "weixin://pay/example" || result.TradeNo != "trade-1" {
+		t.Fatalf("unexpected mapi result: %+v", result)
 	}
 }
 

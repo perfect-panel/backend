@@ -42,6 +42,7 @@ func PurchaseCheckoutHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 				SiteName:          svcCtx.Config.Site.SiteName,
 				CurrencyUnit:      svcCtx.Config.Currency.Unit,
 				CurrencyAccessKey: svcCtx.Config.Currency.AccessKey,
+				ClientIP:          ctx.ClientIP(),
 			},
 			ExchangeRateCache: svcCtx.ExchangeRate,
 		})

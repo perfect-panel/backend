@@ -17,6 +17,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/orderstream"
 	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/result"
@@ -41,6 +42,7 @@ const v2SSEMaxConnectionsPerTicket = 3
 // @Router /v2/public/orders [post]
 func V2CreateAndCheckoutHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(c context.Context, ctx *app.RequestContext) {
+		c = context.WithValue(c, constant.CtxKeyClientIP, ctx.ClientIP())
 		idempotencyKey := strings.TrimSpace(string(ctx.GetHeader("Idempotency-Key")))
 		if !validIdempotencyKey(idempotencyKey) {
 			result.ParamErrorResult(ctx, stdErrors.New("Idempotency-Key must contain 16-128 printable ASCII characters"))
@@ -70,6 +72,7 @@ func V2CreateAndCheckoutHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 // @Router /v2/public/orders/{orderNo}/checkout [post]
 func V2CheckoutHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(c context.Context, ctx *app.RequestContext) {
+		c = context.WithValue(c, constant.CtxKeyClientIP, ctx.ClientIP())
 		var req dto.V2CheckoutOrderRequest
 		if err := httpx.ShouldBind(ctx, &req); err != nil {
 			result.ParamErrorResult(ctx, err)

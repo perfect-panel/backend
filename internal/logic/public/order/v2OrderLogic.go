@@ -269,6 +269,7 @@ func (l *V2OrderLogic) checkoutResponse(orderInfo *orderEntity.Order, checkoutTo
 }
 
 func (l *V2OrderLogic) newCheckoutLogic() *portal.PurchaseCheckoutLogic {
+	clientIP, _ := l.ctx.Value(constant.CtxKeyClientIP).(string)
 	return portal.NewPurchaseCheckoutLogic(l.ctx, portal.CheckoutDependencies{
 		Store:              portal.NewCheckoutStore(l.svcCtx.Store),
 		GuestCheckoutCache: l.svcCtx.Redis,
@@ -276,6 +277,7 @@ func (l *V2OrderLogic) newCheckoutLogic() *portal.PurchaseCheckoutLogic {
 		Config: portal.CheckoutConfig{
 			Host: l.svcCtx.Config.Host, SiteName: l.svcCtx.Config.Site.SiteName,
 			CurrencyUnit: l.svcCtx.Config.Currency.Unit, CurrencyAccessKey: l.svcCtx.Config.Currency.AccessKey,
+			ClientIP: clientIP,
 		},
 		ExchangeRateCache: l.svcCtx.ExchangeRate,
 	})

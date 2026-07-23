@@ -9,5 +9,6 @@ const (
 	CtxKeyPlatform     CtxKey = "platform"
 	CtxKeyPayment      CtxKey = "payment"
 	CtxKeyDeviceSecure CtxKey = "deviceSecure"
+	CtxKeyClientIP     CtxKey = "clientIP"
 	LoginType          CtxKey = "loginType"
 )
