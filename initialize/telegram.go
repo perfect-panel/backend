@@ -63,7 +63,7 @@ func Telegram(svc *svc.ServiceContext) {
 			for update := range updates {
 				if update.Message != nil {
 					ctx := context.Background()
-					l := telegram.NewTelegramLogic(ctx, svc)
+					l := newTelegramLogic(ctx, svc, bot)
 					l.TelegramLogic(&update)
 				}
 			}
@@ -91,4 +91,28 @@ func Telegram(svc *svc.ServiceContext) {
 	svc.TelegramBot = bot
 
 	logger.Info("[Init Telegram Config] Telegram init success")
+}
+
+func newTelegramLogic(ctx context.Context, svcCtx *svc.ServiceContext, bot *tgbotapi.BotAPI) *telegram.TelegramLogic {
+	messenger := telegram.NewTelegramBotMessenger(bot)
+	redisStore := telegram.NewTelegramRedisStore(svcCtx.Redis)
+	admin := telegram.NewTelegramAdmin(ctx, telegram.TelegramAdminDependencies{
+		Messenger:     messenger,
+		Actions:       redisStore,
+		Tickets:       svcCtx.Store.Ticket(),
+		Orders:        svcCtx.Store.Order(),
+		Users:         svcCtx.Store.User(),
+		UserAuth:      svcCtx.Store.UserAuth(),
+		Subscriptions: svcCtx.Store.UserSubscription(),
+		UserCache:     svcCtx.Store.UserCache(),
+		Plans:         svcCtx.Store.Subscribe(),
+		Logs:          svcCtx.Store.Log(),
+	})
+	return telegram.NewTelegramLogic(ctx, telegram.TelegramLogicDependencies{
+		Messenger: messenger,
+		Sessions:  redisStore,
+		UserAuth:  svcCtx.Store.UserAuth(),
+		UserCache: svcCtx.Store.UserCache(),
+		Admin:     admin,
+	})
 }
