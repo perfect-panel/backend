@@ -8,7 +8,6 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
 	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/limit"
@@ -17,7 +16,6 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	queue "github.com/perfect-panel/server/queue/types"
@@ -25,8 +23,8 @@ import (
 
 type SendEmailCodeLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps SendEmailCodeDependencies
 }
 
 const (
@@ -34,11 +32,11 @@ const (
 )
 
 // NewSendEmailCodeLogic Get verification code
-func NewSendEmailCodeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SendEmailCodeLogic {
+func NewSendEmailCodeLogic(ctx context.Context, deps SendEmailCodeDependencies) *SendEmailCodeLogic {
 	return &SendEmailCodeLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -46,27 +44,27 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *dto.SendCodeRequest) (resp *dto.
 	verifyType := constant.ParseVerifyType(req.Type)
 	email, err := authmethod.ValidateEmail(
 		req.Email,
-		l.svcCtx.Config.Email.DomainSuffixList,
-		verifyType == constant.Register && l.svcCtx.Config.Email.EnableDomainSuffix,
+		l.deps.Config.DomainSuffixList,
+		verifyType == constant.Register && l.deps.Config.EnableDomainSuffix,
 	)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "invalid email: %v", err)
 	}
 	if verifyType == constant.Register {
-		if err := registerpolicy.EnsureRegistrationOpen(l.ctx, l.svcCtx, registerpolicy.MethodEmail); err != nil {
+		if err := l.deps.Policy.EnsureRegistrationOpen(l.ctx, authmethod.Email); err != nil {
 			return nil, err
 		}
-	} else if err := registerpolicy.EnsureMethodEnabled(l.ctx, l.svcCtx, registerpolicy.MethodEmail); err != nil {
+	} else if err := l.deps.Policy.EnsureMethodEnabled(l.ctx, authmethod.Email); err != nil {
 		return nil, err
 	}
 	// Check if there is Redis in the code
 	cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeCacheKey, verifyType, email)
 	// Check if the limit is exceeded of current request
-	interval := l.svcCtx.Config.VerifyCode.Interval
+	interval := l.deps.Config.VerifyCodeInterval
 	if interval <= 0 {
 		interval = IntervalTime
 	}
-	limiter := limit.NewPeriodLimit(int(interval), 1, l.svcCtx.Redis, fmt.Sprintf("%semail:%s:", config.SendIntervalKeyPrefix, verifyType))
+	limiter := limit.NewPeriodLimit(int(interval), 1, l.deps.Redis, fmt.Sprintf("%semail:%s:", config.SendIntervalKeyPrefix, verifyType))
 	permit, err := limiter.Take(email)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Failed to take limit")
@@ -75,11 +73,11 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *dto.SendCodeRequest) (resp *dto.
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TooManyRequests), "send email too many requests")
 	}
 	// Check if the limit is exceeded of today
-	dailyLimit := l.svcCtx.Config.VerifyCode.Limit
+	dailyLimit := l.deps.Config.VerifyCodeLimit
 	if dailyLimit <= 0 {
 		dailyLimit = 15
 	}
-	dailyLimiter := limit.NewPeriodLimit(86400, int(dailyLimit), l.svcCtx.Redis, config.SendCountLimitKeyPrefix, limit.Align())
+	dailyLimiter := limit.NewPeriodLimit(86400, int(dailyLimit), l.deps.Redis, config.SendCountLimitKeyPrefix, limit.Align())
 	permit, err = dailyLimiter.Take(fmt.Sprintf("%s:%s:%s", "email", verifyType, email))
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Failed to take limit")
@@ -87,7 +85,7 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *dto.SendCodeRequest) (resp *dto.
 	if !dailyLimiter.ParsePermitState(permit) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TodaySendCountExceedsLimit), "send email too many requests")
 	}
-	m, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, authmethod.Email, email)
+	m, err := l.deps.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, authmethod.Email, email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindUserAuthMethodByOpenID error")
 	}
@@ -100,7 +98,7 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *dto.SendCodeRequest) (resp *dto.
 	var taskPayload queue.SendEmailPayload
 	// Generate verification code
 	code := random.Key(6, 0)
-	expireSeconds := l.svcCtx.Config.VerifyCode.ExpireTime
+	expireSeconds := l.deps.Config.VerifyCodeExpire
 	if expireSeconds <= 0 {
 		expireSeconds = IntervalTime * 5
 	}
@@ -109,13 +107,13 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *dto.SendCodeRequest) (resp *dto.
 	taskPayload.Subject = "Verification code"
 	taskPayload.Content = map[string]interface{}{
 		"Type":     req.Type,
-		"SiteLogo": l.svcCtx.Config.Site.SiteLogo,
-		"SiteName": l.svcCtx.Config.Site.SiteName,
+		"SiteLogo": l.deps.Config.SiteLogo,
+		"SiteName": l.deps.Config.SiteName,
 		"Expire":   (expireSeconds + 59) / 60,
 		"Code":     code,
 	}
 	expiration := time.Duration(expireSeconds) * time.Second
-	if err = SaveVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, code, expiration); err != nil {
+	if err = SaveVerificationCode(l.ctx, l.deps.Redis, cacheKey, code, expiration); err != nil {
 		l.Errorw("[SendEmailCode]: Redis Error", logger.Field("error", err.Error()), logger.Field("cacheKey", cacheKey))
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.ERROR), "Failed to set verification code")
 	}
@@ -129,9 +127,9 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *dto.SendCodeRequest) (resp *dto.
 	// Create a queue task
 	task := asynq.NewTask(queue.ForthwithSendEmail, payloadBuy, asynq.MaxRetry(3))
 	// Enqueue the task
-	taskInfo, err := l.svcCtx.Queue.Enqueue(task)
+	taskInfo, err := l.deps.Queue.Enqueue(task)
 	if err != nil {
-		_ = DeleteVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey)
+		_ = DeleteVerificationCode(l.ctx, l.deps.Redis, cacheKey)
 		l.Errorw("[SendEmailCode]: Enqueue Error", logger.Field("error", err.Error()), logger.Field("type", taskPayload.Type))
 		return nil, errors.Wrap(xerr.NewErrCode(xerr.ERROR), "Failed to enqueue task")
 	}
