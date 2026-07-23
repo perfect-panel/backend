@@ -97,7 +97,7 @@ func (l *UserLoginLogic) UserLogin(req *dto.UserLoginRequest) (resp *dto.LoginRe
 	if !*userInfo.Enable {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserDisabled), "user account is disabled")
 	}
-	upgradePasswordAfterLogin(l.ctx, l.svcCtx, l.Logger, userInfo, req.Password)
+	upgradePasswordAfterLogin(l.ctx, l.svcCtx.Store.User(), l.Logger, userInfo, req.Password)
 
 	// Bind device to user if identifier is provided
 	if req.Identifier != "" {

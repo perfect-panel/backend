@@ -7,18 +7,10 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/logger/logtest"
 	"github.com/perfect-panel/server/pkg/tool"
 )
-
-type passwordUpgradeStore struct {
-	repository.Store
-	users *passwordUpgradeUserRepo
-}
-
-func (s *passwordUpgradeStore) User() repository.UserRepo { return s.users }
 
 type passwordUpgradeUserRepo struct {
 	repository.UserRepo
@@ -46,7 +38,7 @@ func TestUpgradePasswordAfterLoginRehashesLegacyHash(t *testing.T) {
 	repo := &passwordUpgradeUserRepo{updated: true}
 	ctx := context.Background()
 
-	upgradePasswordAfterLogin(ctx, &svc.ServiceContext{Store: &passwordUpgradeStore{users: repo}}, logger.WithContext(ctx), userInfo, "password")
+	upgradePasswordAfterLogin(ctx, repo, logger.WithContext(ctx), userInfo, "password")
 
 	if repo.calls != 1 {
 		t.Fatalf("UpgradePasswordHash calls = %d, want 1", repo.calls)
@@ -72,7 +64,7 @@ func TestUpgradePasswordAfterLoginSkipsCurrentHash(t *testing.T) {
 	repo := &passwordUpgradeUserRepo{updated: true}
 	ctx := context.Background()
 
-	upgradePasswordAfterLogin(ctx, &svc.ServiceContext{Store: &passwordUpgradeStore{users: repo}}, logger.WithContext(ctx), userInfo, "password")
+	upgradePasswordAfterLogin(ctx, repo, logger.WithContext(ctx), userInfo, "password")
 
 	if repo.calls != 0 {
 		t.Fatalf("UpgradePasswordHash calls = %d, want 0", repo.calls)
@@ -86,7 +78,7 @@ func TestUpgradePasswordAfterLoginKeepsConcurrentPasswordChange(t *testing.T) {
 	repo := &passwordUpgradeUserRepo{updated: false}
 	ctx := context.Background()
 
-	upgradePasswordAfterLogin(ctx, &svc.ServiceContext{Store: &passwordUpgradeStore{users: repo}}, logger.WithContext(ctx), userInfo, "password")
+	upgradePasswordAfterLogin(ctx, repo, logger.WithContext(ctx), userInfo, "password")
 
 	if repo.calls != 1 {
 		t.Fatalf("UpgradePasswordHash calls = %d, want 1", repo.calls)
