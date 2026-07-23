@@ -8,13 +8,11 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/auth"
 	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/authmethod"
 	"github.com/perfect-panel/server/pkg/jwt"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -47,16 +45,16 @@ type oauthRequest struct {
 type OAuthLoginGetTokenLogic struct {
 	logger.Logger
 	ctx     context.Context
-	svcCtx  *svc.ServiceContext
+	deps    OAuthLoginDependencies
 	cfToken string
 }
 
 // NewOAuthLoginGetTokenLogic OAuth login get token
-func NewOAuthLoginGetTokenLogic(ctx context.Context, svcCtx *svc.ServiceContext) *OAuthLoginGetTokenLogic {
+func NewOAuthLoginGetTokenLogic(ctx context.Context, deps OAuthLoginDependencies) *OAuthLoginGetTokenLogic {
 	return &OAuthLoginGetTokenLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -76,7 +74,7 @@ func (l *OAuthLoginGetTokenLogic) OAuthLoginGetToken(req *dto.OAuthLoginGetToken
 		l.recordLoginStatus(loginStatus, userInfo, ip, userAgent, requestID, req.Method)
 	}()
 
-	if err := registerpolicy.EnsureMethodEnabled(l.ctx, l.svcCtx, req.Method); err != nil {
+	if err := l.deps.Policy.EnsureMethodEnabled(l.ctx, req.Method); err != nil {
 		return nil, err
 	}
 	if _, ok := req.Callback.(map[string]interface{}); !ok {
@@ -435,37 +433,37 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 		logger.Field("openid", openid),
 	)
 
-	if l.svcCtx.Config.Invite.ForcedInvite {
+	if l.deps.Config.InviteForced {
 		l.Errorw("registration blocked due to forced invite policy",
 			logger.Field("request_id", requestID),
 			logger.Field("auth_method", method),
 		)
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InviteCodeError), "invite code is required")
 	}
-	if err := registerpolicy.EnsureRegistrationOpen(l.ctx, l.svcCtx, method); err != nil {
+	if err := l.deps.Policy.EnsureRegistrationOpen(l.ctx, method); err != nil {
 		return nil, err
 	}
-	if err := registerpolicy.VerifyHuman(l.ctx, l.svcCtx, l.cfToken, ip); err != nil {
+	if err := l.deps.Policy.VerifyHuman(l.ctx, l.cfToken, ip); err != nil {
 		return nil, err
 	}
 	if email != "" {
 		canonicalEmail, err := authmethod.ValidateEmail(
 			email,
-			l.svcCtx.Config.Email.DomainSuffixList,
-			l.svcCtx.Config.Email.EnableDomainSuffix,
+			l.deps.Config.EmailDomainSuffixList,
+			l.deps.Config.EmailEnableDomainSuffix,
 		)
 		if err != nil {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "OAuth email is not allowed: %v", err)
 		}
 		email = canonicalEmail
 	}
-	if err := registerpolicy.TakeIPPermit(l.ctx, l.svcCtx, ip); err != nil {
+	if err := l.deps.Policy.TakeIPPermit(l.ctx, ip); err != nil {
 		return nil, err
 	}
 
 	var userInfo *user.User
 	var trialSubscribe *user.Subscribe
-	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+	err := l.deps.Store.InTx(l.ctx, func(store repository.Store) error {
 		if email != "" {
 			l.Debugw("checking if email already exists",
 				logger.Field("request_id", requestID),
@@ -481,7 +479,7 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 			logger.Field("avatar", avatar),
 		)
 
-		userInfo = &user.User{Avatar: avatar, OnlyFirstPurchase: &l.svcCtx.Config.Invite.OnlyFirstPurchase}
+		userInfo = &user.User{Avatar: avatar, OnlyFirstPurchase: &l.deps.Config.OnlyFirstPurchase}
 		if err := store.User().Insert(l.ctx, userInfo); err != nil {
 			l.Errorw("failed to create user record",
 				logger.Field("request_id", requestID),
@@ -516,7 +514,7 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 			}
 		}
 
-		if l.svcCtx.Config.Register.EnableTrial {
+		if l.deps.Config.TrialEnabled {
 			l.Debugw("activating trial subscription",
 				logger.Field("request_id", requestID),
 				logger.Field("user_id", userInfo.Id),
@@ -540,7 +538,7 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 		)
 		return userInfo, err
 	}
-	clearTrialSubscribeCache(l.ctx, l.svcCtx, trialSubscribe)
+	clearTrialSubscribeCache(l.ctx, l.deps.Store.UserCache(), l.deps.Store.Subscribe(), trialSubscribe)
 
 	l.Infow("user registration completed successfully",
 		logger.Field("request_id", requestID),
@@ -561,7 +559,7 @@ func (l *OAuthLoginGetTokenLogic) register(email, avatar, method, openid, reques
 	}
 	content, _ := registerLog.Marshal()
 
-	err = l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
+	err = l.deps.Store.Log().Insert(l.ctx, &log.SystemLog{
 		Type:     log.TypeRegister.Uint8(),
 		Date:     timeutil.Now().Format("2006-01-02"),
 		ObjectID: userInfo.Id,
@@ -649,7 +647,7 @@ func (l *OAuthLoginGetTokenLogic) recordLoginStatus(loginStatus bool, userInfo *
 			Timestamp: timeutil.Now().UnixMilli(),
 		}
 		content, _ := loginLog.Marshal()
-		if err := l.svcCtx.Store.Log().Insert(l.ctx, &log.SystemLog{
+		if err := l.deps.Store.Log().Insert(l.ctx, &log.SystemLog{
 			Type:     log.TypeLogin.Uint8(),
 			Date:     timeutil.Now().Format("2006-01-02"),
 			ObjectID: userInfo.Id,
@@ -700,9 +698,9 @@ func (l *OAuthLoginGetTokenLogic) generateToken(userInfo *user.User, requestID s
 	)
 
 	token, err := jwt.NewJwtToken(
-		l.svcCtx.Config.JwtAuth.AccessSecret,
+		l.deps.Config.JWTAccessSecret,
 		timeutil.Now().Unix(),
-		l.svcCtx.Config.JwtAuth.AccessExpire,
+		l.deps.Config.JWTAccessExpire,
 		jwt.WithOption("UserId", userInfo.Id),
 		jwt.WithOption("SessionId", sessionId),
 	)
@@ -716,7 +714,7 @@ func (l *OAuthLoginGetTokenLogic) generateToken(userInfo *user.User, requestID s
 	}
 
 	sessionIdCacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
-	if err = l.svcCtx.Redis.Set(l.ctx, sessionIdCacheKey, userInfo.Id, time.Duration(l.svcCtx.Config.JwtAuth.AccessExpire)*time.Second).Err(); err != nil {
+	if err = l.deps.Redis.Set(l.ctx, sessionIdCacheKey, userInfo.Id, time.Duration(l.deps.Config.JWTAccessExpire)*time.Second).Err(); err != nil {
 		l.Errorw("failed to cache session id",
 			logger.Field("request_id", requestID),
 			logger.Field("user_id", userInfo.Id),
@@ -746,7 +744,7 @@ func (l *OAuthLoginGetTokenLogic) validateStateCode(provider, state, requestID s
 		logger.Field("provider", provider),
 	)
 
-	redirect, err := oauthstate.Consume(l.ctx, l.svcCtx.Redis, stateKey)
+	redirect, err := oauthstate.Consume(l.ctx, l.deps.Redis, stateKey)
 	if err != nil {
 		l.Errorw("failed to validate state code",
 			logger.Field("request_id", requestID),
@@ -770,7 +768,7 @@ func (l *OAuthLoginGetTokenLogic) getGoogleConfig(requestID string) (*auth.Googl
 		logger.Field("provider", OAuthGoogle),
 	)
 
-	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, OAuthGoogle)
+	authMethod, err := l.deps.Store.Auth().FindOneByMethod(l.ctx, OAuthGoogle)
 	if err != nil {
 		l.Errorw("failed to find google auth method",
 			logger.Field("request_id", requestID),
@@ -804,7 +802,7 @@ func (l *OAuthLoginGetTokenLogic) getAppleConfig(requestID string) (*auth.AppleA
 		logger.Field("provider", OAuthApple),
 	)
 
-	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, OAuthApple)
+	authMethod, err := l.deps.Store.Auth().FindOneByMethod(l.ctx, OAuthApple)
 	if err != nil {
 		l.Errorw("failed to find apple auth method",
 			logger.Field("request_id", requestID),
@@ -839,7 +837,7 @@ func (l *OAuthLoginGetTokenLogic) getTelegramConfig(requestID string) (*auth.Tel
 		logger.Field("provider", OAuthTelegram),
 	)
 
-	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, OAuthTelegram)
+	authMethod, err := l.deps.Store.Auth().FindOneByMethod(l.ctx, OAuthTelegram)
 	if err != nil {
 		l.Errorw("failed to find telegram auth method",
 			logger.Field("request_id", requestID),
@@ -872,7 +870,7 @@ func (l *OAuthLoginGetTokenLogic) getGithubConfig(requestID string) (*auth.Githu
 		logger.Field("provider", OAuthGithub),
 	)
 
-	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, OAuthGithub)
+	authMethod, err := l.deps.Store.Auth().FindOneByMethod(l.ctx, OAuthGithub)
 	if err != nil {
 		l.Errorw("failed to find github auth method",
 			logger.Field("request_id", requestID),
@@ -919,7 +917,7 @@ func (l *OAuthLoginGetTokenLogic) findOrRegisterUser(authType, openID, email, av
 		logger.Field("email", email),
 	)
 
-	userAuthMethod, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, authType, openID)
+	userAuthMethod, err := l.deps.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, authType, openID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			l.Infow("user not found, starting registration",
@@ -945,7 +943,7 @@ func (l *OAuthLoginGetTokenLogic) findOrRegisterUser(authType, openID, email, av
 		logger.Field("user_id", userAuthMethod.UserId),
 	)
 
-	userInfo, err := l.svcCtx.Store.User().FindOne(l.ctx, userAuthMethod.UserId)
+	userInfo, err := l.deps.Store.User().FindOne(l.ctx, userAuthMethod.UserId)
 	if err != nil {
 		l.Errorw("failed to find user by id",
 			logger.Field("request_id", requestID),
@@ -968,22 +966,22 @@ func (l *OAuthLoginGetTokenLogic) activeTrial(store repository.Store, uid int64,
 	l.Debugw("fetching trial subscription template",
 		logger.Field("request_id", requestID),
 		logger.Field("user_id", uid),
-		logger.Field("trial_subscribe_id", l.svcCtx.Config.Register.TrialSubscribe),
+		logger.Field("trial_subscribe_id", l.deps.Config.TrialSubscribeID),
 	)
 
-	sub, err := store.Subscribe().FindOne(l.ctx, l.svcCtx.Config.Register.TrialSubscribe)
+	sub, err := store.Subscribe().FindOne(l.ctx, l.deps.Config.TrialSubscribeID)
 	if err != nil {
 		l.Errorw("failed to find trial subscription template",
 			logger.Field("request_id", requestID),
 			logger.Field("user_id", uid),
-			logger.Field("trial_subscribe_id", l.svcCtx.Config.Register.TrialSubscribe),
+			logger.Field("trial_subscribe_id", l.deps.Config.TrialSubscribeID),
 			logger.Field("error", err.Error()),
 		)
 		return nil, err
 	}
 
 	startTime := timeutil.Now()
-	expireTime := tool.AddTime(l.svcCtx.Config.Register.TrialTimeUnit, l.svcCtx.Config.Register.TrialTime, startTime)
+	expireTime := tool.AddTime(l.deps.Config.TrialTimeUnit, l.deps.Config.TrialTime, startTime)
 	subscribeToken := uuidx.SubscribeToken(fmt.Sprintf("Trial-%v-%s", uid, uuidx.NewUUID().String()))
 	subscribeUUID := uuidx.NewUUID().String()
 

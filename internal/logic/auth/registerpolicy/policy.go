@@ -21,6 +21,33 @@ const (
 	MethodDevice = authmethod.Device
 )
 
+// ServicePolicy adapts the application service context to a use case policy
+// port. Use cases should depend on its small method set rather than on
+// ServiceContext directly.
+type ServicePolicy struct {
+	svcCtx *svc.ServiceContext
+}
+
+func NewServicePolicy(svcCtx *svc.ServiceContext) ServicePolicy {
+	return ServicePolicy{svcCtx: svcCtx}
+}
+
+func (p ServicePolicy) EnsureMethodEnabled(ctx context.Context, method string) error {
+	return EnsureMethodEnabled(ctx, p.svcCtx, method)
+}
+
+func (p ServicePolicy) EnsureRegistrationOpen(ctx context.Context, method string) error {
+	return EnsureRegistrationOpen(ctx, p.svcCtx, method)
+}
+
+func (p ServicePolicy) VerifyHuman(ctx context.Context, token, ip string) error {
+	return VerifyHuman(ctx, p.svcCtx, token, ip)
+}
+
+func (p ServicePolicy) TakeIPPermit(ctx context.Context, ip string) error {
+	return TakeIPPermit(ctx, p.svcCtx, ip)
+}
+
 // EnsureMethodEnabled rejects direct calls to authentication methods disabled
 // by the administrator. OAuth methods are loaded from the auth_method table.
 func EnsureMethodEnabled(ctx context.Context, svcCtx *svc.ServiceContext, method string) error {
