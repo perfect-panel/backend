@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
 	"github.com/perfect-panel/server/internal/logic/public/user"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
@@ -34,7 +35,13 @@ func BindOAuthCallbackHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := user.NewBindOAuthCallbackLogic(c, svcCtx)
+		l := user.NewBindOAuthCallbackLogic(c, user.BindOAuthCallbackDependencies{
+			Auth:      svcCtx.Store.Auth(),
+			UserAuth:  svcCtx.Store.UserAuth(),
+			UserCache: svcCtx.Store.UserCache(),
+			Redis:     svcCtx.Redis,
+			Policy:    registerpolicy.NewServicePolicy(svcCtx),
+		})
 		err := l.BindOAuthCallback(&req)
 		result.HttpResult(ctx, nil, err)
 	}
