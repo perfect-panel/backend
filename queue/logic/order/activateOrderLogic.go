@@ -450,46 +450,6 @@ func (l *ActivateOrderLogic) validateAndGetOrder(ctx context.Context, orderNo st
 	return orderInfo, nil
 }
 
-// processOrderByType routes order processing based on the order type
-func (l *ActivateOrderLogic) processOrderByType(ctx context.Context, orderInfo *order.Order) error {
-	switch orderInfo.Type {
-	case OrderTypeSubscribe:
-		return l.NewPurchase(ctx, orderInfo)
-	case OrderTypeRenewal:
-		return l.Renewal(ctx, orderInfo)
-	case OrderTypeResetTraffic:
-		return l.ResetTraffic(ctx, orderInfo)
-	case OrderTypeRecharge:
-		return l.Recharge(ctx, orderInfo)
-	default:
-		logger.WithContext(ctx).Error("Order type is invalid", logger.Field("type", orderInfo.Type))
-		return ErrInvalidOrderType
-	}
-}
-
-// finalizeCouponAndOrder handles post-processing tasks including coupon updates
-// and order status finalization
-func (l *ActivateOrderLogic) finalizeCouponAndOrder(ctx context.Context, orderInfo *order.Order) {
-	// Update coupon if exists
-	if orderInfo.Coupon != "" {
-		if err := l.svc.Store.Coupon().UpdateCount(ctx, orderInfo.Coupon); err != nil {
-			logger.WithContext(ctx).Error("Update coupon status failed",
-				logger.Field("error", err.Error()),
-				logger.Field("coupon", orderInfo.Coupon),
-			)
-		}
-	}
-
-	// Update order status
-	orderInfo.Status = OrderStatusFinished
-	if err := l.svc.Store.Order().Update(ctx, orderInfo); err != nil {
-		logger.WithContext(ctx).Error("Update order status failed",
-			logger.Field("error", err.Error()),
-			logger.Field("order_no", orderInfo.OrderNo),
-		)
-	}
-}
-
 // NewPurchase handles new subscription purchase including user creation,
 // subscription setup, commission processing, cache updates, and notifications
 func (l *ActivateOrderLogic) NewPurchase(ctx context.Context, orderInfo *order.Order) error {

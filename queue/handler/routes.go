@@ -27,6 +27,10 @@ func RegisterHandlers(mux *asynq.ServeMux, serverCtx *svc.ServiceContext) {
 	// Close stale pending orders even when their one-shot deferred task was
 	// lost during a Redis outage or exhausted its retries.
 	mux.Handle(types.SchedulerReconcilePendingOrders, orderLogic.NewReconcilePendingOrdersLogic(serverCtx))
+	// Deliver durable order events to Redis Pub/Sub. The database remains the
+	// source of truth for SSE replay when publication is delayed or duplicated.
+	mux.Handle(types.SchedulerPublishOrderEvents, orderLogic.NewPublishOrderEventsLogic(serverCtx))
+	mux.Handle(types.SchedulerCleanupOrderEvents, orderLogic.NewCleanupOrderEventsLogic(serverCtx))
 
 	// Forthwith traffic statistics
 	mux.Handle(types.ForthwithTrafficStatistics, traffic.NewTrafficStatisticsLogic(serverCtx))

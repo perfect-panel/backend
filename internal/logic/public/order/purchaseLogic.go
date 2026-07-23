@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/entity/log"
+	"github.com/perfect-panel/server/internal/orderflow"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/timeutil"
 
@@ -210,6 +211,7 @@ func (l *PurchaseLogic) Purchase(req *dto.PurchaseOrderRequest) (resp *dto.Purch
 		IsNew:          isNew,
 		SubscribeId:    req.SubscribeId,
 	}
+	orderflow.ApplyIdempotency(l.ctx, orderInfo)
 	// Database transaction
 	err = store.InTx(l.ctx, func(txStore repository.Store) error {
 		// The request-context user is only an authentication snapshot. Lock and

@@ -46,6 +46,16 @@ func (m *Service) Start() {
 	if _, err := m.server.Register("@every 60s", reconcilePendingOrdersTask, asynq.MaxRetry(3)); err != nil {
 		logger.Errorf("register pending order reconciliation task failed: %s", err.Error())
 	}
+	// Drain the order-event outbox frequently enough for interactive checkout,
+	// while retaining the database event record as the recovery path.
+	publishOrderEventsTask := asynq.NewTask(types.SchedulerPublishOrderEvents, nil)
+	if _, err := m.server.Register("@every 5s", publishOrderEventsTask, asynq.MaxRetry(3)); err != nil {
+		logger.Errorf("register order event publisher task failed: %s", err.Error())
+	}
+	cleanupOrderEventsTask := asynq.NewTask(types.SchedulerCleanupOrderEvents, nil)
+	if _, err := m.server.Register("0 3 * * *", cleanupOrderEventsTask, asynq.MaxRetry(3)); err != nil {
+		logger.Errorf("register order event cleanup task failed: %s", err.Error())
+	}
 	//// schedule total server data task: every 5 minutes
 	//totalServerDataTask := asynq.NewTask(types.SchedulerTotalServerData, nil)
 	//if _, err := m.server.Register("@every 180s", totalServerDataTask); err != nil {

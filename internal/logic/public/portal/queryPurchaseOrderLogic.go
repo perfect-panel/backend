@@ -130,21 +130,28 @@ func (l *QueryPurchaseOrderLogic) handleTemporaryOrder(orderInfo *order.Order) (
 
 // generateSessionToken creates a session token and stores it in Redis
 func (l *QueryPurchaseOrderLogic) generateSessionToken(userId int64) (string, error) {
+	return IssuePurchaseSession(l.ctx, l.svcCtx, userId)
+}
+
+// IssuePurchaseSession creates the normal authenticated session issued after a
+// guest purchase completes.  Both V1's status endpoint and V2's explicit
+// capability-exchange endpoint use this helper so their token and Redis
+// session semantics cannot drift.
+func IssuePurchaseSession(ctx context.Context, svcCtx *svc.ServiceContext, userId int64) (string, error) {
 	sessionId := uuidx.NewUUID().String()
 	token, err := jwt.NewJwtToken(
-		l.svcCtx.Config.JwtAuth.AccessSecret,
+		svcCtx.Config.JwtAuth.AccessSecret,
 		timeutil.Now().Unix(),
-		l.svcCtx.Config.JwtAuth.AccessExpire,
+		svcCtx.Config.JwtAuth.AccessExpire,
 		jwt.WithOption("UserId", userId),
 		jwt.WithOption("SessionId", sessionId),
 	)
 	if err != nil {
-		l.Errorw("Token Generation Error", logger.Field("error", err.Error()))
 		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Token generation error")
 	}
 
 	cacheKey := fmt.Sprintf("%v:%v", config.SessionIdKey, sessionId)
-	if err := l.svcCtx.Redis.Set(l.ctx, cacheKey, userId, time.Duration(l.svcCtx.Config.JwtAuth.AccessExpire)*time.Second).Err(); err != nil {
+	if err := svcCtx.Redis.Set(ctx, cacheKey, userId, time.Duration(svcCtx.Config.JwtAuth.AccessExpire)*time.Second).Err(); err != nil {
 		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Session storage error")
 	}
 

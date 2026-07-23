@@ -110,6 +110,8 @@ GET /v1/public/user/subscribe github.com/perfect-panel/server/internal/handler.Q
 GET /v1/public/user/subscribe_log github.com/perfect-panel/server/internal/handler.GetSubscribeLogHandler
 GET /v1/public/user/withdrawal_log github.com/perfect-panel/server/internal/handler.QueryWithdrawalLogHandler
 GET /v2/server/:server_id github.com/perfect-panel/server/internal/handler.QueryServerProtocolConfigHandler
+GET /v2/public/orders/:orderNo github.com/perfect-panel/server/internal/handler.V2GetOrderHandler
+GET /v2/public/orders/:orderNo/events github.com/perfect-panel/server/internal/handler.V2OrderEventsHandler
 POST /v1/server/online github.com/perfect-panel/server/internal/handler.PushOnlineUsersHandler
 POST /v1/server/push github.com/perfect-panel/server/internal/handler.ServerPushUserTrafficHandler
 POST /v1/server/status github.com/perfect-panel/server/internal/handler.ServerPushStatusHandler
@@ -184,6 +186,10 @@ POST /v1/public/user/unbind_telegram github.com/perfect-panel/server/internal/ha
 POST /v1/public/user/unsubscribe github.com/perfect-panel/server/internal/handler.UnsubscribeHandler
 POST /v1/public/user/unsubscribe/pre github.com/perfect-panel/server/internal/handler.PreUnsubscribeHandler
 POST /v1/public/user/verify_email github.com/perfect-panel/server/internal/handler.VerifyEmailHandler
+POST /v2/public/orders github.com/perfect-panel/server/internal/handler.V2CreateAndCheckoutHandler
+POST /v2/public/orders/:orderNo/checkout github.com/perfect-panel/server/internal/handler.V2CheckoutHandler
+POST /v2/public/orders/:orderNo/event-ticket github.com/perfect-panel/server/internal/handler.V2EventTicketHandler
+POST /v2/public/orders/:orderNo/session github.com/perfect-panel/server/internal/handler.V2OrderSessionHandler
 PUT /v1/admin/ads/ github.com/perfect-panel/server/internal/handler.UpdateAdsHandler
 PUT /v1/admin/announcement/ github.com/perfect-panel/server/internal/handler.UpdateAnnouncementHandler
 PUT /v1/admin/application/subscribe_application github.com/perfect-panel/server/internal/handler.UpdateSubscribeApplicationHandler

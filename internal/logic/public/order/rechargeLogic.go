@@ -12,6 +12,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/model/entity/user"
+	"github.com/perfect-panel/server/internal/orderflow"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -96,6 +97,7 @@ func (l *RechargeLogic) Recharge(req *dto.RechargeOrderRequest) (resp *dto.Recha
 		Status:    1,
 		IsNew:     isNew,
 	}
+	orderflow.ApplyIdempotency(l.ctx, &orderInfo)
 	err = store.Order().Insert(l.ctx, &orderInfo)
 	if err != nil {
 		l.Errorw("[Recharge] Database insert error", logger.Field("error", err.Error()), logger.Field("order", orderInfo))

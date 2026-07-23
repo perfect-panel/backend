@@ -36,6 +36,9 @@ type Order struct {
 	GuestPasswordHash      string    `gorm:"type:varchar(255);not null;default:'';comment:Guest password hash before account activation"`
 	GuestInviteCode        string    `gorm:"type:varchar(255);not null;default:'';comment:Guest invite code before account activation"`
 	GuestCheckoutTokenHash string    `gorm:"type:char(64);not null;default:'';comment:Hash of guest checkout capability"`
+	StateVersion           int64     `gorm:"type:bigint;not null;default:0;comment:Monotonic version for order state transitions"`
+	IdempotencyKey         string    `gorm:"type:varchar(128);uniqueIndex;default:null;comment:V2 create idempotency key"`
+	IdempotencyHash        string    `gorm:"type:char(64);default:null;comment:Stable hash of the V2 create request"`
 	IsNew                  bool      `gorm:"type:tinyint(1);not null;default:0;comment:Is New Order"`
 	CreatedAt              time.Time `gorm:"<-:create;comment:Create Time"`
 	UpdatedAt              time.Time `gorm:"comment:Update Time"`

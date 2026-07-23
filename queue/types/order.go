@@ -10,6 +10,8 @@ const (
 	ForthwithActivateOrder          = "forthwith:order:activate"
 	SchedulerReconcilePaidOrders    = "scheduler:order:reconcile-paid"
 	SchedulerReconcilePendingOrders = "scheduler:order:reconcile-pending"
+	SchedulerPublishOrderEvents     = "scheduler:order:publish-events"
+	SchedulerCleanupOrderEvents     = "scheduler:order:cleanup-events"
 )
 
 type (

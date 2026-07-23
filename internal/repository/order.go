@@ -26,6 +26,7 @@ type OrderRepo interface {
 	Insert(ctx context.Context, data *order.Order, tx ...*gorm.DB) error
 	FindOne(ctx context.Context, id int64) (*order.Order, error)
 	FindOneByOrderNo(ctx context.Context, orderNo string) (*order.Order, error)
+	FindOneByIdempotencyKey(ctx context.Context, key string) (*order.Order, error)
 	FindOneByOrderNoForUpdate(ctx context.Context, orderNo string) (*order.Order, error)
 	Update(ctx context.Context, data *order.Order, tx ...*gorm.DB) error
 	Delete(ctx context.Context, id int64, tx ...*gorm.DB) error
@@ -81,7 +82,15 @@ func (m *orderRepo) Insert(ctx context.Context, data *order.Order, tx ...*gorm.D
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
-		return conn.Create(&data).Error
+		return withOrderEventTransaction(conn, func(conn *gorm.DB) error {
+			if data.StateVersion == 0 {
+				data.StateVersion = 1
+			}
+			if err := conn.Create(&data).Error; err != nil {
+				return err
+			}
+			return insertOrderEvent(conn, data, orderEventCreated)
+		})
 	}, m.getCacheKeys(data)...)
 }
 
@@ -111,6 +120,17 @@ func (m *orderRepo) FindOneByOrderNo(ctx context.Context, orderNo string) (*orde
 	}
 }
 
+func (m *orderRepo) FindOneByIdempotencyKey(ctx context.Context, key string) (*order.Order, error) {
+	var resp order.Order
+	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&order.Order{}).Where("idempotency_key = ?", key).First(&resp).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 func (m *orderRepo) FindOneByOrderNoForUpdate(ctx context.Context, orderNo string) (*order.Order, error) {
 	var resp order.Order
 	err := m.QueryNoCacheCtx(ctx, &resp, func(conn *gorm.DB, v interface{}) error {
@@ -129,14 +149,27 @@ func (m *orderRepo) FindOneByOrderNoForUpdate(ctx context.Context, orderNo strin
 
 func (m *orderRepo) Update(ctx context.Context, data *order.Order, tx ...*gorm.DB) error {
 	old, err := m.FindOne(ctx, data.Id)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
 		return err
+	}
+	if old.Status != data.Status || old.StateVersion != data.StateVersion {
+		return fmt.Errorf("order status and state version may only be changed through a state transition")
 	}
 	return m.ExecCtx(ctx, func(conn *gorm.DB) error {
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
-		return conn.Save(data).Error
+		result := conn.Model(&order.Order{}).
+			Where("id = ? AND status = ? AND state_version = ?", data.Id, old.Status, old.StateVersion).
+			Select("*").
+			Updates(data)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected != 1 {
+			return fmt.Errorf("order changed concurrently")
+		}
+		return nil
 	}, m.getCacheKeys(old)...)
 }
 
@@ -232,12 +265,27 @@ func (m *orderRepo) UpdateOrderStatusFrom(ctx context.Context, orderNo string, f
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
-		result := conn.Model(&order.Order{}).
-			Where("order_no = ? AND status = ?", orderNo, from).
-			Update("status", status)
-		updated = result.RowsAffected == 1
-		return result.Error
+		return withOrderEventTransaction(conn, func(conn *gorm.DB) error {
+			result := conn.Model(&order.Order{}).
+				Where("order_no = ? AND status = ?", orderNo, from).
+				Updates(map[string]interface{}{
+					"status":        status,
+					"state_version": gorm.Expr("state_version + ?", 1),
+				})
+			updated = result.RowsAffected == 1
+			if result.Error != nil || !updated {
+				return result.Error
+			}
+			var latest order.Order
+			if err := conn.Where("order_no = ?", orderNo).First(&latest).Error; err != nil {
+				return err
+			}
+			return insertOrderEvent(conn, &latest, orderEventTypeForStatus(status))
+		})
 	}, m.getCacheKeys(orderInfo)...)
+	if err != nil {
+		updated = false
+	}
 	return updated, err
 }
 
@@ -296,6 +344,9 @@ func (m *orderRepo) SetPaymentTradeNoIfEmpty(ctx context.Context, orderNo, trade
 		updated = result.RowsAffected == 1
 		return result.Error
 	}, m.getCacheKeys(orderInfo)...)
+	if err != nil {
+		updated = false
+	}
 	return updated, err
 }
 
@@ -322,15 +373,28 @@ func (m *orderRepo) MarkOrderPaid(ctx context.Context, orderNo, tradeNo string, 
 		if len(tx) > 0 {
 			conn = tx[0]
 		}
-		result := conn.Model(&order.Order{}).
-			Where("order_no = ? AND status = ?", orderNo, uint8(1)).
-			Updates(map[string]interface{}{
-				"status":   uint8(2),
-				"trade_no": tradeNo,
-			})
-		updated = result.RowsAffected == 1
-		return result.Error
+		return withOrderEventTransaction(conn, func(conn *gorm.DB) error {
+			result := conn.Model(&order.Order{}).
+				Where("order_no = ? AND status = ?", orderNo, uint8(1)).
+				Updates(map[string]interface{}{
+					"status":        uint8(2),
+					"trade_no":      tradeNo,
+					"state_version": gorm.Expr("state_version + ?", 1),
+				})
+			updated = result.RowsAffected == 1
+			if result.Error != nil || !updated {
+				return result.Error
+			}
+			var latest order.Order
+			if err := conn.Where("order_no = ?", orderNo).First(&latest).Error; err != nil {
+				return err
+			}
+			return insertOrderEvent(conn, &latest, orderEventPaymentPaid)
+		})
 	}, m.getCacheKeys(orderInfo)...)
+	if err != nil {
+		updated = false
+	}
 	return updated, err
 }
 

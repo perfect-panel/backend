@@ -10808,6 +10808,313 @@
                 }
             }
         },
+        "/v2/public/orders": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Create an order and initiate checkout",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "16-128 character request idempotency key",
+                        "name": "Idempotency-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Order parameters",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.V2CreateOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/result.ResponseSuccessBean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.V2OrderResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/result.ResponseErrorBean"
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/public/orders/{orderNo}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Get a V2 order state snapshot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order number",
+                        "name": "orderNo",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Guest checkout capability",
+                        "name": "checkout_token",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/result.ResponseSuccessBean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.V2OrderResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/public/orders/{orderNo}/checkout": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Re-initiate checkout for a pending V2 order",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order number",
+                        "name": "orderNo",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Checkout capability and return URL",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.V2CheckoutOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/result.ResponseSuccessBean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.V2OrderResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/public/orders/{orderNo}/event-ticket": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Refresh a V2 order event stream ticket",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order number",
+                        "name": "orderNo",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Guest checkout capability when applicable",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.V2EventTicketRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/result.ResponseSuccessBean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.V2EventTicketResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/public/orders/{orderNo}/events": {
+            "get": {
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Stream V2 order events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order number",
+                        "name": "orderNo",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Short-lived order event ticket",
+                        "name": "ticket",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Last received event ID",
+                        "name": "Last-Event-ID",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Replay cursor when Last-Event-ID is unavailable",
+                        "name": "after",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v2/public/orders/{orderNo}/session": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Exchange a guest checkout capability for a V2 user session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Order number",
+                        "name": "orderNo",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Guest checkout capability",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.V2OrderSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/result.ResponseSuccessBean"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.V2OrderSessionResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/v2/server/{server_id}": {
             "get": {
                 "security": [
@@ -17343,6 +17650,175 @@
                 }
             }
         },
+        "dto.V2CheckoutOrderRequest": {
+            "type": "object",
+            "properties": {
+                "checkout_token": {
+                    "type": "string"
+                },
+                "return_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.V2CreateOrderRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "guest": {
+                    "$ref": "#/definitions/dto.V2GuestOrderRequest"
+                },
+                "payment_id": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "return_url": {
+                    "type": "string"
+                },
+                "subscribe_id": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "user_subscribe_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.V2EventTicketRequest": {
+            "type": "object",
+            "properties": {
+                "checkout_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.V2EventTicketResponse": {
+            "type": "object",
+            "properties": {
+                "ticket_expires_at": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.V2GuestOrderRequest": {
+            "type": "object",
+            "properties": {
+                "auth_type": {
+                    "type": "string"
+                },
+                "identifier": {
+                    "type": "string"
+                },
+                "invite_code": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.V2OrderEvents": {
+            "type": "object",
+            "properties": {
+                "ticket_expires_at": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.V2OrderPayment": {
+            "type": "object",
+            "properties": {
+                "checkout_url": {
+                    "type": "string"
+                },
+                "payment_status": {
+                    "type": "string"
+                },
+                "stripe": {
+                    "$ref": "#/definitions/dto.StripePayment"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.V2OrderResponse": {
+            "type": "object",
+            "properties": {
+                "checkout_token": {
+                    "type": "string"
+                },
+                "events": {
+                    "$ref": "#/definitions/dto.V2OrderEvents"
+                },
+                "order": {
+                    "$ref": "#/definitions/dto.V2OrderSnapshot"
+                },
+                "payment": {
+                    "$ref": "#/definitions/dto.V2OrderPayment"
+                }
+            }
+        },
+        "dto.V2OrderSessionRequest": {
+            "type": "object",
+            "properties": {
+                "checkout_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.V2OrderSessionResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.V2OrderSnapshot": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "integer"
+                },
+                "fulfillment_status": {
+                    "type": "string"
+                },
+                "order_no": {
+                    "type": "string"
+                },
+                "payment_status": {
+                    "type": "string"
+                },
+                "state_version": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.VeifyConfig": {
             "type": "object",
             "properties": {
@@ -17443,6 +17919,17 @@
                 },
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "result.ResponseErrorBean": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "msg": {
+                    "type": "string"
                 }
             }
         },

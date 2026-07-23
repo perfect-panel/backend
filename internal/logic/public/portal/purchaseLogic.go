@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/order"
+	"github.com/perfect-panel/server/internal/orderflow"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
@@ -123,7 +124,10 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 	}
 	amount += feeAmount
 	// create order
-	checkoutToken := random.KeyNew(32, 1)
+	checkoutToken := orderflow.GuestCheckoutToken(l.ctx)
+	if checkoutToken == "" {
+		checkoutToken = random.KeyNew(32, 1)
+	}
 	orderInfo := &order.Order{
 		OrderNo:                tool.GenerateTradeNo(),
 		Type:                   1,
@@ -146,6 +150,7 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 		GuestInviteCode:        req.InviteCode,
 		GuestCheckoutTokenHash: constant.CheckoutTokenHash(checkoutToken),
 	}
+	orderflow.ApplyIdempotency(l.ctx, orderInfo)
 	// save order
 	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		if orderInfo.Coupon != "" {

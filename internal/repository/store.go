@@ -22,6 +22,7 @@ type Store interface {
 	Log() LogRepo
 	Node() NodeRepo
 	Order() OrderRepo
+	OrderEvent() OrderEventRepo
 	Payment() PaymentRepo
 	Subscribe() SubscribeRepo
 	System() SystemRepo
@@ -61,6 +62,7 @@ type GormStore struct {
 	log          LogRepo
 	node         NodeRepo
 	order        OrderRepo
+	orderEvent   OrderEventRepo
 	payment      PaymentRepo
 	subscribe    SubscribeRepo
 	system       SystemRepo
@@ -94,6 +96,7 @@ func newGormStore(db *gorm.DB, rds *redis.Client, invalidations *cache.Invalidat
 		log:           newLogRepo(db),
 		node:          newNodeRepo(db, rds, nodeRetrier),
 		order:         newOrderRepo(db, rds, invalidations),
+		orderEvent:    newOrderEventRepo(db),
 		payment:       newPaymentRepo(db, rds, invalidations),
 		subscribe:     newSubscribeRepo(db, rds, invalidations),
 		system:        newSystemRepo(db, rds, invalidations),
@@ -120,6 +123,7 @@ func (s *GormStore) Document() DocumentRepo         { return s.document }
 func (s *GormStore) Log() LogRepo                   { return s.log }
 func (s *GormStore) Node() NodeRepo                 { return s.node }
 func (s *GormStore) Order() OrderRepo               { return s.order }
+func (s *GormStore) OrderEvent() OrderEventRepo     { return s.orderEvent }
 func (s *GormStore) Payment() PaymentRepo           { return s.payment }
 func (s *GormStore) Subscribe() SubscribeRepo       { return s.subscribe }
 func (s *GormStore) System() SystemRepo             { return s.system }

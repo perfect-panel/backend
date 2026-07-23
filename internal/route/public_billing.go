@@ -23,6 +23,23 @@ func registerPublicOrderRoutes(router *server.Hertz, serverCtx *svc.ServiceConte
 	group.POST("/reset", publicOrder.ResetTrafficHandler(serverCtx))
 }
 
+func registerPublicOrderV2Routes(router *server.Hertz, serverCtx *svc.ServiceContext) {
+	group := router.Group("/v2/public/orders")
+	group.Use(middleware.OptionalAuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))
+	group.POST("", publicOrder.V2CreateAndCheckoutHandler(serverCtx))
+	group.POST("/:orderNo/checkout", publicOrder.V2CheckoutHandler(serverCtx))
+	group.GET("/:orderNo", publicOrder.V2GetOrderHandler(serverCtx))
+	group.POST("/:orderNo/event-ticket", publicOrder.V2EventTicketHandler(serverCtx))
+	group.POST("/:orderNo/session", publicOrder.V2OrderSessionHandler(serverCtx))
+
+	// EventSource cannot participate in the native-device response encryption
+	// protocol. The short-lived stream ticket is the authorization mechanism
+	// for this browser-facing route, so do not apply DeviceMiddleware here.
+	streamGroup := router.Group("/v2/public/orders")
+	streamGroup.Use(middleware.OptionalAuthMiddleware(serverCtx))
+	streamGroup.GET("/:orderNo/events", publicOrder.V2OrderEventsHandler(serverCtx))
+}
+
 func registerPublicPaymentRoutes(router *server.Hertz, serverCtx *svc.ServiceContext) {
 	group := router.Group("/v1/public/payment")
 	group.Use(middleware.AuthMiddleware(serverCtx), middleware.DeviceMiddleware(serverCtx))

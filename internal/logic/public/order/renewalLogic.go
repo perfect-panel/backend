@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/entity/log"
+	"github.com/perfect-panel/server/internal/orderflow"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/timeutil"
 
@@ -160,6 +161,7 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 		SubscribeId:    userSubscribe.SubscribeId,
 		SubscribeToken: userSubscribe.Token,
 	}
+	orderflow.ApplyIdempotency(l.ctx, &orderInfo)
 	// Database transaction
 	err = store.InTx(l.ctx, func(txStore repository.Store) error {
 		lockedUser, e := txStore.User().FindOneForUpdate(l.ctx, u.Id)
