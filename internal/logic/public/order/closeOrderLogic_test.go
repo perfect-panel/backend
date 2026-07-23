@@ -155,7 +155,7 @@ func TestCloseOrderDoesNotOverwriteConcurrentPayment(t *testing.T) {
 
 func TestCloseOrderRetainsGuestOrderAndRestoresInventory(t *testing.T) {
 	orders := &closeOrderRepo{
-		order:      &orderEntity.Order{Id: 1, OrderNo: "guest-order", SubscribeId: 99, Status: 1},
+		order:      &orderEntity.Order{Id: 1, OrderNo: "guest-order", Type: 1, SubscribeId: 99, Status: 1},
 		transition: true,
 	}
 	subscribes := &closeSubscribeRepo{sub: &subscribeEntity.Subscribe{Id: 99, Inventory: 2}}
@@ -177,7 +177,7 @@ func TestCloseOrderRetainsGuestOrderAndRestoresInventory(t *testing.T) {
 
 func TestCloseOrderRefundsGiftAndRestoresInventory(t *testing.T) {
 	orders := &closeOrderRepo{
-		order:      &orderEntity.Order{Id: 1, OrderNo: "gift-order", UserId: 7, GiftAmount: 40, SubscribeId: 99, Status: 1},
+		order:      &orderEntity.Order{Id: 1, OrderNo: "gift-order", Type: 1, UserId: 7, GiftAmount: 40, SubscribeId: 99, Status: 1},
 		transition: true,
 	}
 	subscribes := &closeSubscribeRepo{sub: &subscribeEntity.Subscribe{Id: 99, Inventory: 2}}
@@ -195,5 +195,28 @@ func TestCloseOrderRefundsGiftAndRestoresInventory(t *testing.T) {
 	}
 	if subscribes.updateCalls != 1 || subscribes.sub.Inventory != 3 {
 		t.Fatalf("expected inventory restoration after gift refund, calls=%d inventory=%d", subscribes.updateCalls, subscribes.sub.Inventory)
+	}
+}
+
+func TestCloseOrderDoesNotRestoreInventoryForRenewalOrTrafficReset(t *testing.T) {
+	for _, orderType := range []uint8{2, 3} {
+		t.Run("type="+string(rune('0'+orderType)), func(t *testing.T) {
+			orders := &closeOrderRepo{
+				order:      &orderEntity.Order{Id: 1, OrderNo: "existing-subscription-order", Type: orderType, SubscribeId: 99, Status: 1},
+				transition: true,
+			}
+			subscribes := &closeSubscribeRepo{sub: &subscribeEntity.Subscribe{Id: 99, Inventory: 2}}
+			logic := NewCloseOrderLogic(context.Background(), &svc.ServiceContext{Store: &closeOrderStore{orders: orders, subscribes: subscribes}})
+
+			if err := logic.CloseOrder(&dto.CloseOrderRequest{OrderNo: "existing-subscription-order"}); err != nil {
+				t.Fatalf("CloseOrder: %v", err)
+			}
+			if orders.order.Status != 3 {
+				t.Fatalf("status = %d, want closed", orders.order.Status)
+			}
+			if subscribes.updateCalls != 0 || subscribes.sub.Inventory != 2 {
+				t.Fatalf("unexpected inventory restoration, calls=%d inventory=%d", subscribes.updateCalls, subscribes.sub.Inventory)
+			}
+		})
 	}
 }

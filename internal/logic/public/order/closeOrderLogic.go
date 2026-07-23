@@ -32,6 +32,8 @@ type CloseOrderLogic struct {
 	svcCtx *svc.ServiceContext
 }
 
+const orderTypeSubscribe uint8 = 1
+
 // NewCloseOrderLogic Close order
 func NewCloseOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CloseOrderLogic {
 	return &CloseOrderLogic{
@@ -74,9 +76,11 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 		return nil
 	}
 
-	// Only query subscribe info if SubscribeId is valid
+	// Only new subscription purchases reserve plan inventory. Renewals and
+	// traffic resets reference a plan too, but do not consume its inventory, so
+	// closing them must not add stock that was never reserved.
 	var sub *subscribe.Subscribe
-	if orderInfo.SubscribeId > 0 {
+	if orderInfo.Type == orderTypeSubscribe && orderInfo.SubscribeId > 0 {
 		sub, err = store.Subscribe().FindOne(l.ctx, orderInfo.SubscribeId)
 		if err != nil {
 			l.Errorw("[CloseOrder] Find subscribe info failed",

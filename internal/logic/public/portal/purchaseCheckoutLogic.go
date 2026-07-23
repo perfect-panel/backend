@@ -566,6 +566,14 @@ func (l *PurchaseCheckoutLogic) queryExchangeRate(to string, src int64) (amount 
 }
 
 func (l *PurchaseCheckoutLogic) persistPaymentExpectation(info *order.Order, amount int64, currency string) error {
+	currency = strings.ToUpper(currency)
+	if info.PaymentCurrency != "" {
+		if info.PaymentAmount != amount || !strings.EqualFold(info.PaymentCurrency, currency) {
+			return errors.Wrapf(xerr.NewErrCode(xerr.OrderStatusError), "payment expectation does not match existing checkout")
+		}
+		return nil
+	}
+
 	updated, err := l.deps.Store.UpdatePaymentExpectation(l.ctx, info.OrderNo, amount, currency)
 	if err != nil {
 		l.Errorw("[PurchaseCheckout] Save payment expectation failed",
@@ -574,11 +582,32 @@ func (l *PurchaseCheckoutLogic) persistPaymentExpectation(info *order.Order, amo
 		)
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "save payment expectation: %v", err)
 	}
-	if !updated {
+	if updated {
+		info.PaymentAmount = amount
+		info.PaymentCurrency = currency
+		return nil
+	}
+
+	// Another concurrent checkout may have recorded the immutable snapshot
+	// first. Reload it so identical retries can continue (and, for Stripe,
+	// reuse the payment intent it already claimed) while a different amount or
+	// currency remains rejected.
+	latest, err := l.deps.Store.FindOrderByOrderNo(l.ctx, info.OrderNo)
+	if err != nil {
+		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "reload payment expectation: %v", err)
+	}
+	if latest.Status != 1 {
 		return errors.Wrapf(xerr.NewErrCode(xerr.OrderStatusError), "order is no longer pending")
 	}
-	info.PaymentAmount = amount
-	info.PaymentCurrency = currency
+	if latest.PaymentCurrency == "" {
+		return errors.Wrapf(xerr.NewErrCode(xerr.OrderStatusError), "payment checkout is being initialized; retry")
+	}
+	if latest.PaymentAmount != amount || !strings.EqualFold(latest.PaymentCurrency, currency) {
+		return errors.Wrapf(xerr.NewErrCode(xerr.OrderStatusError), "payment expectation does not match existing checkout")
+	}
+	info.PaymentAmount = latest.PaymentAmount
+	info.PaymentCurrency = latest.PaymentCurrency
+	info.TradeNo = latest.TradeNo
 	return nil
 }
 

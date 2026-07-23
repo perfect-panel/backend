@@ -213,3 +213,58 @@ func TestAuthorizeCheckoutValidatesGuestCheckoutToken(t *testing.T) {
 		t.Fatal("invalid guest checkout token was accepted")
 	}
 }
+
+type paymentExpectationStore struct {
+	CheckoutStore
+	order       *orderEntity.Order
+	updateCalls int
+}
+
+func (s *paymentExpectationStore) FindOrderByOrderNo(_ context.Context, orderNo string) (*orderEntity.Order, error) {
+	if s.order == nil || s.order.OrderNo != orderNo {
+		return nil, gorm.ErrRecordNotFound
+	}
+	copy := *s.order
+	return &copy, nil
+}
+
+func (s *paymentExpectationStore) UpdatePaymentExpectation(_ context.Context, orderNo string, amount int64, currency string) (bool, error) {
+	s.updateCalls++
+	if s.order == nil || s.order.OrderNo != orderNo || s.order.Status != 1 || s.order.PaymentCurrency != "" {
+		return false, nil
+	}
+	s.order.PaymentAmount = amount
+	s.order.PaymentCurrency = currency
+	return true, nil
+}
+
+func TestPersistPaymentExpectationReusesMatchingSnapshot(t *testing.T) {
+	store := &paymentExpectationStore{order: &orderEntity.Order{
+		OrderNo: "order-1", Status: 1, PaymentAmount: 1250, PaymentCurrency: "CNY", TradeNo: "pi_123",
+	}}
+	logic := NewPurchaseCheckoutLogic(context.Background(), CheckoutDependencies{Store: store})
+	staleOrder := &orderEntity.Order{OrderNo: "order-1", Status: 1}
+
+	if err := logic.persistPaymentExpectation(staleOrder, 1250, "cny"); err != nil {
+		t.Fatalf("persist matching expectation: %v", err)
+	}
+	if store.updateCalls != 1 {
+		t.Fatalf("UpdatePaymentExpectation calls = %d, want 1", store.updateCalls)
+	}
+	if staleOrder.PaymentAmount != 1250 || staleOrder.PaymentCurrency != "CNY" || staleOrder.TradeNo != "pi_123" {
+		t.Fatalf("reloaded order = %+v, want stored payment snapshot and trade number", staleOrder)
+	}
+}
+
+func TestPersistPaymentExpectationRejectsDifferentSnapshot(t *testing.T) {
+	store := &paymentExpectationStore{order: &orderEntity.Order{
+		OrderNo: "order-1", Status: 1, PaymentAmount: 1250, PaymentCurrency: "CNY",
+	}}
+	logic := NewPurchaseCheckoutLogic(context.Background(), CheckoutDependencies{Store: store})
+	staleOrder := &orderEntity.Order{OrderNo: "order-1", Status: 1}
+
+	err := logic.persistPaymentExpectation(staleOrder, 1300, "CNY")
+	if err == nil || !strings.Contains(err.Error(), "does not match") {
+		t.Fatalf("persist mismatched expectation error = %v, want mismatch", err)
+	}
+}
