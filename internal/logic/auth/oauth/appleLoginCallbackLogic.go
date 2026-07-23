@@ -7,14 +7,13 @@ import (
 	"net/url"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
 type AppleLoginCallbackLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps AppleLoginCallbackDependencies
 }
 
 type AppleLoginRedirect struct {
@@ -23,20 +22,20 @@ type AppleLoginRedirect struct {
 }
 
 // Apple Login Callback
-func NewAppleLoginCallbackLogic(ctx context.Context, svcCtx *svc.ServiceContext) *AppleLoginCallbackLogic {
+func NewAppleLoginCallbackLogic(ctx context.Context, deps AppleLoginCallbackDependencies) *AppleLoginCallbackLogic {
 	return &AppleLoginCallbackLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
 func (l *AppleLoginCallbackLogic) AppleLoginCallback(req *dto.AppleLoginCallbackRequest) (*AppleLoginRedirect, error) {
 	// validate the state code
-	result, err := l.svcCtx.Redis.Get(l.ctx, fmt.Sprintf("apple:%s", req.State)).Result()
+	result, err := l.deps.Redis.Get(l.ctx, fmt.Sprintf("apple:%s", req.State)).Result()
 	if err != nil {
 		l.Errorw("get apple state code from redis failed", logger.Field("error", err.Error()), logger.Field("code", req.State))
-		return appleLoginRedirect(l.svcCtx.Config.Site.Host, req, http.StatusTemporaryRedirect), nil
+		return appleLoginRedirect(l.deps.FallbackRedirect, req, http.StatusTemporaryRedirect), nil
 	}
 	redirect := appleLoginRedirect(result, req, http.StatusFound)
 	l.Infow("redirect to apple login page", logger.Field("url", redirect.Location))

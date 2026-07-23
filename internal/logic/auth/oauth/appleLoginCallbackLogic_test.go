@@ -1,10 +1,13 @@
 package oauth
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/redis/go-redis/v9"
 )
 
 func Test_appleLoginRedirect_preserves_found_location_when_state_is_valid(t *testing.T) {
@@ -52,5 +55,24 @@ func Test_appleLoginRedirect_preserves_temporary_redirect_when_state_is_invalid(
 	}
 	if redirect.Location != "https://panel.example" {
 		t.Fatalf("location = %q", redirect.Location)
+	}
+}
+
+func TestAppleLoginCallbackUsesInjectedStateStoreAndFallbackRedirect(t *testing.T) {
+	server := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Options{Addr: server.Addr()})
+	t.Cleanup(func() { _ = client.Close() })
+
+	logic := NewAppleLoginCallbackLogic(context.Background(), AppleLoginCallbackDependencies{
+		Redis:            client,
+		FallbackRedirect: "https://panel.example/fallback",
+	})
+
+	redirect, err := logic.AppleLoginCallback(&dto.AppleLoginCallbackRequest{State: "missing"})
+	if err != nil {
+		t.Fatalf("AppleLoginCallback error = %v", err)
+	}
+	if redirect.StatusCode != http.StatusTemporaryRedirect || redirect.Location != "https://panel.example/fallback" {
+		t.Fatalf("redirect = %#v, want temporary fallback redirect", redirect)
 	}
 }

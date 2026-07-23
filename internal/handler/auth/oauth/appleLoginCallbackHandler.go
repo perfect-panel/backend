@@ -30,7 +30,10 @@ func AppleLoginCallbackHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			ctx.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request data"})
 			return
 		}
-		l := oauth.NewAppleLoginCallbackLogic(c, svcCtx)
+		l := oauth.NewAppleLoginCallbackLogic(c, oauth.AppleLoginCallbackDependencies{
+			Redis:            svcCtx.Redis,
+			FallbackRedirect: svcCtx.Config.Site.Host,
+		})
 		redirect, err := l.AppleLoginCallback(&req)
 		if err != nil {
 			result.HttpResult(ctx, nil, err)
