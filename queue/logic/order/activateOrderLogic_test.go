@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/config"
@@ -19,9 +20,10 @@ import (
 
 type activationStore struct {
 	repository.Store
-	orders *activationOrderRepo
-	users  *activationUserRepo
-	logs   *activationLogRepo
+	orders     *activationOrderRepo
+	users      *activationUserRepo
+	subscribes *activationSubscribeRepo
+	logs       *activationLogRepo
 }
 
 func (s *activationStore) InTx(_ context.Context, fn func(repository.Store) error) error {
@@ -34,6 +36,7 @@ func (s *activationStore) UserSubscription() repository.UserSubscriptionRepo {
 }
 func (s *activationStore) UserCache() repository.UserCacheRepo { return s.users }
 func (s *activationStore) Log() repository.LogRepo             { return s.logs }
+func (s *activationStore) Subscribe() repository.SubscribeRepo { return s.subscribes }
 
 type activationOrderRepo struct {
 	repository.OrderRepo
@@ -66,6 +69,15 @@ type activationUserRepo struct {
 	quotaCountCalls  int
 	blocking         bool
 	hasBlockingCalls int
+	subscription     *userEntity.Subscribe
+}
+
+func (r *activationUserRepo) FindOne(_ context.Context, id int64) (*userEntity.User, error) {
+	if r.user == nil || r.user.Id != id {
+		return nil, gorm.ErrRecordNotFound
+	}
+	copy := *r.user
+	return &copy, nil
 }
 
 func (r *activationUserRepo) FindOneForUpdate(_ context.Context, id int64) (*userEntity.User, error) {
@@ -102,6 +114,28 @@ func (r *activationUserRepo) HasBlockingSubscription(_ context.Context, _ int64)
 	return r.blocking, nil
 }
 
+func (r *activationUserRepo) FindOneSubscribeByToken(_ context.Context, token string) (*userEntity.Subscribe, error) {
+	if r.subscription == nil || r.subscription.Token != token {
+		return nil, gorm.ErrRecordNotFound
+	}
+	copy := *r.subscription
+	return &copy, nil
+}
+
+func (r *activationUserRepo) FindOneSubscribeByTokenForUpdate(ctx context.Context, token string) (*userEntity.Subscribe, error) {
+	return r.FindOneSubscribeByToken(ctx, token)
+}
+
+func (r *activationUserRepo) UpdateSubscribe(_ context.Context, data *userEntity.Subscribe, _ ...*gorm.DB) error {
+	copy := *data
+	r.subscription = &copy
+	return nil
+}
+
+func (r *activationUserRepo) ClearSubscribeCache(_ context.Context, _ ...*userEntity.Subscribe) error {
+	return nil
+}
+
 type activationLogRepo struct {
 	repository.LogRepo
 	logs []*logEntity.SystemLog
@@ -109,6 +143,23 @@ type activationLogRepo struct {
 
 func (r *activationLogRepo) Insert(_ context.Context, data *logEntity.SystemLog) error {
 	r.logs = append(r.logs, data)
+	return nil
+}
+
+type activationSubscribeRepo struct {
+	repository.SubscribeRepo
+	subscribe *subscribeEntity.Subscribe
+}
+
+func (r *activationSubscribeRepo) FindOne(_ context.Context, id int64) (*subscribeEntity.Subscribe, error) {
+	if r.subscribe == nil || r.subscribe.Id != id {
+		return nil, gorm.ErrRecordNotFound
+	}
+	copy := *r.subscribe
+	return &copy, nil
+}
+
+func (r *activationSubscribeRepo) ClearCache(_ context.Context, _ ...int64) error {
 	return nil
 }
 
@@ -170,4 +221,57 @@ func TestCreateUserSubscriptionTxEnforcesSingleModel(t *testing.T) {
 	if users.hasBlockingCalls != 1 {
 		t.Fatalf("HasBlockingSubscription calls = %d, want 1", users.hasBlockingCalls)
 	}
+}
+
+func TestActivateResetTrafficTxClearsFinishedAt(t *testing.T) {
+	logic, store := newResetTrafficTestLogic(t)
+
+	result, err := logic.activateResetTrafficTx(context.Background(), store, &orderEntity.Order{
+		OrderNo: "reset-order", UserId: 7, SubscribeToken: "subscription-token",
+	})
+	if err != nil {
+		t.Fatalf("activate reset traffic: %v", err)
+	}
+	if store.users.subscription.FinishedAt != nil {
+		t.Fatal("reset traffic left FinishedAt set")
+	}
+	if result.userSub.FinishedAt != nil {
+		t.Fatal("activation result left FinishedAt set")
+	}
+	if store.users.subscription.Status != userEntity.SubscribeStatusActive {
+		t.Fatalf("status = %d, want active", store.users.subscription.Status)
+	}
+}
+
+func TestResetTrafficClearsFinishedAt(t *testing.T) {
+	logic, store := newResetTrafficTestLogic(t)
+
+	if err := logic.ResetTraffic(context.Background(), &orderEntity.Order{
+		OrderNo: "reset-order", UserId: 7, SubscribeToken: "subscription-token",
+	}); err != nil {
+		t.Fatalf("reset traffic: %v", err)
+	}
+	if store.users.subscription.FinishedAt != nil {
+		t.Fatal("legacy reset traffic left FinishedAt set")
+	}
+	if store.users.subscription.Status != userEntity.SubscribeStatusActive {
+		t.Fatalf("status = %d, want active", store.users.subscription.Status)
+	}
+}
+
+func newResetTrafficTestLogic(t *testing.T) (*ActivateOrderLogic, *activationStore) {
+	t.Helper()
+	finishedAt := time.Now().Add(-time.Hour)
+	store := &activationStore{
+		users: &activationUserRepo{
+			user: &userEntity.User{Id: 7},
+			subscription: &userEntity.Subscribe{
+				Id: 11, UserId: 7, SubscribeId: 9, Token: "subscription-token",
+				Download: 100, Upload: 200, Status: userEntity.SubscribeStatusFinished, FinishedAt: &finishedAt,
+			},
+		},
+		subscribes: &activationSubscribeRepo{subscribe: &subscribeEntity.Subscribe{Id: 9}},
+		logs:       &activationLogRepo{},
+	}
+	return NewActivateOrderLogic(&svc.ServiceContext{Store: store}), store
 }

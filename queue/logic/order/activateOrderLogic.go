@@ -317,6 +317,7 @@ func (l *ActivateOrderLogic) activateResetTrafficTx(ctx context.Context, store r
 	userSub.Download = 0
 	userSub.Upload = 0
 	userSub.Status = 1
+	userSub.FinishedAt = nil
 	if err := store.UserSubscription().UpdateSubscribe(ctx, userSub); err != nil {
 		return nil, err
 	}
@@ -949,6 +950,7 @@ func (l *ActivateOrderLogic) ResetTraffic(ctx context.Context, orderInfo *order.
 	userSub.Download = 0
 	userSub.Upload = 0
 	userSub.Status = 1
+	userSub.FinishedAt = nil
 
 	if err := l.svc.Store.UserSubscription().UpdateSubscribe(ctx, userSub); err != nil {
 		logger.WithContext(ctx).Error("Update user subscribe failed", logger.Field("error", err.Error()))

@@ -3,6 +3,7 @@ package order
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	userEntity "github.com/perfect-panel/server/internal/model/entity/user"
@@ -64,5 +65,19 @@ func TestResetTrafficRejectsSubscriptionOwnedByAnotherUser(t *testing.T) {
 	_, err := logic.ResetTraffic(&dto.ResetTrafficOrderRequest{UserSubscribeID: 22})
 	if err == nil {
 		t.Fatal("reset traffic accepted a subscription owned by another user")
+	}
+}
+
+func TestResetTrafficRejectsExpiredSubscription(t *testing.T) {
+	ctx := context.WithValue(context.Background(), constant.CtxKeyUser, &userEntity.User{Id: 11})
+	logic := NewResetTrafficLogic(ctx, &svc.ServiceContext{Store: ownershipStore{
+		users: ownershipUserRepo{subscribe: &userEntity.SubscribeDetails{
+			Id: 22, UserId: 11, ExpireTime: time.Now().Add(-time.Minute),
+		}},
+	}})
+
+	_, err := logic.ResetTraffic(&dto.ResetTrafficOrderRequest{UserSubscribeID: 22})
+	if err == nil {
+		t.Fatal("reset traffic accepted an expired subscription")
 	}
 }
