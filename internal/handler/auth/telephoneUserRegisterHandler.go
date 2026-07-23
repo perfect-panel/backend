@@ -50,7 +50,7 @@ func TelephoneUserRegisterHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 				JWTAccessExpire:   svcCtx.Config.JwtAuth.AccessExpire,
 			},
 			Policy:       registerpolicy.NewServicePolicy(svcCtx),
-			DeviceBinder: auth.NewBindDeviceLogic(ctx, svcCtx),
+			DeviceBinder: auth.NewBindDeviceLogic(ctx, auth.BindDeviceDependencies{Store: svcCtx.Store}),
 		})
 		resp, err := l.TelephoneUserRegister(&req)
 		result.HttpResult(c, resp, err)

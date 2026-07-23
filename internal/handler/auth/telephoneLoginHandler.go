@@ -58,7 +58,7 @@ func TelephoneLoginHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 				JWTAccessExpire: svcCtx.Config.JwtAuth.AccessExpire,
 			},
 			Policy:       registerpolicy.NewServicePolicy(svcCtx),
-			DeviceBinder: auth.NewBindDeviceLogic(c, svcCtx),
+			DeviceBinder: auth.NewBindDeviceLogic(c, auth.BindDeviceDependencies{Store: svcCtx.Store}),
 		})
 		resp, err := l.TelephoneLogin(&req, ctx.ClientIP(), string(ctx.UserAgent()))
 		result.HttpResult(ctx, resp, err)
