@@ -178,7 +178,7 @@ func (l *ActivateOrderLogic) activateNewPurchaseTx(ctx context.Context, store re
 		if passwordHash == "" {
 			return nil, fmt.Errorf("guest order password hash is missing")
 		}
-		userInfo = &user.User{Password: passwordHash, Algo: "default"}
+		userInfo = &user.User{Password: passwordHash, Algo: tool.PasswordAlgoForHash(passwordHash)}
 		if err := store.User().Insert(ctx, userInfo); err != nil {
 			return nil, err
 		}
@@ -542,7 +542,7 @@ func (l *ActivateOrderLogic) createGuestUser(ctx context.Context, orderInfo *ord
 
 	userInfo := &user.User{
 		Password: tool.EncodePassWord(tempOrder.Password),
-		Algo:     "default",
+		Algo:     tool.PasswordAlgoArgon2id,
 	}
 
 	err = l.svc.Store.InTx(ctx, func(store repository.Store) error {

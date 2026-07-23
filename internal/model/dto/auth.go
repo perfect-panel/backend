@@ -136,7 +136,7 @@ type PubilcVerifyCodeConfig struct {
 type ResetPasswordRequest struct {
 	Identifier string `json:"identifier"`
 	Email      string `json:"email" validate:"required,email"`
-	Password   string `json:"password" validate:"required"`
+	Password   string `json:"password" validate:"required,min=8,max=128"`
 	Code       string `json:"code,optional"`
 	IP         string `header:"X-Original-Forwarded-For" swaggerignore:"true"`
 	UserAgent  string `header:"User-Agent" swaggerignore:"true"`
@@ -192,7 +192,7 @@ type TelephoneRegisterRequest struct {
 	Identifier        string `json:"identifier"`
 	Telephone         string `json:"telephone" validate:"required"`
 	TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
-	Password          string `json:"password" validate:"required"`
+	Password          string `json:"password" validate:"required,min=8,max=128"`
 	Invite            string `json:"invite,optional"`
 	Code              string `json:"code,optional"`
 	IP                string `header:"X-Original-Forwarded-For" swaggerignore:"true"`
@@ -205,7 +205,7 @@ type TelephoneResetPasswordRequest struct {
 	Identifier        string `json:"identifier"`
 	Telephone         string `json:"telephone" validate:"required"`
 	TelephoneAreaCode string `json:"telephone_area_code" validate:"required"`
-	Password          string `json:"password" validate:"required"`
+	Password          string `json:"password" validate:"required,min=8,max=128"`
 	Code              string `json:"code,optional"`
 	IP                string `header:"X-Original-Forwarded-For" swaggerignore:"true"`
 	UserAgent         string `header:"User-Agent" swaggerignore:"true"`
@@ -246,7 +246,7 @@ type UserLoginRequest struct {
 type UserRegisterRequest struct {
 	Identifier string `json:"identifier"`
 	Email      string `json:"email" validate:"required,email"`
-	Password   string `json:"password" validate:"required"`
+	Password   string `json:"password" validate:"required,min=8,max=128"`
 	Invite     string `json:"invite,optional"`
 	Code       string `json:"code,optional"`
 	IP         string `header:"X-Original-Forwarded-For" swaggerignore:"true"`

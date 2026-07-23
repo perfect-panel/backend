@@ -8,7 +8,6 @@ require (
 	github.com/alibabacloud-go/dysmsapi-20170525/v2 v2.0.18
 	github.com/alibabacloud-go/tea v1.2.2
 	github.com/alicebob/miniredis/v2 v2.34.0
-	github.com/anaskhan96/go-password-encoder v0.0.0-20201010210601-c765b799fd72
 	github.com/andybalholm/brotli v1.1.1
 	github.com/forgoer/openssl v1.6.0
 	github.com/go-playground/locales v0.14.1

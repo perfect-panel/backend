@@ -38,6 +38,7 @@ func CreateAdminUser(email, password string, tx *gorm.DB) error {
 
 		u := user.User{
 			Password:  tool.EncodePassWord(password),
+			Algo:      tool.PasswordAlgoArgon2id,
 			IsAdmin:   &enable,
 			ReferCode: uuidx.UserInviteCode(time.Now().Unix()),
 		}

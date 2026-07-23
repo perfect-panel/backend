@@ -106,6 +106,7 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *dto.TelephoneLoginRequest, ip,
 		if !tool.MultiPasswordVerify(userInfo.Algo, userInfo.Salt, req.Password, userInfo.Password) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserPasswordError), "user password")
 		}
+		upgradePasswordAfterLogin(l.ctx, l.svcCtx, l.Logger, userInfo, req.Password)
 	} else {
 		cacheKey := fmt.Sprintf("%s:%s:%s", config.AuthCodeTelephoneCacheKey, constant.ParseVerifyType(uint8(constant.Security)), phoneNumber)
 		if err := common.ValidateVerificationCode(l.ctx, l.svcCtx.Redis, cacheKey, req.TelephoneCode, true); err != nil {
