@@ -102,7 +102,8 @@ func (l *ResetPasswordLogic) ResetPassword(req *dto.ResetPasswordRequest) (resp 
 
 	// Update password
 	userInfo.Password = tool.EncodePassWord(req.Password)
-	userInfo.Algo = "default"
+	userInfo.Algo = tool.PasswordAlgoArgon2id
+	userInfo.Salt = ""
 	if err = l.svcCtx.Store.User().Update(l.ctx, userInfo); err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update user info failed: %v", err.Error())
 	}

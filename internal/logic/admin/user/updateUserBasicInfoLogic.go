@@ -82,7 +82,8 @@ func (l *UpdateUserBasicInfoLogic) UpdateUserBasicInfo(req *dto.UpdateUserBasice
 				return errors.Wrapf(xerr.NewErrCodeMsg(503, "Demo mode does not allow modification of the admin user password"), "UpdateUserBasicInfo failed: cannot update admin user password in demo mode")
 			}
 			userInfo.Password = tool.EncodePassWord(req.Password)
-			userInfo.Algo = "default"
+			userInfo.Algo = tool.PasswordAlgoArgon2id
+			userInfo.Salt = ""
 		}
 		return store.User().Update(l.ctx, userInfo)
 	})

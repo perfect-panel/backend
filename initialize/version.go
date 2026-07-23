@@ -41,6 +41,7 @@ func Migrate(ctx *svc.ServiceContext) {
 			enable := true
 			admin := &user.User{
 				Password:  tool.EncodePassWord(ctx.Config.Administrator.Password),
+				Algo:      tool.PasswordAlgoArgon2id,
 				IsAdmin:   &enable,
 				ReferCode: uuidx.UserInviteCode(time.Now().Unix()),
 			}

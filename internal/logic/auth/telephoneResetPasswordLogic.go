@@ -77,7 +77,8 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *dto.TelephoneR
 	// Generate password
 	pwd := tool.EncodePassWord(req.Password)
 	userInfo.Password = pwd
-	userInfo.Algo = "default"
+	userInfo.Algo = tool.PasswordAlgoArgon2id
+	userInfo.Salt = ""
 	err = l.svcCtx.Store.User().Update(l.ctx, userInfo)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "update user password failed: %v", err.Error())

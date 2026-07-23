@@ -42,6 +42,7 @@ type UserRepo interface {
 	FindOneByEmail(ctx context.Context, email string) (*user.User, error)
 	FindOneByReferCode(ctx context.Context, referCode string) (*user.User, error)
 	Update(ctx context.Context, data *user.User, tx ...*gorm.DB) error
+	UpgradePasswordHash(ctx context.Context, id int64, currentHash, password, algo, salt string) (bool, error)
 	UpdateBalanceFields(ctx context.Context, data *user.User, tx ...*gorm.DB) error
 	UpdateCommission(ctx context.Context, data *user.User, tx ...*gorm.DB) error
 	Delete(ctx context.Context, id int64, tx ...*gorm.DB) error
@@ -237,6 +238,29 @@ func (m *userRepo) Update(ctx context.Context, data *user.User, tx ...*gorm.DB) 
 		return conn.Save(data).Error
 	}, m.getCacheKeys(old)...)
 	return err
+}
+
+func (m *userRepo) UpgradePasswordHash(ctx context.Context, id int64, currentHash, password, algo, salt string) (bool, error) {
+	old, err := m.FindOne(ctx, id)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, err
+	}
+	updated := false
+	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
+		result := conn.Model(&user.User{}).
+			Where("id = ? AND password = ?", id, currentHash).
+			Updates(map[string]interface{}{
+				"password": password,
+				"algo":     algo,
+				"salt":     salt,
+			})
+		if result.Error != nil {
+			return result.Error
+		}
+		updated = result.RowsAffected == 1
+		return nil
+	}, m.getCacheKeys(old)...)
+	return updated, err
 }
 
 func (m *userRepo) UpdateBalanceFields(ctx context.Context, data *user.User, tx ...*gorm.DB) error {

@@ -40,7 +40,7 @@ func (l *CreateUserLogic) CreateUser(req *dto.CreateUserRequest) error {
 	pwd := tool.EncodePassWord(req.Password)
 	newUser := &user.User{
 		Password:           pwd,
-		Algo:               "default",
+		Algo:               tool.PasswordAlgoArgon2id,
 		ReferralPercentage: req.ReferralPercentage,
 		OnlyFirstPurchase:  &req.OnlyFirstPurchase,
 		ReferCode:          req.ReferCode,

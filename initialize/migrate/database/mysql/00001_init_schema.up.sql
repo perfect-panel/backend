@@ -371,7 +371,7 @@ CREATE TABLE IF NOT EXISTS `traffic_log`
 CREATE TABLE IF NOT EXISTS `user`
 (
     `id`                      bigint                                                        NOT NULL AUTO_INCREMENT,
-    `password`                varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'User Password',
+    `password`                varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'User Password',
     `avatar`                  text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci COMMENT 'User Avatar',
     `balance`                 bigint                                                                 DEFAULT '0' COMMENT 'User Balance',
     `telegram`                bigint                                                                 DEFAULT NULL COMMENT 'Telegram Account',
