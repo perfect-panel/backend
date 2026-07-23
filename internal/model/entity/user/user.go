@@ -58,6 +58,15 @@ type Subscribe struct {
 	UpdatedAt   time.Time  `gorm:"comment:Update Time"`
 }
 
+const (
+	SubscribeStatusPending uint8 = iota
+	SubscribeStatusActive
+	SubscribeStatusFinished
+	SubscribeStatusExpired
+	SubscribeStatusDeducted
+	SubscribeStatusStopped
+)
+
 func (*Subscribe) TableName() string {
 	return "user_subscribe"
 }

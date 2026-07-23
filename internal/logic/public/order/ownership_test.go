@@ -39,6 +39,18 @@ func TestRenewalRejectsSubscriptionOwnedByAnotherUser(t *testing.T) {
 	}
 }
 
+func TestRenewalRejectsDeductedSubscription(t *testing.T) {
+	ctx := context.WithValue(context.Background(), constant.CtxKeyUser, &userEntity.User{Id: 11})
+	logic := NewRenewalLogic(ctx, &svc.ServiceContext{Store: ownershipStore{
+		users: ownershipUserRepo{subscribe: &userEntity.SubscribeDetails{Id: 22, UserId: 11, Status: userEntity.SubscribeStatusDeducted}},
+	}})
+
+	_, err := logic.Renewal(&dto.RenewalOrderRequest{UserSubscribeID: 22})
+	if err == nil {
+		t.Fatal("renewal accepted a deducted subscription")
+	}
+}
+
 func TestResetTrafficRejectsSubscriptionOwnedByAnotherUser(t *testing.T) {
 	ctx := context.WithValue(context.Background(), constant.CtxKeyUser, &userEntity.User{Id: 11})
 	logic := NewResetTrafficLogic(ctx, &svc.ServiceContext{Store: ownershipStore{

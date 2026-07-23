@@ -56,10 +56,9 @@ func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "user subscribe does not belong to current user")
 	}
 
-	activate := []uint8{0, 1, 2}
+	cancelable := []uint8{user.SubscribeStatusPending, user.SubscribeStatusActive, user.SubscribeStatusFinished}
 
-	if !tool.Contains(activate, userSub.Status) {
-		// Only active (2) or paused (5) subscriptions can be cancelled
+	if !tool.Contains(cancelable, userSub.Status) {
 		l.Errorw("Subscription status invalid for cancellation", logger.Field("userSubscribeId", userSub.Id), logger.Field("status", userSub.Status))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Subscription status invalid for cancellation")
 	}
@@ -81,11 +80,10 @@ func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 		if lockedSub.UserId != u.Id {
 			return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "user subscribe does not belong to current user")
 		}
-		if !tool.Contains(activate, lockedSub.Status) {
+		if !tool.Contains(cancelable, lockedSub.Status) {
 			return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Subscription status invalid for cancellation")
 		}
-		// Find and update subscription status to cancelled (status = 4).
-		lockedSub.Status = 4
+		lockedSub.Status = user.SubscribeStatusDeducted
 		if err = store.User().UpdateSubscribe(l.ctx, lockedSub); err != nil {
 			return err
 		}

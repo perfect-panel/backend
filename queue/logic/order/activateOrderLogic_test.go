@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	"github.com/hibiken/asynq"
+	"github.com/perfect-panel/server/internal/config"
 	logEntity "github.com/perfect-panel/server/internal/model/entity/log"
 	orderEntity "github.com/perfect-panel/server/internal/model/entity/order"
+	subscribeEntity "github.com/perfect-panel/server/internal/model/entity/subscribe"
 	userEntity "github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
@@ -54,6 +56,10 @@ type activationUserRepo struct {
 	repository.UserRepo
 	user             *userEntity.User
 	updateCacheCalls int
+	quotaCount       int64
+	quotaCountCalls  int
+	blocking         bool
+	hasBlockingCalls int
 }
 
 func (r *activationUserRepo) FindOneForUpdate(_ context.Context, id int64) (*userEntity.User, error) {
@@ -78,6 +84,16 @@ func (r *activationUserRepo) UpdateBalanceFields(_ context.Context, data *userEn
 func (r *activationUserRepo) UpdateUserCache(_ context.Context, _ *userEntity.User) error {
 	r.updateCacheCalls++
 	return nil
+}
+
+func (r *activationUserRepo) CountQuotaConsumingSubscriptions(_ context.Context, _ int64, _ int64) (int64, error) {
+	r.quotaCountCalls++
+	return r.quotaCount, nil
+}
+
+func (r *activationUserRepo) HasBlockingSubscription(_ context.Context, _ int64) (bool, error) {
+	r.hasBlockingCalls++
+	return r.blocking, nil
 }
 
 type activationLogRepo struct {
@@ -119,5 +135,33 @@ func TestActivateRechargeCommitsSettlementOnlyOnce(t *testing.T) {
 	}
 	if len(store.logs.logs) != 1 {
 		t.Fatalf("recharge logs = %d, want 1", len(store.logs.logs))
+	}
+}
+
+func TestCreateUserSubscriptionTxEnforcesQuota(t *testing.T) {
+	users := &activationUserRepo{quotaCount: 1}
+	store := &activationStore{users: users}
+	logic := NewActivateOrderLogic(&svc.ServiceContext{})
+
+	_, err := logic.createUserSubscriptionTx(context.Background(), store, &orderEntity.Order{UserId: 7, SubscribeId: 9}, &subscribeEntity.Subscribe{Quota: 1})
+	if err == nil {
+		t.Fatal("activation created a subscription after quota was exhausted")
+	}
+	if users.quotaCountCalls != 1 {
+		t.Fatalf("CountQuotaConsumingSubscriptions calls = %d, want 1", users.quotaCountCalls)
+	}
+}
+
+func TestCreateUserSubscriptionTxEnforcesSingleModel(t *testing.T) {
+	users := &activationUserRepo{blocking: true}
+	store := &activationStore{users: users}
+	logic := NewActivateOrderLogic(&svc.ServiceContext{Config: config.Config{Subscribe: config.SubscribeConfig{SingleModel: true}}})
+
+	_, err := logic.createUserSubscriptionTx(context.Background(), store, &orderEntity.Order{UserId: 7, SubscribeId: 9}, &subscribeEntity.Subscribe{})
+	if err == nil {
+		t.Fatal("activation created a subscription despite a blocking subscription")
+	}
+	if users.hasBlockingCalls != 1 {
+		t.Fatalf("HasBlockingSubscription calls = %d, want 1", users.hasBlockingCalls)
 	}
 }

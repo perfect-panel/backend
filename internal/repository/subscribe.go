@@ -5,13 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/perfect-panel/server/pkg/orm"
-	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -19,8 +17,7 @@ import (
 )
 
 var (
-	cacheSubscribeIdPrefix       = "cache:subscribe:id:"
-	userSubscribeUserCachePrefix = "cache:user:subscribe:user:v2:"
+	cacheSubscribeIdPrefix = "cache:subscribe:id:"
 )
 
 // SubscribeRepo subscribe 数据访问接口
@@ -107,11 +104,9 @@ func (m *subscribeRepo) getCacheKeys(data *subscribe.Subscribe) []string {
 
 func (m *subscribeRepo) getUserSubscribeCacheKeys(ctx context.Context, subscribeId int64) ([]string, error) {
 	var userIds []int64
-	now := timeutil.Now()
-	sevenDaysAgo := now.Add(-7 * 24 * time.Hour)
 	err := m.QueryNoCacheCtx(ctx, &userIds, func(conn *gorm.DB, v interface{}) error {
 		return conn.Table("user_subscribe").
-			Where("subscribe_id = ? AND (expire_time > ? OR finished_at >= ? OR expire_time = ?)", subscribeId, now, sevenDaysAgo, time.UnixMilli(0)).
+			Where("subscribe_id = ?", subscribeId).
 			Distinct("user_id").
 			Pluck("user_id", &userIds).Error
 	})
@@ -121,7 +116,7 @@ func (m *subscribeRepo) getUserSubscribeCacheKeys(ctx context.Context, subscribe
 
 	keys := make([]string, 0, len(userIds))
 	for _, userId := range userIds {
-		keys = append(keys, fmt.Sprintf("%s%d", userSubscribeUserCachePrefix, userId))
+		keys = append(keys, fmt.Sprintf("%s%d", cacheUserSubscribeUserPrefix, userId))
 	}
 	return keys, nil
 }

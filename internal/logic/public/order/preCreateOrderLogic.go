@@ -57,7 +57,7 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *dto.PurchaseOrderRequest) (res
 	}
 
 	if sub.Quota > 0 {
-		count, err := store.User().CountUserSubscribesByUserAndSubscribe(l.ctx, u.Id, req.SubscribeId)
+		count, err := store.User().CountQuotaConsumingSubscriptions(l.ctx, u.Id, req.SubscribeId)
 		if err != nil {
 			l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("subscribe_id", req.SubscribeId))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "count user subscribe error: %v", err.Error())

@@ -221,8 +221,17 @@ func (l *ActivateOrderLogic) activateNewPurchaseTx(ctx context.Context, store re
 }
 
 func (l *ActivateOrderLogic) createUserSubscriptionTx(ctx context.Context, store repository.Store, orderInfo *order.Order, sub *subscribe.Subscribe) (*user.Subscribe, error) {
+	if l.svc.Config.Subscribe.SingleModel {
+		hasBlockingSubscription, err := store.User().HasBlockingSubscription(ctx, orderInfo.UserId)
+		if err != nil {
+			return nil, err
+		}
+		if hasBlockingSubscription {
+			return nil, fmt.Errorf("single subscription mode exceeds limit")
+		}
+	}
 	if sub.Quota > 0 {
-		count, err := store.User().CountUserSubscribesByUserAndSubscribe(ctx, orderInfo.UserId, orderInfo.SubscribeId)
+		count, err := store.User().CountQuotaConsumingSubscriptions(ctx, orderInfo.UserId, orderInfo.SubscribeId)
 		if err != nil {
 			return nil, err
 		}
@@ -660,6 +669,15 @@ func (l *ActivateOrderLogic) getSubscribeInfo(ctx context.Context, subscribeId i
 
 // createUserSubscription creates a new user subscription record based on order and subscription plan details
 func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderInfo *order.Order, sub *subscribe.Subscribe) (*user.Subscribe, error) {
+	if l.svc.Config.Subscribe.SingleModel {
+		hasBlockingSubscription, err := l.svc.Store.User().HasBlockingSubscription(ctx, orderInfo.UserId)
+		if err != nil {
+			return nil, err
+		}
+		if hasBlockingSubscription {
+			return nil, fmt.Errorf("single subscription mode exceeds limit")
+		}
+	}
 	now := timeutil.Now()
 	userSub := &user.Subscribe{
 		UserId:      orderInfo.UserId,
@@ -676,7 +694,7 @@ func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderIn
 	}
 
 	if sub.Quota > 0 {
-		count, err := l.svc.Store.User().CountUserSubscribesByUserAndSubscribe(ctx, orderInfo.UserId, orderInfo.SubscribeId)
+		count, err := l.svc.Store.User().CountQuotaConsumingSubscriptions(ctx, orderInfo.UserId, orderInfo.SubscribeId)
 		if err != nil {
 			logger.WithContext(ctx).Error("Count user subscribe failed", logger.Field("error", err.Error()))
 			return nil, err

@@ -67,6 +67,9 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 	if userSubscribe.UserId != u.Id {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "subscription does not belong to the current user")
 	}
+	if userSubscribe.Status == user.SubscribeStatusDeducted {
+		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeNotAvailable), "deducted subscription cannot be renewed")
+	}
 	// find subscription
 	sub, err := store.Subscribe().FindOne(l.ctx, userSubscribe.SubscribeId)
 	if err != nil {

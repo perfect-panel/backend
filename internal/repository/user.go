@@ -15,7 +15,6 @@ import (
 	"github.com/perfect-panel/server/pkg/cache"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/orm"
-	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -25,9 +24,9 @@ var (
 	cacheUserIdPrefix             = "cache:user:id:"
 	cacheUserEmailPrefix          = "cache:user:email:v2:"
 	cacheUserSubscribeTokenPrefix = "cache:user:subscribe:token:"
-	// v2 stores the status-unfiltered subscription list. Status-specific callers
-	// filter this shared value in memory so cache entries cannot collide.
-	cacheUserSubscribeUserPrefix = "cache:user:subscribe:user:v2:"
+	// v3 stores the complete, status-unfiltered subscription history. Status-specific
+	// callers filter this shared value in memory so cache entries cannot collide.
+	cacheUserSubscribeUserPrefix = "cache:user:subscribe:user:v3:"
 	cacheUserSubscribeIdPrefix   = "cache:user:subscribe:id:"
 	cacheUserDeviceNumberPrefix  = "cache:user:device:number:"
 	cacheUserDeviceIdPrefix      = "cache:user:device:id:"
@@ -90,7 +89,8 @@ type UserRepo interface {
 	FindUserSubscribesByStatus(ctx context.Context, status ...int64) ([]*user.Subscribe, error)
 	FindSubscribesByIds(ctx context.Context, ids []int64) ([]*user.Subscribe, error)
 	ActivatePendingSubscribesBySubscribeId(ctx context.Context, subscribeId int64) error
-	CountUserSubscribesByUserAndSubscribe(ctx context.Context, userId, subscribeId int64) (int64, error)
+	CountQuotaConsumingSubscriptions(ctx context.Context, userId, subscribeId int64) (int64, error)
+	HasBlockingSubscription(ctx context.Context, userId int64) (bool, error)
 	CountUserSubscribesBySubscribeIdAndStatus(ctx context.Context, subscribeId int64, status ...int64) (int64, error)
 	QueryActiveSubscriptions(ctx context.Context, subscribeId ...int64) (map[int64]int64, error)
 	QueryUserSubscribe(ctx context.Context, userId int64, status ...int64) ([]*user.SubscribeDetails, error)
@@ -1016,29 +1016,33 @@ func (m *userRepo) CountUserSubscribesBySubscribeIdAndStatus(ctx context.Context
 	return total, err
 }
 
-func (m *userRepo) CountUserSubscribesByUserAndSubscribe(ctx context.Context, userId, subscribeId int64) (int64, error) {
+func (m *userRepo) CountQuotaConsumingSubscriptions(ctx context.Context, userId, subscribeId int64) (int64, error) {
 	var total int64
 	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
 		return conn.Model(&user.Subscribe{}).
-			Where("user_id = ? AND subscribe_id = ?", userId, subscribeId).
+			Where("user_id = ? AND subscribe_id = ? AND status <> ?", userId, subscribeId, user.SubscribeStatusDeducted).
 			Count(&total).Error
 	})
 	return total, err
 }
 
-// QueryUserSubscribe returns a list of records that meet the conditions.
+func (m *userRepo) HasBlockingSubscription(ctx context.Context, userId int64) (bool, error) {
+	var total int64
+	err := m.QueryNoCacheCtx(ctx, &total, func(conn *gorm.DB, v interface{}) error {
+		return conn.Model(&user.Subscribe{}).
+			Where("user_id = ? AND status <> ?", userId, user.SubscribeStatusDeducted).
+			Count(&total).Error
+	})
+	return total > 0, err
+}
+
+// QueryUserSubscribe returns the complete cached subscription history for a user.
 func (m *userRepo) QueryUserSubscribe(ctx context.Context, userId int64, status ...int64) ([]*user.SubscribeDetails, error) {
 	var all []*user.SubscribeDetails
 	key := fmt.Sprintf("%s%d", cacheUserSubscribeUserPrefix, userId)
 	err := m.QueryCtx(ctx, &all, key, func(conn *gorm.DB, v interface{}) error {
-		// 获取当前时间
-		now := timeutil.Now()
-		// 获取当前时间向前推 7 天
-		sevenDaysAgo := now.Add(-7 * 24 * time.Hour)
-		// 基础条件查询
-		conn = conn.Model(&user.Subscribe{}).Where("user_id = ?", userId)
-		// 订阅过期时间大于当前时间或者订阅结束时间大于当前时间
-		return conn.Where("expire_time > ? OR finished_at >= ? OR expire_time = ?", now, sevenDaysAgo, time.UnixMilli(0)).
+		return conn.Model(&user.Subscribe{}).
+			Where("user_id = ?", userId).
 			Preload("Subscribe").
 			Order("CASE WHEN status = 1 THEN 0 ELSE 1 END ASC").
 			Order("expire_time DESC").

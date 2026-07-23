@@ -378,6 +378,11 @@ func TestQueryUserSubscribeCachesUnfilteredListWithStableOrder(t *testing.T) {
 			if strings.Contains(sql, "status IN") {
 				t.Fatalf("cached query must load the complete list before filtering:\n%s", sql)
 			}
+			for _, unwanted := range []string{"expire_time >", "finished_at >=", "expire_time ="} {
+				if strings.Contains(sql, unwanted) {
+					t.Fatalf("subscription history query must not apply a retention window %q:\n%s", unwanted, sql)
+				}
+			}
 			for _, want := range []string{
 				"ORDER BY CASE WHEN status = 1 THEN 0 ELSE 1 END ASC",
 				"expire_time DESC",
@@ -434,9 +439,72 @@ func TestSubscribeRepoInvalidatesEveryCachedUserListThatCanContainPlan(t *testin
 
 			sql := logs.String()
 			if strings.Contains(sql, "status IN") {
-				t.Fatalf("cache invalidation must not exclude recently completed subscriptions by status:\n%s", sql)
+				t.Fatalf("cache invalidation must not filter subscriptions by status:\n%s", sql)
 			}
-			for _, want := range []string{"subscribe_id = 10", "expire_time >", "finished_at >=", "expire_time ="} {
+			for _, unwanted := range []string{"expire_time >", "finished_at >=", "expire_time ="} {
+				if strings.Contains(sql, unwanted) {
+					t.Fatalf("cache invalidation must include historical subscriptions, found %q:\n%s", unwanted, sql)
+				}
+			}
+			for _, want := range []string{"subscribe_id = 10"} {
+				if !strings.Contains(sql, want) {
+					t.Fatalf("SQL missing %q:\n%s", want, sql)
+				}
+			}
+		})
+	}
+}
+
+func TestSubscriptionPolicyQueriesExcludeDeductedSubscriptions(t *testing.T) {
+	tests := []struct {
+		name      string
+		dialector gorm.Dialector
+	}{
+		{
+			name: "mysql",
+			dialector: mysql.New(mysql.Config{
+				DSN:                       "gorm:gorm@tcp(localhost:9910)/gorm?charset=utf8&parseTime=True&loc=Local",
+				SkipInitializeWithVersion: true,
+			}),
+		},
+		{
+			name: "postgres",
+			dialector: postgres.New(postgres.Config{
+				DSN:                  "host=localhost user=gorm password=gorm dbname=gorm port=9920 sslmode=disable",
+				PreferSimpleProtocol: true,
+			}),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var logs bytes.Buffer
+			db, err := gorm.Open(tt.dialector, &gorm.Config{
+				DryRun:                 true,
+				DisableAutomaticPing:   true,
+				SkipDefaultTransaction: true,
+				Logger:                 gormlogger.New(log.New(&logs, "", 0), gormlogger.Config{LogLevel: gormlogger.Info}),
+			})
+			if err != nil {
+				t.Fatalf("open gorm db: %v", err)
+			}
+			redisServer := miniredis.RunT(t)
+			redisClient := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})
+			t.Cleanup(func() { _ = redisClient.Close() })
+
+			repo := newUserRepo(db, redisClient)
+			if _, err := repo.CountQuotaConsumingSubscriptions(context.Background(), 42, 10); err != nil {
+				t.Fatalf("CountQuotaConsumingSubscriptions: %v", err)
+			}
+			if _, err := repo.HasBlockingSubscription(context.Background(), 42); err != nil {
+				t.Fatalf("HasBlockingSubscription: %v", err)
+			}
+
+			sql := logs.String()
+			if strings.Count(sql, "status <> 4") != 2 {
+				t.Fatalf("expected both policy queries to exclude deducted subscriptions:\n%s", sql)
+			}
+			for _, want := range []string{"user_id = 42", "subscribe_id = 10"} {
 				if !strings.Contains(sql, want) {
 					t.Fatalf("SQL missing %q:\n%s", want, sql)
 				}
