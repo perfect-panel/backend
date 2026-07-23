@@ -29,10 +29,12 @@ func (s subscriptionPolicyStore) Subscribe() repository.SubscribeRepo { return s
 type subscriptionPolicyUserRepo struct {
 	repository.UserRepo
 	repository.UserSubscriptionRepo
-	blocking         bool
-	quotaCount       int64
-	hasBlockingCalls int
-	quotaCountCalls  int
+	blocking           bool
+	quotaCount         int64
+	subscription       *userEntity.Subscribe
+	hasBlockingCalls   int
+	quotaCountCalls    int
+	findSubscribeCalls int
 }
 
 func (r *subscriptionPolicyUserRepo) HasBlockingSubscription(_ context.Context, _ int64) (bool, error) {
@@ -43,6 +45,11 @@ func (r *subscriptionPolicyUserRepo) HasBlockingSubscription(_ context.Context, 
 func (r *subscriptionPolicyUserRepo) CountQuotaConsumingSubscriptions(_ context.Context, _ int64, _ int64) (int64, error) {
 	r.quotaCountCalls++
 	return r.quotaCount, nil
+}
+
+func (r *subscriptionPolicyUserRepo) FindOneSubscribe(_ context.Context, _ int64) (*userEntity.Subscribe, error) {
+	r.findSubscribeCalls++
+	return r.subscription, nil
 }
 
 type subscriptionPolicySubscribeRepo struct {
@@ -130,6 +137,108 @@ func TestPurchaseAndPreCreateUseQuotaConsumingCount(t *testing.T) {
 			t.Fatalf("CountQuotaConsumingSubscriptions calls = %d, want 1", users.quotaCountCalls)
 		}
 	})
+}
+
+func TestRenewalPreviewSkipsNewPurchaseQuotaAfterValidation(t *testing.T) {
+	users := &subscriptionPolicyUserRepo{
+		quotaCount: 1,
+		subscription: &userEntity.Subscribe{
+			Id:          22,
+			UserId:      42,
+			SubscribeId: 10,
+			Status:      userEntity.SubscribeStatusExpired,
+		},
+	}
+	logic := NewPreCreateOrderLogic(subscriptionPolicyContext(), &svc.ServiceContext{Store: subscriptionPolicyStore{
+		users: users,
+		subscribes: &subscriptionPolicySubscribeRepo{subscribe: &subscribe.Subscribe{
+			Id:        10,
+			Quota:     1,
+			UnitPrice: 100,
+		}},
+	}})
+
+	_, err := logic.PreCreateOrder(&dto.PurchaseOrderRequest{
+		SubscribeId:     10,
+		UserSubscribeId: 22,
+		Quantity:        1,
+	})
+	if err != nil {
+		t.Fatalf("PreCreateOrder renewal preview error = %v, want nil", err)
+	}
+	if users.findSubscribeCalls != 1 {
+		t.Fatalf("FindOneSubscribe calls = %d, want 1", users.findSubscribeCalls)
+	}
+	if users.quotaCountCalls != 0 {
+		t.Fatalf("CountQuotaConsumingSubscriptions calls = %d, want 0", users.quotaCountCalls)
+	}
+}
+
+func TestRenewalPreviewValidatesTargetBeforeSkippingQuota(t *testing.T) {
+	tests := []struct {
+		name         string
+		subscription *userEntity.Subscribe
+		wantError    string
+	}{
+		{
+			name: "foreign subscription",
+			subscription: &userEntity.Subscribe{
+				Id:          22,
+				UserId:      7,
+				SubscribeId: 10,
+				Status:      userEntity.SubscribeStatusActive,
+			},
+			wantError: "does not belong to current user",
+		},
+		{
+			name: "different plan",
+			subscription: &userEntity.Subscribe{
+				Id:          22,
+				UserId:      42,
+				SubscribeId: 11,
+				Status:      userEntity.SubscribeStatusActive,
+			},
+			wantError: "does not match subscribe plan",
+		},
+		{
+			name: "deducted subscription",
+			subscription: &userEntity.Subscribe{
+				Id:          22,
+				UserId:      42,
+				SubscribeId: 10,
+				Status:      userEntity.SubscribeStatusDeducted,
+			},
+			wantError: "status does not allow renewal",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			users := &subscriptionPolicyUserRepo{
+				quotaCount:   1,
+				subscription: tt.subscription,
+			}
+			logic := NewPreCreateOrderLogic(subscriptionPolicyContext(), &svc.ServiceContext{Store: subscriptionPolicyStore{
+				users: users,
+				subscribes: &subscriptionPolicySubscribeRepo{subscribe: &subscribe.Subscribe{
+					Id:    10,
+					Quota: 1,
+				}},
+			}})
+
+			_, err := logic.PreCreateOrder(&dto.PurchaseOrderRequest{
+				SubscribeId:     10,
+				UserSubscribeId: 22,
+				Quantity:        1,
+			})
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("PreCreateOrder error = %v, want %q", err, tt.wantError)
+			}
+			if users.quotaCountCalls != 0 {
+				t.Fatalf("CountQuotaConsumingSubscriptions calls = %d, want 0", users.quotaCountCalls)
+			}
+		})
+	}
 }
 
 func boolPtr(value bool) *bool { return &value }
