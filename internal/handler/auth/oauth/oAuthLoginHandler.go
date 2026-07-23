@@ -5,6 +5,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/perfect-panel/server/internal/logic/auth/oauth"
+	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -33,7 +34,11 @@ func OAuthLoginHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := oauth.NewOAuthLoginLogic(ctx, svcCtx)
+		l := oauth.NewOAuthLoginLogic(ctx, oauth.OAuthLoginURLDependencies{
+			Store:  svcCtx.Store,
+			Redis:  svcCtx.Redis,
+			Policy: registerpolicy.NewServicePolicy(svcCtx),
+		})
 		resp, err := l.OAuthLogin(&req)
 		result.HttpResult(c, resp, err)
 	}

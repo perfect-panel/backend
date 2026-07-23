@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/logic/auth/registerpolicy"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/auth"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	githuboauth "github.com/perfect-panel/server/pkg/oauth/github"
 	"github.com/perfect-panel/server/pkg/oauth/google"
@@ -22,21 +20,21 @@ import (
 
 type OAuthLoginLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps OAuthLoginURLDependencies
 }
 
 // OAuth login
-func NewOAuthLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *OAuthLoginLogic {
+func NewOAuthLoginLogic(ctx context.Context, deps OAuthLoginURLDependencies) *OAuthLoginLogic {
 	return &OAuthLoginLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
 func (l *OAuthLoginLogic) OAuthLogin(req *dto.OAthLoginRequest) (resp *dto.OAuthLoginResponse, err error) {
-	if err := registerpolicy.EnsureMethodEnabled(l.ctx, l.svcCtx, req.Method); err != nil {
+	if err := l.deps.Policy.EnsureMethodEnabled(l.ctx, req.Method); err != nil {
 		return nil, err
 	}
 	var uri string
@@ -63,7 +61,7 @@ func (l *OAuthLoginLogic) OAuthLogin(req *dto.OAthLoginRequest) (resp *dto.OAuth
 }
 
 func (l *OAuthLoginLogic) google(req *dto.OAthLoginRequest) (string, error) {
-	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "google")
+	authMethod, err := l.deps.Store.Auth().FindOneByMethod(l.ctx, "google")
 	if err != nil {
 		return "", err
 	}
@@ -81,7 +79,7 @@ func (l *OAuthLoginLogic) google(req *dto.OAthLoginRequest) (string, error) {
 	// generate the state code
 	code := random.KeyNew(32, 1)
 	// save the state code
-	err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf("google:%s", code), req.Redirect, 5*60*time.Second).Err()
+	err = l.deps.Redis.Set(l.ctx, fmt.Sprintf("google:%s", code), req.Redirect, 5*60*time.Second).Err()
 	if err != nil {
 		return "", err
 	}
@@ -93,7 +91,7 @@ func (l *OAuthLoginLogic) facebook() (string, error) {
 	return "", nil
 }
 func (l *OAuthLoginLogic) apple(req *dto.OAthLoginRequest) (string, error) {
-	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "apple")
+	authMethod, err := l.deps.Store.Auth().FindOneByMethod(l.ctx, "apple")
 	if err != nil {
 		return "", err
 	}
@@ -107,14 +105,14 @@ func (l *OAuthLoginLogic) apple(req *dto.OAthLoginRequest) (string, error) {
 	// generate the state code
 	code := random.KeyNew(32, 1)
 	// save the state code under correct apple prefix
-	err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf("apple:%s", code), req.Redirect, 5*60*time.Second).Err()
+	err = l.deps.Redis.Set(l.ctx, fmt.Sprintf("apple:%s", code), req.Redirect, 5*60*time.Second).Err()
 	if err != nil {
 		l.Errorw("error save state code to redis", logger.Field("error", err.Error()))
 	}
 	return fmt.Sprintf(uri, cfg.ClientId, fmt.Sprintf("%s/v1/auth/oauth/callback/apple", cfg.RedirectURL), code), nil
 }
 func (l *OAuthLoginLogic) github(req *dto.OAthLoginRequest) (string, error) {
-	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "github")
+	authMethod, err := l.deps.Store.Auth().FindOneByMethod(l.ctx, "github")
 	if err != nil {
 		return "", err
 	}
@@ -132,7 +130,7 @@ func (l *OAuthLoginLogic) github(req *dto.OAthLoginRequest) (string, error) {
 	// generate the state code
 	code := random.KeyNew(32, 1)
 	// save the state code
-	err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf("github:%s", code), req.Redirect, 5*60*time.Second).Err()
+	err = l.deps.Redis.Set(l.ctx, fmt.Sprintf("github:%s", code), req.Redirect, 5*60*time.Second).Err()
 	if err != nil {
 		return "", err
 	}
@@ -140,7 +138,7 @@ func (l *OAuthLoginLogic) github(req *dto.OAthLoginRequest) (string, error) {
 	return uri, nil
 }
 func (l *OAuthLoginLogic) telegram(req *dto.OAthLoginRequest) (string, error) {
-	authMethod, err := l.svcCtx.Store.Auth().FindOneByMethod(l.ctx, "telegram")
+	authMethod, err := l.deps.Store.Auth().FindOneByMethod(l.ctx, "telegram")
 	if err != nil {
 		return "", err
 	}
@@ -153,7 +151,7 @@ func (l *OAuthLoginLogic) telegram(req *dto.OAthLoginRequest) (string, error) {
 	// generate the state code
 	code := random.KeyNew(32, 1)
 	// save the state code under correct telegram prefix
-	err = l.svcCtx.Redis.Set(l.ctx, fmt.Sprintf("telegram:%s", code), req.Redirect, 5*60*time.Second).Err()
+	err = l.deps.Redis.Set(l.ctx, fmt.Sprintf("telegram:%s", code), req.Redirect, 5*60*time.Second).Err()
 	if err != nil {
 		l.Errorw("error save state code to redis", logger.Field("error", err.Error()))
 		return "", errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "error save state code to redis")
