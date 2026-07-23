@@ -18,7 +18,18 @@ import (
 // @Router /v1/common/site/config [get]
 func GetGlobalConfigHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
-		l := common.NewGetGlobalConfigLogic(ctx, svcCtx)
+		l := common.NewGetGlobalConfigLogic(ctx, common.GetGlobalConfigDependencies{
+			Store: svcCtx.Store,
+			Config: common.GlobalConfigSnapshot{
+				Site:      svcCtx.Config.Site,
+				Subscribe: svcCtx.Config.Subscribe,
+				Email:     svcCtx.Config.Email,
+				Mobile:    svcCtx.Config.Mobile,
+				Register:  svcCtx.Config.Register,
+				Verify:    svcCtx.Config.Verify,
+				Invite:    svcCtx.Config.Invite,
+			},
+		})
 		resp, err := l.GetGlobalConfig()
 		result.HttpResult(c, resp, err)
 	}
