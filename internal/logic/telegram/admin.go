@@ -331,7 +331,7 @@ func (l *TelegramLogic) lookupUser(msg *tgbotapi.Message, input string) (*user.U
 			return u, true
 		}
 	}
-	auth, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "email", input)
+	auth, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "email", input)
 	if err == nil && auth.UserId > 0 {
 		u, err := l.svcCtx.Store.User().FindOne(l.ctx, auth.UserId)
 		if err == nil {
@@ -343,7 +343,7 @@ func (l *TelegramLogic) lookupUser(msg *tgbotapi.Message, input string) (*user.U
 }
 
 func userEmail(ctx context.Context, svcCtx *svc.ServiceContext, userId int64) (string, error) {
-	auths, err := svcCtx.Store.User().FindUserAuthMethods(ctx, userId)
+	auths, err := svcCtx.Store.UserAuth().FindUserAuthMethods(ctx, userId)
 	if err != nil {
 		return fmt.Sprintf("ID:%d", userId), err
 	}
@@ -360,7 +360,7 @@ func (l *TelegramLogic) userDetail(msg *tgbotapi.Message, adminUser *user.User, 
 	if !ok {
 		return
 	}
-	subs, _ := l.svcCtx.Store.User().QueryUserSubscribe(l.ctx, u.Id)
+	subs, _ := l.svcCtx.Store.UserSubscription().QueryUserSubscribe(l.ctx, u.Id)
 
 	enable := "❌ 已禁用"
 	if u.Enable != nil && *u.Enable {
@@ -380,7 +380,7 @@ func (l *TelegramLogic) userDetail(msg *tgbotapi.Message, adminUser *user.User, 
 		u.ReferCode,
 	))
 
-	auths, _ := l.svcCtx.Store.User().FindUserAuthMethods(l.ctx, u.Id)
+	auths, _ := l.svcCtx.Store.UserAuth().FindUserAuthMethods(l.ctx, u.Id)
 	if len(auths) > 0 {
 		sb.WriteString("\n绑定方式：\n")
 		for _, a := range auths {
@@ -429,7 +429,7 @@ func (l *TelegramLogic) userSubs(msg *tgbotapi.Message, adminUser *user.User, in
 	if !ok {
 		return
 	}
-	subs, _ := l.svcCtx.Store.User().QueryUserSubscribe(l.ctx, u.Id)
+	subs, _ := l.svcCtx.Store.UserSubscription().QueryUserSubscribe(l.ctx, u.Id)
 	if len(subs) == 0 {
 		_ = l.sendMessage(l.svcCtx.TelegramBot, "用户无订阅。", msg.Chat.ID)
 		return
@@ -501,7 +501,7 @@ func (l *TelegramLogic) confirmResetTraffic(msg *tgbotapi.Message, adminUser *us
 		_ = l.sendMessage(l.svcCtx.TelegramBot, "订阅ID格式错误。", msg.Chat.ID)
 		return
 	}
-	sub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, subID)
+	sub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, subID)
 	if err != nil {
 		_ = l.sendMessage(l.svcCtx.TelegramBot, "订阅不存在。", msg.Chat.ID)
 		return
@@ -520,7 +520,7 @@ func (l *TelegramLogic) confirmToggleSub(msg *tgbotapi.Message, adminUser *user.
 		_ = l.sendMessage(l.svcCtx.TelegramBot, "订阅ID格式错误。", msg.Chat.ID)
 		return
 	}
-	userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, subID)
+	userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, subID)
 	if err != nil {
 		_ = l.sendMessage(l.svcCtx.TelegramBot, "订阅不存在。", msg.Chat.ID)
 		return
@@ -574,25 +574,25 @@ func (l *TelegramLogic) confirmAction(msg *tgbotapi.Message, adminUser *user.Use
 		_ = l.sendMessage(l.svcCtx.TelegramBot, fmt.Sprintf("✅ 工单 #%d 已关闭", id), msg.Chat.ID)
 	case "reset":
 		id, _ := strconv.ParseInt(act.Target, 10, 64)
-		userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, id)
+		userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, id)
 		if err != nil {
 			_ = l.sendMessage(l.svcCtx.TelegramBot, "订阅不存在。", msg.Chat.ID)
 			return
 		}
 		userSub.Download = 0
 		userSub.Upload = 0
-		if err := l.svcCtx.Store.User().UpdateSubscribe(l.ctx, userSub); err != nil {
+		if err := l.svcCtx.Store.UserSubscription().UpdateSubscribe(l.ctx, userSub); err != nil {
 			l.Errorw("reset traffic failed", logger.Field("error", err.Error()))
 			_ = l.sendMessage(l.svcCtx.TelegramBot, "重置流量失败。", msg.Chat.ID)
 			return
 		}
-		_ = l.svcCtx.Store.User().ClearSubscribeCache(l.ctx, userSub)
+		_ = l.svcCtx.Store.UserCache().ClearSubscribeCache(l.ctx, userSub)
 		_ = l.svcCtx.Store.Subscribe().ClearCache(l.ctx, userSub.SubscribeId)
 		_ = l.sendMessage(l.svcCtx.TelegramBot,
 			fmt.Sprintf("✅ 订阅 ID:%d 流量已重置", id), msg.Chat.ID)
 	case "toggle":
 		id, _ := strconv.ParseInt(act.Target, 10, 64)
-		userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, id)
+		userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, id)
 		if err != nil {
 			_ = l.sendMessage(l.svcCtx.TelegramBot, "订阅不存在。", msg.Chat.ID)
 			return
@@ -604,12 +604,12 @@ func (l *TelegramLogic) confirmAction(msg *tgbotapi.Message, adminUser *user.Use
 			opLabel = "已暂停"
 		}
 		userSub.Status = newStatus
-		if err := l.svcCtx.Store.User().UpdateSubscribe(l.ctx, userSub); err != nil {
+		if err := l.svcCtx.Store.UserSubscription().UpdateSubscribe(l.ctx, userSub); err != nil {
 			l.Errorw("toggle sub failed", logger.Field("error", err.Error()))
 			_ = l.sendMessage(l.svcCtx.TelegramBot, "操作失败。", msg.Chat.ID)
 			return
 		}
-		_ = l.svcCtx.Store.User().ClearSubscribeCache(l.ctx, userSub)
+		_ = l.svcCtx.Store.UserCache().ClearSubscribeCache(l.ctx, userSub)
 		_ = l.svcCtx.Store.Subscribe().ClearCache(l.ctx, userSub.SubscribeId)
 		_ = l.sendMessage(l.svcCtx.TelegramBot,
 			fmt.Sprintf("✅ 订阅 ID:%d %s", id, opLabel), msg.Chat.ID)

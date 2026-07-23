@@ -78,7 +78,7 @@ func (l *BindOAuthCallbackLogic) BindOAuthCallback(req *dto.BindOAuthCallbackReq
 		return err
 	}
 	// update user info to redis
-	err = l.svcCtx.Store.User().UpdateUserCache(l.ctx, u)
+	err = l.svcCtx.Store.UserCache().UpdateUserCache(l.ctx, u)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "update user cache failed")
 	}
@@ -131,7 +131,7 @@ func (l *BindOAuthCallbackLogic) google(req *dto.BindOAuthCallbackRequest) error
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get google user info failed")
 	}
 	// query user info
-	userAuthMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "google", googleUserInfo.OpenID)
+	userAuthMethod, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "google", googleUserInfo.OpenID)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user auth method failed")
 	}
@@ -145,7 +145,7 @@ func (l *BindOAuthCallbackLogic) google(req *dto.BindOAuthCallbackRequest) error
 		AuthIdentifier: googleUserInfo.OpenID,
 		Verified:       true,
 	}
-	err = l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, userAuthMethod)
+	err = l.svcCtx.Store.UserAuth().InsertUserAuthMethods(l.ctx, userAuthMethod)
 	if err != nil {
 		l.Errorw("error insert user auth method: %v", logger.Field("error", err.Error()))
 		return err
@@ -206,7 +206,7 @@ func (l *BindOAuthCallbackLogic) apple(req *dto.BindOAuthCallbackRequest) error 
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "get apple unique id failed: %v", err.Error())
 	}
 	// query user by apple unique id
-	userAuthMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "apple", appleUnique)
+	userAuthMethod, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "apple", appleUnique)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("[BindOAuthCallbackLogic] FindUserAuthMethodByOpenID error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user auth method by openid failed: %v", err.Error())
@@ -228,7 +228,7 @@ func (l *BindOAuthCallbackLogic) apple(req *dto.BindOAuthCallbackRequest) error 
 		AuthIdentifier: appleUnique,
 		Verified:       true,
 	}
-	err = l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, userAuthMethod)
+	err = l.svcCtx.Store.UserAuth().InsertUserAuthMethods(l.ctx, userAuthMethod)
 	if err != nil {
 		l.Errorw("[BindOAuthCallbackLogic] InsertUserAuthMethods error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert user auth method failed: %v", err.Error())
@@ -292,7 +292,7 @@ func (l *BindOAuthCallbackLogic) telegram(req *dto.BindOAuthCallbackRequest) err
 
 	telegramUserID := fmt.Sprintf("%d", *callbackData.Id)
 
-	existingByOpenID, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "telegram", telegramUserID)
+	existingByOpenID, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "telegram", telegramUserID)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("find telegram user auth method by openid failed", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find telegram user auth method failed")
@@ -304,7 +304,7 @@ func (l *BindOAuthCallbackLogic) telegram(req *dto.BindOAuthCallbackRequest) err
 		return errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "telegram user already exists")
 	}
 
-	existingByPlatform, err := l.svcCtx.Store.User().FindUserAuthMethodByPlatform(l.ctx, u.Id, "telegram")
+	existingByPlatform, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByPlatform(l.ctx, u.Id, "telegram")
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("find telegram user auth method by platform failed", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find telegram user auth method failed")
@@ -323,7 +323,7 @@ func (l *BindOAuthCallbackLogic) telegram(req *dto.BindOAuthCallbackRequest) err
 		Verified:       true,
 	}
 
-	err = l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, userAuthMethod)
+	err = l.svcCtx.Store.UserAuth().InsertUserAuthMethods(l.ctx, userAuthMethod)
 	if err != nil {
 		l.Errorw("insert telegram user auth method failed", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "insert telegram user auth method failed")
@@ -387,7 +387,7 @@ func (l *BindOAuthCallbackLogic) github(req *dto.BindOAuthCallbackRequest) error
 
 	// check if this GitHub account is already bound to another user
 	openID := fmt.Sprintf("%d", githubUserInfo.OpenID)
-	userAuthMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "github", openID)
+	userAuthMethod, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "github", openID)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user auth method failed")
 	}
@@ -402,7 +402,7 @@ func (l *BindOAuthCallbackLogic) github(req *dto.BindOAuthCallbackRequest) error
 		AuthIdentifier: openID,
 		Verified:       true,
 	}
-	err = l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, userAuthMethod)
+	err = l.svcCtx.Store.UserAuth().InsertUserAuthMethods(l.ctx, userAuthMethod)
 	if err != nil {
 		l.Errorw("error insert user auth method: %v", logger.Field("error", err.Error()))
 		return err

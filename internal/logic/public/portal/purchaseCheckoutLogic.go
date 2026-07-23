@@ -143,7 +143,7 @@ func (s checkoutStore) UpdateOrderStatusFrom(ctx context.Context, orderNo string
 }
 
 func (s checkoutStore) ClearUserCache(ctx context.Context, users ...*user.User) error {
-	return s.store.User().ClearUserCache(ctx, users...)
+	return s.store.UserCache().ClearUserCache(ctx, users...)
 }
 
 func (s checkoutStore) InTx(ctx context.Context, fn func(CheckoutTransaction) error) error {

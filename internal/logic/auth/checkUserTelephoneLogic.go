@@ -33,7 +33,7 @@ func (l *CheckUserTelephoneLogic) CheckUserTelephone(req *dto.TelephoneCheckUser
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TelephoneError), "Invalid phone number")
 	}
-	authMethods, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
+	authMethods, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user by email error: %v", err.Error())
 	}

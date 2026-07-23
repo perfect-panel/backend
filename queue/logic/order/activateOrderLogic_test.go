@@ -29,7 +29,11 @@ func (s *activationStore) InTx(_ context.Context, fn func(repository.Store) erro
 }
 func (s *activationStore) Order() repository.OrderRepo { return s.orders }
 func (s *activationStore) User() repository.UserRepo   { return s.users }
-func (s *activationStore) Log() repository.LogRepo     { return s.logs }
+func (s *activationStore) UserSubscription() repository.UserSubscriptionRepo {
+	return s.users
+}
+func (s *activationStore) UserCache() repository.UserCacheRepo { return s.users }
+func (s *activationStore) Log() repository.LogRepo             { return s.logs }
 
 type activationOrderRepo struct {
 	repository.OrderRepo
@@ -54,6 +58,8 @@ func (r *activationOrderRepo) UpdateOrderStatusFrom(_ context.Context, orderNo s
 
 type activationUserRepo struct {
 	repository.UserRepo
+	repository.UserSubscriptionRepo
+	repository.UserCacheRepo
 	user             *userEntity.User
 	updateCacheCalls int
 	quotaCount       int64

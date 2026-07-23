@@ -62,7 +62,7 @@ func (l *QueryDocumentDetailLogic) renderConditional(content string) string {
 	hasSubscription := false
 	if u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User); ok && u != nil {
 		// status 1 = active
-		subs, err := l.svcCtx.Store.User().QueryUserSubscribe(l.ctx, u.Id, 1)
+		subs, err := l.svcCtx.Store.UserSubscription().QueryUserSubscribe(l.ctx, u.Id, 1)
 		if err != nil {
 			l.Errorw("[QueryDocumentDetailLogic] QueryUserSubscribe error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id))
 		} else {

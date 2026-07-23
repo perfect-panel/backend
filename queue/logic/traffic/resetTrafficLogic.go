@@ -195,7 +195,7 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 		}
 
 		// Query users for monthly reset based on subscription start date cycle
-		monthlyResetUsers, err := store.User().QueryMonthlyResetSubscribeIds(ctx, resetMonthSubIds, now)
+		monthlyResetUsers, err := store.SubscriptionTraffic().QueryMonthlyResetSubscribeIds(ctx, resetMonthSubIds, now)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Failed to query monthly reset users", logger.Field("error", err.Error()))
 			return err
@@ -206,12 +206,12 @@ func (l *ResetTrafficLogic) resetMonth(ctx context.Context) error {
 				logger.Field("count", len(monthlyResetUsers)),
 				logger.Field("userIds", monthlyResetUsers))
 
-			if err = store.User().ResetSubscribeTrafficByIds(ctx, monthlyResetUsers); err != nil {
+			if err = store.SubscriptionTraffic().ResetSubscribeTrafficByIds(ctx, monthlyResetUsers); err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update monthly reset users", logger.Field("error", err.Error()))
 				return err
 			}
 			// Find user subscriptions for these users
-			userSubs, err := store.User().FindSubscribesByIds(ctx, monthlyResetUsers)
+			userSubs, err := store.UserSubscription().FindSubscribesByIds(ctx, monthlyResetUsers)
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to find user subscriptions for 1st reset", logger.Field("error", err.Error()))
 				return err
@@ -266,7 +266,7 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 		}
 
 		// Get all active users with these subscriptions
-		users1stReset, err := store.User().QueryFirstResetSubscribeIds(ctx, reset1stSubIds, now)
+		users1stReset, err := store.SubscriptionTraffic().QueryFirstResetSubscribeIds(ctx, reset1stSubIds, now)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Failed to query 1st reset users", logger.Field("error", err.Error()))
 			return err
@@ -278,11 +278,11 @@ func (l *ResetTrafficLogic) reset1st(ctx context.Context, cache resetTrafficCach
 				logger.Field("userIds", users1stReset))
 
 			// Reset upload and download traffic to zero
-			if err = store.User().ResetSubscribeTrafficByIds(ctx, users1stReset); err != nil {
+			if err = store.SubscriptionTraffic().ResetSubscribeTrafficByIds(ctx, users1stReset); err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update 1st reset users", logger.Field("error", err.Error()))
 				return err
 			}
-			userSubs, err := store.User().FindSubscribesByIds(ctx, users1stReset)
+			userSubs, err := store.UserSubscription().FindSubscribesByIds(ctx, users1stReset)
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to find user subscriptions for 1st reset", logger.Field("error", err.Error()))
 				return err
@@ -331,7 +331,7 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 		}
 
 		// Query users for yearly reset based on subscription start date anniversary
-		usersYearReset, err := store.User().QueryYearlyResetSubscribeIds(ctx, resetYearSubIds, now)
+		usersYearReset, err := store.SubscriptionTraffic().QueryYearlyResetSubscribeIds(ctx, resetYearSubIds, now)
 		if err != nil {
 			logger.Errorw("[ResetTraffic] Query yearly reset users failed", logger.Field("error", err.Error()))
 			return err
@@ -343,12 +343,12 @@ func (l *ResetTrafficLogic) resetYear(ctx context.Context) error {
 				logger.Field("userIds", usersYearReset))
 
 			// Reset upload and download traffic to zero
-			if err = store.User().ResetSubscribeTrafficByIds(ctx, usersYearReset); err != nil {
+			if err = store.SubscriptionTraffic().ResetSubscribeTrafficByIds(ctx, usersYearReset); err != nil {
 				logger.Errorw("[ResetTraffic] Failed to update yearly reset users", logger.Field("error", err.Error()))
 				return err
 			}
 			// Find user subscriptions for these users
-			userSubs, err := store.User().FindSubscribesByIds(ctx, usersYearReset)
+			userSubs, err := store.UserSubscription().FindSubscribesByIds(ctx, usersYearReset)
 			if err != nil {
 				logger.Errorw("[ResetTraffic] Failed to find user subscriptions for 1st reset", logger.Field("error", err.Error()))
 				return err
@@ -520,7 +520,7 @@ func (l *ResetTrafficLogic) clearCache(_ context.Context, list []*user.Subscribe
 		for _, sub := range list {
 			if sub.SubscribeId > 0 {
 				cacheCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-				err := l.svc.Store.User().ClearSubscribeCache(cacheCtx, sub)
+				err := l.svc.Store.UserCache().ClearSubscribeCache(cacheCtx, sub)
 				cancel()
 				if err != nil {
 					logger.Errorw("[ResetTraffic] Failed to clear cache for subscription",

@@ -32,7 +32,7 @@ func NewUnbindDeviceLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Unbi
 
 func (l *UnbindDeviceLogic) UnbindDevice(req *dto.UnbindDeviceRequest) error {
 	userInfo := l.ctx.Value(constant.CtxKeyUser).(*user.User)
-	device, err := l.svcCtx.Store.User().FindOneDevice(l.ctx, req.Id)
+	device, err := l.svcCtx.Store.UserDevice().FindOneDevice(l.ctx, req.Id)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DeviceNotExist), "find device")
 	}
@@ -42,11 +42,11 @@ func (l *UnbindDeviceLogic) UnbindDevice(req *dto.UnbindDeviceRequest) error {
 	}
 
 	return l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
-		if err = store.User().DeleteDevice(l.ctx, req.Id); err != nil {
+		if err = store.UserDevice().DeleteDevice(l.ctx, req.Id); err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete device err: %v", err)
 		}
 
-		if err = store.User().DeleteUserAuthMethodByIdentifier(l.ctx, "device", device.Identifier); err != nil {
+		if err = store.UserAuth().DeleteUserAuthMethodByIdentifier(l.ctx, "device", device.Identifier); err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find device online record err: %v", err)
 		}
 		sessionId := l.ctx.Value(constant.CtxKeySessionID)

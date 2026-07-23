@@ -41,7 +41,7 @@ func (l *BindDeviceLogic) BindDeviceToUser(identifier, ip, userAgent string, cur
 	)
 
 	// Check if device exists
-	deviceInfo, err := l.svcCtx.Store.User().FindOneDeviceByIdentifier(l.ctx, identifier)
+	deviceInfo, err := l.svcCtx.Store.UserDevice().FindOneDeviceByIdentifier(l.ctx, identifier)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Device not found, create new device record
@@ -63,7 +63,7 @@ func (l *BindDeviceLogic) BindDeviceToUser(identifier, ip, userAgent string, cur
 		)
 		deviceInfo.Ip = ip
 		deviceInfo.UserAgent = userAgent
-		if err := l.svcCtx.Store.User().UpdateDevice(l.ctx, deviceInfo); err != nil {
+		if err := l.svcCtx.Store.UserDevice().UpdateDevice(l.ctx, deviceInfo); err != nil {
 			l.Errorw("failed to update device",
 				logger.Field("identifier", identifier),
 				logger.Field("error", err.Error()),
@@ -97,7 +97,7 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 			AuthIdentifier: identifier,
 			Verified:       true,
 		}
-		if err := store.User().InsertUserAuthMethods(l.ctx, authMethod); err != nil {
+		if err := store.UserAuth().InsertUserAuthMethods(l.ctx, authMethod); err != nil {
 			if errors.Is(err, gorm.ErrDuplicatedKey) {
 				// Concurrent request already created this auth method;
 				// propagate so the outer handler can retry gracefully.
@@ -120,7 +120,7 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 			Enabled:    true,
 			Online:     false,
 		}
-		if err := store.User().InsertDevice(l.ctx, deviceInfo); err != nil {
+		if err := store.UserDevice().InsertDevice(l.ctx, deviceInfo); err != nil {
 			l.Errorw("failed to create device",
 				logger.Field("user_id", userId),
 				logger.Field("identifier", identifier),
@@ -141,7 +141,7 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 			logger.Field("user_id", userId),
 		)
 
-		deviceInfo, findErr := l.svcCtx.Store.User().FindOneDeviceByIdentifier(l.ctx, identifier)
+		deviceInfo, findErr := l.svcCtx.Store.UserDevice().FindOneDeviceByIdentifier(l.ctx, identifier)
 		if findErr != nil {
 			l.Errorw("failed to find device after concurrent creation",
 				logger.Field("identifier", identifier),
@@ -154,7 +154,7 @@ func (l *BindDeviceLogic) createDeviceForUser(identifier, ip, userAgent string, 
 		if deviceInfo.UserId == userId {
 			deviceInfo.Ip = ip
 			deviceInfo.UserAgent = userAgent
-			if err := l.svcCtx.Store.User().UpdateDevice(l.ctx, deviceInfo); err != nil {
+			if err := l.svcCtx.Store.UserDevice().UpdateDevice(l.ctx, deviceInfo); err != nil {
 				l.Errorw("failed to update device",
 					logger.Field("identifier", identifier),
 					logger.Field("error", err.Error()),
@@ -190,7 +190,7 @@ func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, use
 
 	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// Check if old user has other auth methods besides device
-		authMethods, err := store.User().FindUserAuthMethods(l.ctx, oldUserId)
+		authMethods, err := store.UserAuth().FindUserAuthMethods(l.ctx, oldUserId)
 		if err != nil {
 			l.Errorw("failed to query auth methods for old user",
 				logger.Field("old_user_id", oldUserId),
@@ -238,7 +238,7 @@ func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, use
 		}
 
 		// Update device auth method to new user
-		if err := store.User().UpdateUserAuthMethodOwner(l.ctx, "device", deviceInfo.Identifier, newUserId); err != nil {
+		if err := store.UserAuth().UpdateUserAuthMethodOwner(l.ctx, "device", deviceInfo.Identifier, newUserId); err != nil {
 			l.Errorw("failed to update device auth method",
 				logger.Field("identifier", deviceInfo.Identifier),
 				logger.Field("error", err.Error()),
@@ -252,7 +252,7 @@ func (l *BindDeviceLogic) rebindDeviceToNewUser(deviceInfo *user.Device, ip, use
 		deviceInfo.UserAgent = userAgent
 		deviceInfo.Enabled = true
 
-		if err := store.User().UpdateDevice(l.ctx, deviceInfo); err != nil {
+		if err := store.UserDevice().UpdateDevice(l.ctx, deviceInfo); err != nil {
 			l.Errorw("failed to update device",
 				logger.Field("identifier", deviceInfo.Identifier),
 				logger.Field("error", err.Error()),

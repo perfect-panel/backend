@@ -26,7 +26,7 @@ func NewDeleteUserAuthMethodLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *DeleteUserAuthMethodLogic) DeleteUserAuthMethod(req *dto.DeleteUserAuthMethodRequest) error {
-	err := l.svcCtx.Store.User().DeleteUserAuthMethods(l.ctx, req.UserId, req.AuthType)
+	err := l.svcCtx.Store.UserAuth().DeleteUserAuthMethods(l.ctx, req.UserId, req.AuthType)
 	if err != nil {
 		l.Errorw("[DeleteUserAuthMethodLogic] Delete User Auth Method Error:", logger.Field("err", err.Error()), logger.Field("userId", req.UserId), logger.Field("authType", req.AuthType))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "Delete User Auth Method Error")

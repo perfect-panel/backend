@@ -12,7 +12,7 @@ func clearTrialSubscribeCache(ctx context.Context, svcCtx *svc.ServiceContext, t
 	if trialSub == nil {
 		return
 	}
-	if err := svcCtx.Store.User().ClearSubscribeCache(ctx, trialSub); err != nil {
+	if err := svcCtx.Store.UserCache().ClearSubscribeCache(ctx, trialSub); err != nil {
 		logger.WithContext(ctx).Errorw("ClearSubscribeCache failed",
 			logger.Field("error", err.Error()),
 			logger.Field("user_subscribe_id", trialSub.Id),

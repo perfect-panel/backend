@@ -78,7 +78,7 @@ func (l *DeviceLoginLogic) DeviceLogin(req *dto.DeviceLoginRequest) (resp *dto.L
 	}()
 
 	// Check if device exists by identifier
-	deviceInfo, err := l.svcCtx.Store.User().FindOneDeviceByIdentifier(l.ctx, req.Identifier)
+	deviceInfo, err := l.svcCtx.Store.UserDevice().FindOneDeviceByIdentifier(l.ctx, req.Identifier)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Device not found, create new user and device
@@ -203,7 +203,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *dto.DeviceLoginRequest) (*
 			AuthIdentifier: req.Identifier,
 			Verified:       true,
 		}
-		if err := store.User().InsertUserAuthMethods(l.ctx, authMethod); err != nil {
+		if err := store.UserAuth().InsertUserAuthMethods(l.ctx, authMethod); err != nil {
 			l.Errorw("failed to create device auth method",
 				logger.Field("user_id", userInfo.Id),
 				logger.Field("identifier", req.Identifier),
@@ -221,7 +221,7 @@ func (l *DeviceLoginLogic) registerUserAndDevice(req *dto.DeviceLoginRequest) (*
 			Enabled:    true,
 			Online:     false,
 		}
-		if err := store.User().InsertDevice(l.ctx, deviceInfo); err != nil {
+		if err := store.UserDevice().InsertDevice(l.ctx, deviceInfo); err != nil {
 			l.Errorw("failed to insert device",
 				logger.Field("user_id", userInfo.Id),
 				logger.Field("identifier", req.Identifier),
@@ -313,7 +313,7 @@ func (l *DeviceLoginLogic) activeTrial(store repository.Store, userId int64) (*u
 		Status:      1,
 	}
 
-	if err := store.User().InsertSubscribe(l.ctx, userSub); err != nil {
+	if err := store.UserSubscription().InsertSubscribe(l.ctx, userSub); err != nil {
 		l.Errorw("failed to insert trial subscription",
 			logger.Field("user_id", userId),
 			logger.Field("error", err.Error()),

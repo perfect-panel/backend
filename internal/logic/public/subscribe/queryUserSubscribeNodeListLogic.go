@@ -38,7 +38,7 @@ func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *dt
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 
-	userSubscribes, err := l.svcCtx.Store.User().QueryUserSubscribe(l.ctx, u.Id, 1, 2)
+	userSubscribes, err := l.svcCtx.Store.UserSubscription().QueryUserSubscribe(l.ctx, u.Id, 1, 2)
 	if err != nil {
 		logger.Errorw("failed to query user subscribe", logger.Field("error", err.Error()), logger.Field("user_id", u.Id))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "DB_ERROR")
@@ -240,7 +240,7 @@ func (l *QueryUserSubscribeNodeListLogic) getFirstHostLine() string {
 	return host
 }
 func (l *QueryUserSubscribeNodeListLogic) getUserSubscribe(token string) (*user.Subscribe, error) {
-	userSub, err := l.svcCtx.Store.User().FindOneSubscribeByToken(l.ctx, token)
+	userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribeByToken(l.ctx, token)
 	if err != nil {
 		l.Infow("[Generate Subscribe]find subscribe error: %v", logger.Field("error", err.Error()), logger.Field("token", token))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())

@@ -81,7 +81,7 @@ func (l *ResetPasswordLogic) ResetPassword(req *dto.ResetPasswordRequest) (resp 
 	}
 
 	// Check user
-	authMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, authmethod.Email, email)
+	authMethod, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, authmethod.Email, email)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user email not exist: %v", req.Email)

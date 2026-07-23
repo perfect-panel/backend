@@ -20,6 +20,7 @@ import (
 // method call panics immediately (fail-fast).
 type fakeUserRepo struct {
 	repository.UserRepo
+	repository.UserSubscriptionRepo
 
 	findOneSubscribeFn    func(context.Context, int64) (*usermodel.Subscribe, error)
 	findOneSubscribeCalls int
@@ -48,12 +49,15 @@ func (r *fakeUserRepo) FindOneUserSubscribe(ctx context.Context, id int64) (*use
 // call panics immediately.
 type fakeStore struct {
 	repository.Store
-	uRepo repository.UserRepo
+	uRepo *fakeUserRepo
 }
 
 func (s *fakeStore) User() repository.UserRepo { return s.uRepo }
+func (s *fakeStore) UserSubscription() repository.UserSubscriptionRepo {
+	return s.uRepo
+}
 
-func newFakeSvcCtx(uRepo repository.UserRepo) *svc.ServiceContext {
+func newFakeSvcCtx(uRepo *fakeUserRepo) *svc.ServiceContext {
 	return &svc.ServiceContext{
 		Store:  &fakeStore{uRepo: uRepo},
 		Config: config.Config{},

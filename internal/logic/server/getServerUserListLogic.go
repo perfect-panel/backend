@@ -154,10 +154,10 @@ func (l *GetServerUserListLogic) GetServerUserList(req *dto.GetServerUserListReq
 	}
 	users := make([]dto.ServerUser, 0)
 	for _, sub := range subs {
-		if err := l.svcCtx.Store.User().ActivatePendingSubscribesBySubscribeId(l.ctx, sub.Id); err != nil {
+		if err := l.svcCtx.Store.UserSubscription().ActivatePendingSubscribesBySubscribeId(l.ctx, sub.Id); err != nil {
 			return nil, err
 		}
-		data, err := l.svcCtx.Store.User().FindUsersSubscribeBySubscribeId(l.ctx, sub.Id)
+		data, err := l.svcCtx.Store.UserSubscription().FindUsersSubscribeBySubscribeId(l.ctx, sub.Id)
 		if err != nil {
 			return nil, err
 		}

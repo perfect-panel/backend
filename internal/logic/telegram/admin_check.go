@@ -17,7 +17,7 @@ import (
 func adminAuth(ctx context.Context, svcCtx *svc.ServiceContext, msg *tgbotapi.Message) (admin *user.User, rejectMsg string) {
 	chatID := strconv.FormatInt(msg.Chat.ID, 10)
 
-	auth, err := svcCtx.Store.User().FindUserAuthMethodByOpenID(ctx, "telegram", chatID)
+	auth, err := svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(ctx, "telegram", chatID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			logger.WithContext(ctx).Infow("admin auth: Telegram not bound", logger.Field("chat_id", msg.Chat.ID))
@@ -44,7 +44,7 @@ func adminAuth(ctx context.Context, svcCtx *svc.ServiceContext, msg *tgbotapi.Me
 // resolveTelegramUser resolves a Telegram chat ID to a user, regardless of admin status.
 // Used when sending messages to users via their bound Telegram.
 func resolveTelegramUser(ctx context.Context, svcCtx *svc.ServiceContext, chatID int64) (*user.User, bool) {
-	auth, err := svcCtx.Store.User().FindUserAuthMethodByOpenID(ctx, "telegram", strconv.FormatInt(chatID, 10))
+	auth, err := svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(ctx, "telegram", strconv.FormatInt(chatID, 10))
 	if err != nil {
 		return nil, false
 	}

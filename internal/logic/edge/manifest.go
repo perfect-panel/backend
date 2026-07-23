@@ -43,7 +43,7 @@ func NewManifestLogic(ctx context.Context, svcCtx *svc.ServiceContext) *Manifest
 }
 
 func (l *ManifestLogic) Manifest(token string) (*dto.EdgeManifestResponse, error) {
-	userSubscribe, err := l.svcCtx.Store.User().FindOneSubscribeByToken(l.ctx, token)
+	userSubscribe, err := l.svcCtx.Store.UserSubscription().FindOneSubscribeByToken(l.ctx, token)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrManifestNotFound

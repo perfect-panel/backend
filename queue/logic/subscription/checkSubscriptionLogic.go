@@ -29,7 +29,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 	logger.Infof("[CheckSubscription] Start check subscription: %s", timeutil.Now().Format("2006-01-02 15:04:05"))
 	// Check subscription traffic
 	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
-		list, err := store.User().FindTrafficExceededSubscribes(ctx)
+		list, err := store.UserSubscription().FindTrafficExceededSubscribes(ctx)
 		if err != nil {
 			logger.Errorw("[Check Subscription Traffic] Query subscribe failed", logger.Field("error", err.Error()))
 			return err
@@ -39,7 +39,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 			ids = append(ids, item.Id)
 		}
 		if len(ids) > 0 {
-			if err = store.User().MarkSubscribesFinished(ctx, ids, 2, timeutil.Now()); err != nil {
+			if err = store.UserSubscription().MarkSubscribesFinished(ctx, ids, 2, timeutil.Now()); err != nil {
 				logger.Errorw("[Check Subscription Traffic] Update subscribe status failed", logger.Field("error", err.Error()))
 				return nil
 			}
@@ -50,7 +50,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 			}
 
 			if len(list) > 0 {
-				if err = store.User().ClearSubscribeCache(ctx, list...); err != nil {
+				if err = store.UserCache().ClearSubscribeCache(ctx, list...); err != nil {
 					logger.Errorw("[Check Subscription Traffic] Clear subscribe cache failed", logger.Field("error", err.Error()))
 					return err
 				}
@@ -69,7 +69,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 	}
 	// Check subscription expire
 	err = l.svc.Store.InTx(ctx, func(store repository.Store) error {
-		list, err := store.User().FindExpiredSubscribes(ctx, timeutil.Now())
+		list, err := store.UserSubscription().FindExpiredSubscribes(ctx, timeutil.Now())
 		if err != nil {
 			logger.Error("[Check Subscription] Find subscribe failed", logger.Field("error", err.Error()))
 			return err
@@ -79,7 +79,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 			ids = append(ids, item.Id)
 		}
 		if len(ids) > 0 {
-			if err = store.User().MarkSubscribesFinished(ctx, ids, 3, timeutil.Now()); err != nil {
+			if err = store.UserSubscription().MarkSubscribesFinished(ctx, ids, 3, timeutil.Now()); err != nil {
 				logger.Error("[Check Subscription Expire] Update subscribe status failed", logger.Field("error", err.Error()))
 				return err
 			}
@@ -88,7 +88,7 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 				logger.Error("[Check Subscription Expire] Send email failed", logger.Field("error", err.Error()))
 				return nil
 			}
-			if err = store.User().ClearSubscribeCache(ctx, list...); err != nil {
+			if err = store.UserCache().ClearSubscribeCache(ctx, list...); err != nil {
 				logger.Errorw("[Check Subscription Traffic] Clear subscribe cache failed", logger.Field("error", err.Error()))
 				return err
 			}
@@ -108,12 +108,12 @@ func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task)
 
 func (l *CheckSubscriptionLogic) sendExpiredNotify(ctx context.Context, subs []int64) error {
 	for _, id := range subs {
-		sub, err := l.svc.Store.User().FindOneUserSubscribe(ctx, id)
+		sub, err := l.svc.Store.UserSubscription().FindOneUserSubscribe(ctx, id)
 		if err != nil {
 			logger.Errorw("[CheckSubscription] FindOneUserSubscribe failed", logger.Field("error", err.Error()))
 			continue
 		}
-		method, err := l.svc.Store.User().FindUserAuthMethodByUserId(ctx, "email", sub.UserId)
+		method, err := l.svc.Store.UserAuth().FindUserAuthMethodByUserId(ctx, "email", sub.UserId)
 		if err != nil {
 			logger.Errorw("[CheckSubscription] FindUserAuthMethodByUserId failed", logger.Field("error", err.Error()), logger.Field("user_id", sub.UserId))
 			continue
@@ -148,12 +148,12 @@ func (l *CheckSubscriptionLogic) sendExpiredNotify(ctx context.Context, subs []i
 
 func (l *CheckSubscriptionLogic) sendTrafficNotify(ctx context.Context, subs []int64) error {
 	for _, id := range subs {
-		sub, err := l.svc.Store.User().FindOneUserSubscribe(ctx, id)
+		sub, err := l.svc.Store.UserSubscription().FindOneUserSubscribe(ctx, id)
 		if err != nil {
 			logger.Errorw("[CheckSubscription] FindOneUserSubscribe failed", logger.Field("error", err.Error()))
 			continue
 		}
-		method, err := l.svc.Store.User().FindUserAuthMethodByUserId(ctx, "email", sub.UserId)
+		method, err := l.svc.Store.UserAuth().FindUserAuthMethodByUserId(ctx, "email", sub.UserId)
 		if err != nil {
 			logger.Errorw("[CheckSubscription] FindUserAuthMethodByUserId failed", logger.Field("error", err.Error()), logger.Field("user_id", sub.UserId))
 			continue

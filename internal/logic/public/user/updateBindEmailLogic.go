@@ -46,11 +46,11 @@ func (l *UpdateBindEmailLogic) UpdateBindEmail(req *dto.UpdateBindEmailRequest) 
 		logger.Error("current user is not found in context")
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	method, err := l.svcCtx.Store.User().FindUserAuthMethodByUserId(l.ctx, "email", u.Id)
+	method, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByUserId(l.ctx, "email", u.Id)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindUserAuthMethodByOpenID error")
 	}
-	m, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "email", req.Email)
+	m, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "email", req.Email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindUserAuthMethodByOpenID error")
 	}
@@ -65,13 +65,13 @@ func (l *UpdateBindEmailLogic) UpdateBindEmail(req *dto.UpdateBindEmailRequest) 
 			AuthIdentifier: req.Email,
 			Verified:       false,
 		}
-		if err := l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, method); err != nil {
+		if err := l.svcCtx.Store.UserAuth().InsertUserAuthMethods(l.ctx, method); err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "InsertUserAuthMethods error")
 		}
 	} else {
 		method.Verified = false
 		method.AuthIdentifier = req.Email
-		if err := l.svcCtx.Store.User().UpdateUserAuthMethods(l.ctx, method); err != nil {
+		if err := l.svcCtx.Store.UserAuth().UpdateUserAuthMethods(l.ctx, method); err != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "UpdateUserAuthMethods error")
 		}
 	}

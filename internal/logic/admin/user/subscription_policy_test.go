@@ -18,9 +18,13 @@ type adminSubscriptionPolicyStore struct {
 }
 
 func (s adminSubscriptionPolicyStore) User() repository.UserRepo { return s.users }
+func (s adminSubscriptionPolicyStore) UserSubscription() repository.UserSubscriptionRepo {
+	return s.users
+}
 
 type adminSubscriptionPolicyUserRepo struct {
 	repository.UserRepo
+	repository.UserSubscriptionRepo
 	blocking         bool
 	hasBlockingCalls int
 }

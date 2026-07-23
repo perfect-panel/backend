@@ -28,7 +28,7 @@ func NewGetUserSubscribeDevicesLogic(ctx context.Context, svcCtx *svc.ServiceCon
 }
 
 func (l *GetUserSubscribeDevicesLogic) GetUserSubscribeDevices(req *dto.GetUserSubscribeDevicesRequest) (resp *dto.GetUserSubscribeDevicesResponse, err error) {
-	list, total, err := l.svcCtx.Store.User().QueryDevicePageList(l.ctx, req.UserId, req.SubscribeId, req.Page, req.Size)
+	list, total, err := l.svcCtx.Store.UserDevice().QueryDevicePageList(l.ctx, req.UserId, req.SubscribeId, req.Page, req.Size)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "GetUserSubscribeDevices failed: %v", err.Error())
 	}

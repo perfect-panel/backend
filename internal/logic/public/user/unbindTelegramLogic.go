@@ -40,7 +40,7 @@ func (l *UnbindTelegramLogic) UnbindTelegram() error {
 		logger.Error("current user is not found in context")
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	method, err := l.svcCtx.Store.User().FindUserAuthMethodByPlatform(l.ctx, u.Id, "telegram")
+	method, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByPlatform(l.ctx, u.Id, "telegram")
 	if err != nil {
 		l.Errorw("UnbindTelegramLogic FindUserAuthMethodByPlatform Error", logger.Field("id", u.Id), logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Find User Auth Method By Platform Failed")
@@ -57,7 +57,7 @@ func (l *UnbindTelegramLogic) UnbindTelegram() error {
 	}
 
 	// Unbind Telegram
-	err = l.svcCtx.Store.User().DeleteUserAuthMethods(l.ctx, u.Id, "telegram")
+	err = l.svcCtx.Store.UserAuth().DeleteUserAuthMethods(l.ctx, u.Id, "telegram")
 	if err != nil {
 		l.Errorw("UnbindTelegramLogic DeleteUserAuthMethods Error", logger.Field("id", u.Id), logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "Delete User Auth Methods Failed")

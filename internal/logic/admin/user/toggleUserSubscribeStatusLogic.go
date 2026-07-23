@@ -27,7 +27,7 @@ func NewToggleUserSubscribeStatusLogic(ctx context.Context, svcCtx *svc.ServiceC
 }
 
 func (l *ToggleUserSubscribeStatusLogic) ToggleUserSubscribeStatus(req *dto.ToggleUserSubscribeStatusRequest) error {
-	userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, req.UserSubscribeId)
+	userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, req.UserSubscribeId)
 	if err != nil {
 		l.Errorw("FindOneSubscribe error", logger.Field("error", err.Error()), logger.Field("userSubscribeId", req.UserSubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), " FindOneSubscribe error: %v", err.Error())
@@ -43,14 +43,14 @@ func (l *ToggleUserSubscribeStatusLogic) ToggleUserSubscribeStatus(req *dto.Togg
 		return errors.Wrapf(xerr.NewErrCodeMsg(xerr.ERROR, "invalid subscribe status"), "invalid user subscribe status: %d", userSub.Status)
 	}
 
-	err = l.svcCtx.Store.User().UpdateSubscribe(l.ctx, userSub)
+	err = l.svcCtx.Store.UserSubscription().UpdateSubscribe(l.ctx, userSub)
 	if err != nil {
 		l.Errorw("UpdateSubscribe error", logger.Field("error", err.Error()), logger.Field("userSubscribeId", req.UserSubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), " UpdateSubscribe error: %v", err.Error())
 	}
 
 	// Clear user subscribe cache
-	if err = l.svcCtx.Store.User().ClearSubscribeCache(l.ctx, userSub); err != nil {
+	if err = l.svcCtx.Store.UserCache().ClearSubscribeCache(l.ctx, userSub); err != nil {
 		l.Errorw("ClearSubscribeCache failed:", logger.Field("error", err.Error()), logger.Field("userSubscribeId", userSub.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}

@@ -186,7 +186,7 @@ func (l *ActivateOrderLogic) activateNewPurchaseTx(ctx context.Context, store re
 		if err := store.User().Update(ctx, userInfo); err != nil {
 			return nil, err
 		}
-		if err := store.User().InsertUserAuthMethods(ctx, &user.AuthMethods{
+		if err := store.UserAuth().InsertUserAuthMethods(ctx, &user.AuthMethods{
 			UserId:         userInfo.Id,
 			AuthType:       tempOrder.AuthType,
 			AuthIdentifier: tempOrder.Identifier,
@@ -222,7 +222,7 @@ func (l *ActivateOrderLogic) activateNewPurchaseTx(ctx context.Context, store re
 
 func (l *ActivateOrderLogic) createUserSubscriptionTx(ctx context.Context, store repository.Store, orderInfo *order.Order, sub *subscribe.Subscribe) (*user.Subscribe, error) {
 	if l.svc.Config.Subscribe.SingleModel {
-		hasBlockingSubscription, err := store.User().HasBlockingSubscription(ctx, orderInfo.UserId)
+		hasBlockingSubscription, err := store.UserSubscription().HasBlockingSubscription(ctx, orderInfo.UserId)
 		if err != nil {
 			return nil, err
 		}
@@ -231,7 +231,7 @@ func (l *ActivateOrderLogic) createUserSubscriptionTx(ctx context.Context, store
 		}
 	}
 	if sub.Quota > 0 {
-		count, err := store.User().CountQuotaConsumingSubscriptions(ctx, orderInfo.UserId, orderInfo.SubscribeId)
+		count, err := store.UserSubscription().CountQuotaConsumingSubscriptions(ctx, orderInfo.UserId, orderInfo.SubscribeId)
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +251,7 @@ func (l *ActivateOrderLogic) createUserSubscriptionTx(ctx context.Context, store
 		UUID:        uuid.New().String(),
 		Status:      1,
 	}
-	if err := store.User().InsertSubscribe(ctx, userSub); err != nil {
+	if err := store.UserSubscription().InsertSubscribe(ctx, userSub); err != nil {
 		return nil, err
 	}
 	return userSub, nil
@@ -262,7 +262,7 @@ func (l *ActivateOrderLogic) activateRenewalTx(ctx context.Context, store reposi
 	if err != nil {
 		return nil, err
 	}
-	userSub, err := store.User().FindOneSubscribeByTokenForUpdate(ctx, orderInfo.SubscribeToken)
+	userSub, err := store.UserSubscription().FindOneSubscribeByTokenForUpdate(ctx, orderInfo.SubscribeToken)
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +299,7 @@ func (l *ActivateOrderLogic) updateSubscriptionForRenewalTx(ctx context.Context,
 	}
 	userSub.ExpireTime = tool.AddTime(sub.UnitTime, orderInfo.Quantity, userSub.ExpireTime)
 	userSub.Status = 1
-	return store.User().UpdateSubscribe(ctx, userSub)
+	return store.UserSubscription().UpdateSubscribe(ctx, userSub)
 }
 
 func (l *ActivateOrderLogic) activateResetTrafficTx(ctx context.Context, store repository.Store, orderInfo *order.Order) (*activationResult, error) {
@@ -307,7 +307,7 @@ func (l *ActivateOrderLogic) activateResetTrafficTx(ctx context.Context, store r
 	if err != nil {
 		return nil, err
 	}
-	userSub, err := store.User().FindOneSubscribeByTokenForUpdate(ctx, orderInfo.SubscribeToken)
+	userSub, err := store.UserSubscription().FindOneSubscribeByTokenForUpdate(ctx, orderInfo.SubscribeToken)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +317,7 @@ func (l *ActivateOrderLogic) activateResetTrafficTx(ctx context.Context, store r
 	userSub.Download = 0
 	userSub.Upload = 0
 	userSub.Status = 1
-	if err := store.User().UpdateSubscribe(ctx, userSub); err != nil {
+	if err := store.UserSubscription().UpdateSubscribe(ctx, userSub); err != nil {
 		return nil, err
 	}
 	sub, err := store.Subscribe().FindOne(ctx, userSub.SubscribeId)
@@ -383,7 +383,7 @@ func (l *ActivateOrderLogic) afterActivationCommit(ctx context.Context, result *
 	switch result.order.Type {
 	case OrderTypeSubscribe, OrderTypeRenewal, OrderTypeResetTraffic:
 		if result.userSub != nil {
-			if err := l.svc.Store.User().ClearSubscribeCache(ctx, result.userSub); err != nil {
+			if err := l.svc.Store.UserCache().ClearSubscribeCache(ctx, result.userSub); err != nil {
 				logger.WithContext(ctx).Error("Clear user subscribe cache failed", logger.Field("error", err.Error()))
 			}
 		}
@@ -391,7 +391,7 @@ func (l *ActivateOrderLogic) afterActivationCommit(ctx context.Context, result *
 			l.clearServerCache(ctx, result.subscribe)
 		}
 		if result.commissionRecipient != nil {
-			if err := l.svc.Store.User().UpdateUserCache(ctx, result.commissionRecipient); err != nil {
+			if err := l.svc.Store.UserCache().UpdateUserCache(ctx, result.commissionRecipient); err != nil {
 				logger.WithContext(ctx).Error("Update referer cache failed", logger.Field("error", err.Error()))
 			}
 		}
@@ -399,7 +399,7 @@ func (l *ActivateOrderLogic) afterActivationCommit(ctx context.Context, result *
 			l.sendNotifications(ctx, result.order, result.user, result.subscribe, result.userSub, result.notifyType)
 		}
 	case OrderTypeRecharge:
-		if err := l.svc.Store.User().UpdateUserCache(ctx, result.user); err != nil {
+		if err := l.svc.Store.UserCache().UpdateUserCache(ctx, result.user); err != nil {
 			logger.WithContext(ctx).Error("[Recharge] Update user cache failed", logger.Field("error", err.Error()))
 		}
 		l.sendRechargeNotifications(ctx, result.order, result.user)
@@ -564,7 +564,7 @@ func (l *ActivateOrderLogic) createGuestUser(ctx context.Context, orderInfo *ord
 			return err
 		}
 
-		if err := store.User().InsertUserAuthMethods(ctx, &user.AuthMethods{
+		if err := store.UserAuth().InsertUserAuthMethods(ctx, &user.AuthMethods{
 			UserId:         userInfo.Id,
 			AuthType:       tempOrder.AuthType,
 			AuthIdentifier: tempOrder.Identifier,
@@ -670,7 +670,7 @@ func (l *ActivateOrderLogic) getSubscribeInfo(ctx context.Context, subscribeId i
 // createUserSubscription creates a new user subscription record based on order and subscription plan details
 func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderInfo *order.Order, sub *subscribe.Subscribe) (*user.Subscribe, error) {
 	if l.svc.Config.Subscribe.SingleModel {
-		hasBlockingSubscription, err := l.svc.Store.User().HasBlockingSubscription(ctx, orderInfo.UserId)
+		hasBlockingSubscription, err := l.svc.Store.UserSubscription().HasBlockingSubscription(ctx, orderInfo.UserId)
 		if err != nil {
 			return nil, err
 		}
@@ -694,7 +694,7 @@ func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderIn
 	}
 
 	if sub.Quota > 0 {
-		count, err := l.svc.Store.User().CountQuotaConsumingSubscriptions(ctx, orderInfo.UserId, orderInfo.SubscribeId)
+		count, err := l.svc.Store.UserSubscription().CountQuotaConsumingSubscriptions(ctx, orderInfo.UserId, orderInfo.SubscribeId)
 		if err != nil {
 			logger.WithContext(ctx).Error("Count user subscribe failed", logger.Field("error", err.Error()))
 			return nil, err
@@ -710,7 +710,7 @@ func (l *ActivateOrderLogic) createUserSubscription(ctx context.Context, orderIn
 		}
 	}
 
-	if err := l.svc.Store.User().InsertSubscribe(ctx, userSub); err != nil {
+	if err := l.svc.Store.UserSubscription().InsertSubscribe(ctx, userSub); err != nil {
 		logger.WithContext(ctx).Error("Insert user subscribe failed", logger.Field("error", err.Error()))
 		return nil, err
 	}
@@ -733,7 +733,7 @@ func (l *ActivateOrderLogic) handleCommission(ctx context.Context, userInfo *use
 		return
 	}
 	if recipient != nil {
-		if err = l.svc.Store.User().UpdateUserCache(ctx, recipient); err != nil {
+		if err = l.svc.Store.UserCache().UpdateUserCache(ctx, recipient); err != nil {
 			logger.WithContext(ctx).Error("Update referer cache failed",
 				logger.Field("error", err.Error()),
 				logger.Field("user_id", recipient.Id),
@@ -865,7 +865,7 @@ func (l *ActivateOrderLogic) Renewal(ctx context.Context, orderInfo *order.Order
 	}
 
 	// Clear user subscription cache
-	err = l.svc.Store.User().ClearSubscribeCache(ctx, userSub)
+	err = l.svc.Store.UserCache().ClearSubscribeCache(ctx, userSub)
 	if err != nil {
 		logger.WithContext(ctx).Error("Clear user subscribe cache failed",
 			logger.Field("error", err.Error()),
@@ -888,7 +888,7 @@ func (l *ActivateOrderLogic) Renewal(ctx context.Context, orderInfo *order.Order
 
 // getUserSubscription retrieves user subscription by token
 func (l *ActivateOrderLogic) getUserSubscription(ctx context.Context, token string) (*user.Subscribe, error) {
-	userSub, err := l.svc.Store.User().FindOneSubscribeByToken(ctx, token)
+	userSub, err := l.svc.Store.UserSubscription().FindOneSubscribeByToken(ctx, token)
 	if err != nil {
 		logger.WithContext(ctx).Error("Find user subscribe failed", logger.Field("error", err.Error()))
 		return nil, err
@@ -925,7 +925,7 @@ func (l *ActivateOrderLogic) updateSubscriptionForRenewal(ctx context.Context, u
 	userSub.ExpireTime = tool.AddTime(sub.UnitTime, orderInfo.Quantity, userSub.ExpireTime)
 	userSub.Status = 1
 
-	if err := l.svc.Store.User().UpdateSubscribe(ctx, userSub); err != nil {
+	if err := l.svc.Store.UserSubscription().UpdateSubscribe(ctx, userSub); err != nil {
 		logger.WithContext(ctx).Error("Update user subscribe failed", logger.Field("error", err.Error()))
 		return err
 	}
@@ -950,7 +950,7 @@ func (l *ActivateOrderLogic) ResetTraffic(ctx context.Context, orderInfo *order.
 	userSub.Upload = 0
 	userSub.Status = 1
 
-	if err := l.svc.Store.User().UpdateSubscribe(ctx, userSub); err != nil {
+	if err := l.svc.Store.UserSubscription().UpdateSubscribe(ctx, userSub); err != nil {
 		logger.WithContext(ctx).Error("Update user subscribe failed", logger.Field("error", err.Error()))
 		return err
 	}
@@ -961,7 +961,7 @@ func (l *ActivateOrderLogic) ResetTraffic(ctx context.Context, orderInfo *order.
 	}
 
 	// Clear user subscription cache
-	err = l.svc.Store.User().ClearSubscribeCache(ctx, userSub)
+	err = l.svc.Store.UserCache().ClearSubscribeCache(ctx, userSub)
 	if err != nil {
 		logger.WithContext(ctx).Error("Clear user subscribe cache failed",
 			logger.Field("error", err.Error()),
@@ -1035,7 +1035,7 @@ func (l *ActivateOrderLogic) Recharge(ctx context.Context, orderInfo *order.Orde
 	}
 
 	// clear user cache
-	if err = l.svc.Store.User().UpdateUserCache(ctx, userInfo); err != nil {
+	if err = l.svc.Store.UserCache().UpdateUserCache(ctx, userInfo); err != nil {
 		logger.WithContext(ctx).Error("[Recharge] Update user cache failed", logger.Field("error", err.Error()))
 		return err
 	}

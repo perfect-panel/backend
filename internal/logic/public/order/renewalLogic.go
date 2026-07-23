@@ -60,7 +60,7 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 
 	orderNo := tool.GenerateTradeNo()
 	// find user subscribe
-	userSubscribe, err := store.User().FindOneUserSubscribe(l.ctx, req.UserSubscribeID)
+	userSubscribe, err := store.UserSubscription().FindOneUserSubscribe(l.ctx, req.UserSubscribeID)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user subscribe error: %v", err.Error())
 	}

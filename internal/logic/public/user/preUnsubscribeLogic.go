@@ -33,7 +33,7 @@ func (l *PreUnsubscribeLogic) PreUnsubscribe(req *dto.PreUnsubscribeRequest) (re
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 
-	userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, req.Id)
+	userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[PreUnsubscribeLogic] FindOneSubscribe failed", logger.Field("err", err.Error()), logger.Field("reqId", req.Id))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneSubscribe failed: %v", err.Error())

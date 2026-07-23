@@ -43,7 +43,7 @@ const (
 
 func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.PortalPurchaseResponse, err error) {
 	// find user auth
-	userAuth, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, req.AuthType, req.Identifier)
+	userAuth, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, req.AuthType, req.Identifier)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user auth error: %v", err.Error())
 	}

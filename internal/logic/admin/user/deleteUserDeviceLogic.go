@@ -27,7 +27,7 @@ func NewDeleteUserDeviceLogic(ctx context.Context, svcCtx *svc.ServiceContext) *
 }
 
 func (l *DeleteUserDeviceLogic) DeleteUserDevice(req *dto.DeleteUserDeivceRequest) error {
-	err := l.svcCtx.Store.User().DeleteDevice(l.ctx, req.Id)
+	err := l.svcCtx.Store.UserDevice().DeleteDevice(l.ctx, req.Id)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "delete user error: %v", err.Error())
 	}

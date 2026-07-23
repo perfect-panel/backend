@@ -13,7 +13,7 @@ import (
 
 func CalculateRemainingAmount(ctx context.Context, svcCtx *svc.ServiceContext, userSubscribeId int64) (int64, error) {
 	// Find User Subscribe
-	userSubscribe, err := svcCtx.Store.User().FindOneUserSubscribe(ctx, userSubscribeId)
+	userSubscribe, err := svcCtx.Store.UserSubscription().FindOneUserSubscribe(ctx, userSubscribeId)
 	if err != nil {
 		logger.WithContext(ctx).Error("[func CalculateRemainingAmount(ctx context.Context, svcCtx *svc.ServiceContext, userSubscribeId int64) (int64, error) {\n] FindOneUserSubscribe", logger.Field("err", err.Error()), logger.Field("id", userSubscribeId))
 		return 0, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneUserSubscribe failed, id: %d", userSubscribeId)

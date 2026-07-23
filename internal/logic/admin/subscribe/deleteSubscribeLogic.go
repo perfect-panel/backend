@@ -30,7 +30,7 @@ func (l *DeleteSubscribeLogic) DeleteSubscribe(req *dto.DeleteSubscribeRequest) 
 	// Check if the subscribe exists
 	phase := "check"
 	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
-		total, err := store.User().CountUserSubscribesBySubscribeIdAndStatus(l.ctx, req.Id, 1)
+		total, err := store.UserSubscription().CountUserSubscribesBySubscribeIdAndStatus(l.ctx, req.Id, 1)
 		if err != nil {
 			return err
 		}

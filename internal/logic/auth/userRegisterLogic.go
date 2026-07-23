@@ -124,7 +124,7 @@ func (l *UserRegisterLogic) UserRegister(req *dto.UserRegisterRequest) (resp *dt
 			AuthIdentifier: canonicalEmail,
 			Verified:       email.EnableVerify,
 		}
-		if err = store.User().InsertUserAuthMethods(l.ctx, authInfo); err != nil {
+		if err = store.UserAuth().InsertUserAuthMethods(l.ctx, authInfo); err != nil {
 			return err
 		}
 
@@ -247,5 +247,5 @@ func (l *UserRegisterLogic) activeTrial(store repository.Store, uid int64) (*use
 		UUID:        uuidx.NewUUID().String(),
 		Status:      1,
 	}
-	return userSub, store.User().InsertSubscribe(l.ctx, userSub)
+	return userSub, store.UserSubscription().InsertSubscribe(l.ctx, userSub)
 }

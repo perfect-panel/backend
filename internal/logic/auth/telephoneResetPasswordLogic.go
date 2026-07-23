@@ -55,7 +55,7 @@ func (l *TelephoneResetPasswordLogic) TelephoneResetPassword(req *dto.TelephoneR
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 	}
 
-	authMethods, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
+	authMethods, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("FindOneByTelephone Error", logger.Field("error", err))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())

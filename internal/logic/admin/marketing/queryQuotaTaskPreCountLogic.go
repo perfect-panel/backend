@@ -25,7 +25,7 @@ func NewQueryQuotaTaskPreCountLogic(ctx context.Context, svcCtx *svc.ServiceCont
 }
 
 func (l *QueryQuotaTaskPreCountLogic) QueryQuotaTaskPreCount(req *dto.QueryQuotaTaskPreCountRequest) (resp *dto.QueryQuotaTaskPreCountResponse, err error) {
-	count, err := l.svcCtx.Store.User().CountSubscribesByFilter(l.ctx, &user.SubscribeFilter{
+	count, err := l.svcCtx.Store.UserSubscription().CountSubscribesByFilter(l.ctx, &user.SubscribeFilter{
 		Subscribers: req.Subscribers,
 		IsActive:    req.IsActive,
 		StartTime:   req.StartTime,

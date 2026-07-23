@@ -84,7 +84,7 @@ func (l *FilterServerListLogic) FilterServerList(req *dto.FilterServerListReques
 func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []dto.Protocol) []dto.ServerOnlineUser {
 	result := make([]dto.ServerOnlineUser, 0)
 	nodeStore := l.svcCtx.Store.Node()
-	userStore := l.svcCtx.Store.User()
+	userSubscriptions := l.svcCtx.Store.UserSubscription()
 
 	for _, protocol := range protocols {
 		// query online user
@@ -122,7 +122,7 @@ func (l *FilterServerListLogic) handlerServerStatus(id int64, protocols []dto.Pr
 			mapResult[item.SubscribeId] = exist
 		} else {
 			// get subscribe info
-			info, err := userStore.FindOneUserSubscribe(l.ctx, item.SubscribeId)
+			info, err := userSubscriptions.FindOneUserSubscribe(l.ctx, item.SubscribeId)
 			if err != nil {
 				if !errors.Is(err, gorm.ErrRecordNotFound) {
 					l.Errorw("[handlerServerStatus] FindOneSubscribe Error: ", logger.Field("error", err.Error()), logger.Field("subscribe_id", item.SubscribeId))

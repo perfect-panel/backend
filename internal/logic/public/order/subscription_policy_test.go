@@ -20,11 +20,15 @@ type subscriptionPolicyStore struct {
 	subscribes *subscriptionPolicySubscribeRepo
 }
 
-func (s subscriptionPolicyStore) User() repository.UserRepo           { return s.users }
+func (s subscriptionPolicyStore) User() repository.UserRepo { return s.users }
+func (s subscriptionPolicyStore) UserSubscription() repository.UserSubscriptionRepo {
+	return s.users
+}
 func (s subscriptionPolicyStore) Subscribe() repository.SubscribeRepo { return s.subscribes }
 
 type subscriptionPolicyUserRepo struct {
 	repository.UserRepo
+	repository.UserSubscriptionRepo
 	blocking         bool
 	quotaCount       int64
 	hasBlockingCalls int

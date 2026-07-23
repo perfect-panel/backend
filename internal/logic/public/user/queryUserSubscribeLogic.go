@@ -38,7 +38,7 @@ func (l *QueryUserSubscribeLogic) QueryUserSubscribe() (resp *dto.QueryUserSubsc
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	data, err := l.svcCtx.Store.User().QueryUserSubscribe(l.ctx, u.Id, 0, 1, 2, 3)
+	data, err := l.svcCtx.Store.UserSubscription().QueryUserSubscribe(l.ctx, u.Id, 0, 1, 2, 3)
 	if err != nil {
 		l.Errorw("[QueryUserSubscribeLogic] Query User Subscribe Error:", logger.Field("err", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Subscribe Error")

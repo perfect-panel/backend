@@ -13,13 +13,17 @@ import (
 
 type ownershipStore struct {
 	repository.Store
-	users repository.UserRepo
+	users ownershipUserRepo
 }
 
 func (s ownershipStore) User() repository.UserRepo { return s.users }
+func (s ownershipStore) UserSubscription() repository.UserSubscriptionRepo {
+	return s.users
+}
 
 type ownershipUserRepo struct {
 	repository.UserRepo
+	repository.UserSubscriptionRepo
 	subscribe *userEntity.SubscribeDetails
 }
 

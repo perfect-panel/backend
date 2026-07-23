@@ -44,7 +44,7 @@ func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 	}
 
 	// find user subscription by ID
-	userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, req.Id)
+	userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("FindOneSubscribe failed", logger.Field("error", err.Error()), logger.Field("reqId", req.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneSubscribe failed: %v", err.Error())
@@ -73,7 +73,7 @@ func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// Re-read both mutable balances and the subscription under row locks.
 		// The context user is only an authorization principal and can be stale.
-		lockedSub, err := store.User().FindOneSubscribeForUpdate(l.ctx, req.Id)
+		lockedSub, err := store.UserSubscription().FindOneSubscribeForUpdate(l.ctx, req.Id)
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 			return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "Subscription status invalid for cancellation")
 		}
 		lockedSub.Status = user.SubscribeStatusDeducted
-		if err = store.User().UpdateSubscribe(l.ctx, lockedSub); err != nil {
+		if err = store.UserSubscription().UpdateSubscribe(l.ctx, lockedSub); err != nil {
 			return err
 		}
 		// Subscriptions created by an administrator have no associated order.
@@ -180,7 +180,7 @@ func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 	}
 
 	//clear user subscription cache
-	if err = l.svcCtx.Store.User().ClearSubscribeCache(l.ctx, userSub); err != nil {
+	if err = l.svcCtx.Store.UserCache().ClearSubscribeCache(l.ctx, userSub); err != nil {
 		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("userSubscribeId", userSub.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}

@@ -33,7 +33,7 @@ func (l *BatchDeleteSubscribeLogic) BatchDeleteSubscribe(req *dto.BatchDeleteSub
 	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		for _, id := range req.Ids {
 			// Validate whether the subscription ID belongs to an active user subscription.
-			count, err := store.User().CountUserSubscribesBySubscribeIdAndStatus(l.ctx, id, 1)
+			count, err := store.UserSubscription().CountUserSubscribesBySubscribeIdAndStatus(l.ctx, id, 1)
 			if err != nil {
 				l.Logger.Error("[BatchDeleteSubscribe] Query Subscribe Error: ", logger.Field("error", err.Error()))
 				return err

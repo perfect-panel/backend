@@ -394,7 +394,7 @@ func (a *Aggregator) persistBucket(ctx context.Context, suffix string, deltas []
 		subscribeIDs = append(subscribeIDs, delta.SubscribeId)
 	}
 
-	subs, err := a.svc.Store.User().FindSubscribesByIds(ctx, subscribeIDs)
+	subs, err := a.svc.Store.UserSubscription().FindSubscribesByIds(ctx, subscribeIDs)
 	if err != nil {
 		return err
 	}
@@ -443,7 +443,7 @@ func (a *Aggregator) persistBucket(ctx context.Context, suffix string, deltas []
 	})
 
 	return a.svc.Store.InTx(ctx, func(store repository.Store) error {
-		if err := store.User().BatchUpdateUserSubscribeWithTraffic(ctx, updates); err != nil {
+		if err := store.UserSubscription().BatchUpdateUserSubscribeWithTraffic(ctx, updates); err != nil {
 			return err
 		}
 		return store.TrafficLog().InsertBatch(ctx, logs, defaultTrafficBatchSize)

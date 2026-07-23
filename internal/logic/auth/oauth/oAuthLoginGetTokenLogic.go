@@ -618,7 +618,7 @@ func (l *OAuthLoginGetTokenLogic) createAuthMethod(store repository.Store, userI
 		AuthIdentifier: identifier,
 		Verified:       true,
 	}
-	if err := store.User().InsertUserAuthMethods(l.ctx, authMethod); err != nil {
+	if err := store.UserAuth().InsertUserAuthMethods(l.ctx, authMethod); err != nil {
 		l.Errorw("failed to create auth method",
 			logger.Field("request_id", requestID),
 			logger.Field("user_id", userID),
@@ -919,7 +919,7 @@ func (l *OAuthLoginGetTokenLogic) findOrRegisterUser(authType, openID, email, av
 		logger.Field("email", email),
 	)
 
-	userAuthMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, authType, openID)
+	userAuthMethod, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, authType, openID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			l.Infow("user not found, starting registration",
@@ -1013,7 +1013,7 @@ func (l *OAuthLoginGetTokenLogic) activeTrial(store repository.Store, uid int64,
 		Status:      1,
 	}
 
-	if err := store.User().InsertSubscribe(l.ctx, userSub); err != nil {
+	if err := store.UserSubscription().InsertSubscribe(l.ctx, userSub); err != nil {
 		l.Errorw("failed to insert trial subscription",
 			logger.Field("request_id", requestID),
 			logger.Field("user_id", uid),

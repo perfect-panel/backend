@@ -59,7 +59,7 @@ func (l *GetSubscribeListLogic) GetSubscribeList(req *dto.GetSubscribeListReques
 		resultList = append(resultList, sub)
 	}
 
-	subscribeMaps, err := l.svcCtx.Store.User().QueryActiveSubscriptions(l.ctx, subscribeIdList...)
+	subscribeMaps, err := l.svcCtx.Store.UserSubscription().QueryActiveSubscriptions(l.ctx, subscribeIdList...)
 	if err != nil {
 		l.Logger.Error("[GetSubscribeListLogic] get user subscribe failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get user subscribe failed: %v", err.Error())

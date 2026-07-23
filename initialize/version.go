@@ -49,7 +49,7 @@ func Migrate(ctx *svc.ServiceContext) {
 				logger.Errorf("[Migrate] CreateAdminUser error: %v", err.Error())
 				return err
 			}
-			if err := store.User().InsertUserAuthMethods(context.Background(), &user.AuthMethods{
+			if err := store.UserAuth().InsertUserAuthMethods(context.Background(), &user.AuthMethods{
 				UserId:         admin.Id,
 				AuthType:       "email",
 				AuthIdentifier: ctx.Config.Administrator.Email,

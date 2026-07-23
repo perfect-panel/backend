@@ -33,7 +33,7 @@ func NewResetAllSubscribeTokenLogic(ctx context.Context, svcCtx *svc.ServiceCont
 func (l *ResetAllSubscribeTokenLogic) ResetAllSubscribeToken() (resp *dto.ResetAllSubscribeTokenResponse, err error) {
 	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
 		// select all active and Finished subscriptions
-		list, err := store.User().FindUserSubscribesByStatus(l.ctx, 1, 2)
+		list, err := store.UserSubscription().FindUserSubscribesByStatus(l.ctx, 1, 2)
 		if err != nil {
 			logger.Errorf("[ResetAllSubscribeToken] Failed to fetch subscribe list: %v", err.Error())
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Failed to fetch subscribe list: %v", err.Error())
@@ -41,7 +41,7 @@ func (l *ResetAllSubscribeTokenLogic) ResetAllSubscribeToken() (resp *dto.ResetA
 		for _, sub := range list {
 			sub.Token = uuidx.SubscribeToken(strconv.FormatInt(timeutil.Now().UnixMilli(), 10) + strconv.FormatInt(sub.Id, 10))
 			sub.UUID = uuidx.NewUUID().String()
-			if updateErr := store.User().UpdateSubscribe(l.ctx, sub); updateErr != nil {
+			if updateErr := store.UserSubscription().UpdateSubscribe(l.ctx, sub); updateErr != nil {
 				logger.Errorf("[ResetAllSubscribeToken] Failed to update subscribe token for ID %d: %v", sub.Id, updateErr.Error())
 				return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "Failed to update subscribe token for ID %d: %v", sub.Id, updateErr.Error())
 			}

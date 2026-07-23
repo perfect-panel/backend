@@ -183,7 +183,7 @@ func (l *SubscribeLogic) getSubscribeV2URL() string {
 
 // getUserSubscribe 是本次修改的核心部分
 func (l *SubscribeLogic) getUserSubscribe(token string) (*user.Subscribe, error) {
-	userSub, err := l.svc.Store.User().FindOneSubscribeByToken(l.ctx, token)
+	userSub, err := l.svc.Store.UserSubscription().FindOneSubscribeByToken(l.ctx, token)
 	if err != nil {
 		l.Infow("[Generate Subscribe]find subscribe error: %v", logger.Field("error", err.Error()), logger.Field("token", token))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())

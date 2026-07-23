@@ -107,7 +107,7 @@ func (l *TelegramLogic) bind(userId int64, token string) error {
 	chatIdStr := strconv.FormatInt(userId, 10)
 
 	// Check if this Chat ID is already bound to another user
-	existingByChatId, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "telegram", chatIdStr)
+	existingByChatId, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "telegram", chatIdStr)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("TelegramLogic bind FindUserAuthMethodByOpenID Error", logger.Field("error", err.Error()), logger.Field("chatId", userId))
 		return l.sendMessage(l.svcCtx.TelegramBot, "Bind failed. Please try again later.", userId)
@@ -121,7 +121,7 @@ func (l *TelegramLogic) bind(userId int64, token string) error {
 	}
 
 	// Check if the target user already has Telegram bound
-	existingByUser, err := l.svcCtx.Store.User().FindUserAuthMethodByPlatform(l.ctx, bindUserId, "telegram")
+	existingByUser, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByPlatform(l.ctx, bindUserId, "telegram")
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("TelegramLogic bind FindUserAuthMethodByPlatform Error", logger.Field("error", err.Error()), logger.Field("bindUserId", bindUserId))
 		return l.sendMessage(l.svcCtx.TelegramBot, "Bind failed. Please try again later.", userId)
@@ -140,7 +140,7 @@ func (l *TelegramLogic) bind(userId int64, token string) error {
 	}
 
 	// Create the binding
-	if err := l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, &user.AuthMethods{
+	if err := l.svcCtx.Store.UserAuth().InsertUserAuthMethods(l.ctx, &user.AuthMethods{
 		UserId:         bindUserId,
 		AuthType:       "telegram",
 		AuthIdentifier: chatIdStr,
@@ -153,7 +153,7 @@ func (l *TelegramLogic) bind(userId int64, token string) error {
 	}
 
 	// Update user cache
-	err = l.svcCtx.Store.User().UpdateUserCache(l.ctx, &user.User{
+	err = l.svcCtx.Store.UserCache().UpdateUserCache(l.ctx, &user.User{
 		Id: bindUserId,
 	})
 	if err != nil {
@@ -198,7 +198,7 @@ func (l *TelegramLogic) start(req *tgbotapi.Update) error {
 	}
 
 	// Check if this Chat ID is already bound to another user
-	existingByChatId, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "telegram", chatIdStr)
+	existingByChatId, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "telegram", chatIdStr)
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			l.Errorw("TelegramLogic start FindUserAuthMethodByOpenID Error", logger.Field("error", err.Error()), logger.Field("chatId", req.Message.Chat.ID))
@@ -215,7 +215,7 @@ func (l *TelegramLogic) start(req *tgbotapi.Update) error {
 	}
 
 	// Check if the target user already has a Telegram binding
-	method, err := l.svcCtx.Store.User().FindUserAuthMethodByPlatform(l.ctx, userId, "telegram")
+	method, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByPlatform(l.ctx, userId, "telegram")
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("TelegramLogic start FindUserAuthMethodByPlatform Error", logger.Field("error", err.Error()), logger.Field("userId", userId))
 		return l.sendMessage(l.svcCtx.TelegramBot, "Bind failed!", req.Message.Chat.ID)
@@ -236,7 +236,7 @@ func (l *TelegramLogic) start(req *tgbotapi.Update) error {
 	}
 
 	// No existing binding — create a new one
-	if err := l.svcCtx.Store.User().InsertUserAuthMethods(l.ctx, &user.AuthMethods{
+	if err := l.svcCtx.Store.UserAuth().InsertUserAuthMethods(l.ctx, &user.AuthMethods{
 		UserId:         userId,
 		AuthType:       "telegram",
 		AuthIdentifier: chatIdStr,
@@ -249,7 +249,7 @@ func (l *TelegramLogic) start(req *tgbotapi.Update) error {
 	}
 
 	// Update user cache
-	err = l.svcCtx.Store.User().UpdateUserCache(l.ctx, &user.User{
+	err = l.svcCtx.Store.UserCache().UpdateUserCache(l.ctx, &user.User{
 		Id: userId,
 	})
 	if err != nil {

@@ -87,7 +87,7 @@ func (l *SendEmailCodeLogic) SendEmailCode(req *dto.SendCodeRequest) (resp *dto.
 	if !dailyLimiter.ParsePermitState(permit) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.TodaySendCountExceedsLimit), "send email too many requests")
 	}
-	m, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, authmethod.Email, email)
+	m, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, authmethod.Email, email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindUserAuthMethodByOpenID error")
 	}

@@ -32,9 +32,10 @@ var (
 	cacheUserDeviceIdPrefix      = "cache:user:device:id:"
 )
 
-// UserRepo user 数据访问接口
+// UserRepo provides user profile, account, reporting, and marketing queries.
+// Related authentication, subscription, device, cache, withdrawal, and traffic
+// operations live behind their own focused repository interfaces below.
 type UserRepo interface {
-	// user
 	Insert(ctx context.Context, data *user.User, tx ...*gorm.DB) error
 	FindOne(ctx context.Context, id int64) (*user.User, error)
 	FindOneForUpdate(ctx context.Context, id int64) (*user.User, error)
@@ -59,8 +60,10 @@ type UserRepo interface {
 	CountEmailRecipients(ctx context.Context, filter *user.EmailRecipientFilter) (int64, error)
 	QueryDailyUserStatisticsList(ctx context.Context, date time.Time) ([]user.UserStatisticsWithDate, error)
 	QueryMonthlyUserStatisticsList(ctx context.Context, date time.Time) ([]user.UserStatisticsWithDate, error)
+}
 
-	// auth methods
+// UserAuthRepo manages external authentication identities linked to users.
+type UserAuthRepo interface {
 	FindUserAuthMethods(ctx context.Context, userId int64) ([]*user.AuthMethods, error)
 	FindUserAuthMethodByOpenID(ctx context.Context, method, openID string) (*user.AuthMethods, error)
 	ValidateEmailIdentityUniqueness(ctx context.Context) error
@@ -72,8 +75,10 @@ type UserRepo interface {
 	UpdateUserAuthMethodOwner(ctx context.Context, authType, identifier string, userId int64, tx ...*gorm.DB) error
 	DeleteUserAuthMethodByIdentifier(ctx context.Context, authType, identifier string, tx ...*gorm.DB) error
 	UpsertUserAuthMethod(ctx context.Context, data *user.AuthMethods) error
+}
 
-	// subscribe
+// UserSubscriptionRepo manages user subscription records and their lifecycle.
+type UserSubscriptionRepo interface {
 	InsertSubscribe(ctx context.Context, data *user.Subscribe, tx ...*gorm.DB) error
 	FindOneSubscribe(ctx context.Context, id int64) (*user.Subscribe, error)
 	FindOneSubscribeForUpdate(ctx context.Context, id int64) (*user.Subscribe, error)
@@ -101,8 +106,10 @@ type UserRepo interface {
 	MarkSubscribesFinished(ctx context.Context, ids []int64, status uint8, finishedAt time.Time, tx ...*gorm.DB) error
 	QuerySubscribeIdsByFilter(ctx context.Context, filter *user.SubscribeFilter) ([]int64, error)
 	CountSubscribesByFilter(ctx context.Context, filter *user.SubscribeFilter) (int64, error)
+}
 
-	// device
+// UserDeviceRepo manages registered devices and their online records.
+type UserDeviceRepo interface {
 	InsertDevice(ctx context.Context, data *user.Device, tx ...*gorm.DB) error
 	FindOneDevice(ctx context.Context, id int64) (*user.Device, error)
 	FindOneDeviceByIdentifier(ctx context.Context, id string) (*user.Device, error)
@@ -112,17 +119,23 @@ type UserRepo interface {
 	QueryDevicePageList(ctx context.Context, userid, subscribeId int64, page, size int) ([]*user.Device, int64, error)
 	FindDeviceOnlineRecord(ctx context.Context, userId int64, startTime, endTime string) (*user.DeviceOnlineRecord, error)
 	InsertDeviceOnlineRecord(ctx context.Context, data *user.DeviceOnlineRecord, tx ...*gorm.DB) error
+}
 
-	// withdrawal
+// UserWithdrawalRepo manages affiliate withdrawal records.
+type UserWithdrawalRepo interface {
 	InsertWithdrawal(ctx context.Context, data *user.Withdrawal, tx ...*gorm.DB) error
+}
 
-	// reset traffic
+// SubscriptionTrafficRepo manages scheduled subscription traffic resets.
+type SubscriptionTrafficRepo interface {
 	QueryMonthlyResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error)
 	QueryFirstResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error)
 	QueryYearlyResetSubscribeIds(ctx context.Context, subscribeIds []int64, now time.Time) ([]int64, error)
 	ResetSubscribeTrafficByIds(ctx context.Context, ids []int64, tx ...*gorm.DB) error
+}
 
-	// cache
+// UserCacheRepo manages cached user-related projections.
+type UserCacheRepo interface {
 	ClearUserCache(ctx context.Context, data ...*user.User) error
 	ClearSubscribeCache(ctx context.Context, data ...*user.Subscribe) error
 	ClearDeviceCache(ctx context.Context, data ...*user.Device) error
@@ -133,13 +146,19 @@ type UserRepo interface {
 }
 
 var _ UserRepo = (*userRepo)(nil)
+var _ UserAuthRepo = (*userRepo)(nil)
+var _ UserSubscriptionRepo = (*userRepo)(nil)
+var _ UserDeviceRepo = (*userRepo)(nil)
+var _ UserWithdrawalRepo = (*userRepo)(nil)
+var _ SubscriptionTrafficRepo = (*userRepo)(nil)
+var _ UserCacheRepo = (*userRepo)(nil)
 
 type userRepo struct {
 	cache.CachedConn
 	table string
 }
 
-func newUserRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) UserRepo {
+func newUserRepo(db *gorm.DB, c *redis.Client, invalidations ...*cache.InvalidationQueue) *userRepo {
 	return &userRepo{
 		CachedConn: newCachedConn(db, c, invalidations...),
 		table:      "user",

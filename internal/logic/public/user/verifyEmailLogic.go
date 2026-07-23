@@ -50,7 +50,7 @@ func (l *VerifyEmailLogic) VerifyEmail(req *dto.VerifyEmailRequest) error {
 		logger.Error("current user is not found in context")
 		return errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	method, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, authmethod.Email, email)
+	method, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, authmethod.Email, email)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindUserAuthMethodByOpenID error")
 	}
@@ -61,7 +61,7 @@ func (l *VerifyEmailLogic) VerifyEmail(req *dto.VerifyEmailRequest) error {
 		return errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 	}
 	method.Verified = true
-	err = l.svcCtx.Store.User().UpdateUserAuthMethods(l.ctx, method)
+	err = l.svcCtx.Store.UserAuth().UpdateUserAuthMethods(l.ctx, method)
 	if err != nil {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "UpdateUserAuthMethods error")
 	}

@@ -39,7 +39,7 @@ func (l *CreateUserSubscribeLogic) CreateUserSubscribe(req *dto.CreateUserSubscr
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOne error: %v", err.Error())
 	}
 	if l.svcCtx.Config.Subscribe.SingleModel {
-		hasBlockingSubscription, err := l.svcCtx.Store.User().HasBlockingSubscription(l.ctx, req.UserId)
+		hasBlockingSubscription, err := l.svcCtx.Store.UserSubscription().HasBlockingSubscription(l.ctx, req.UserId)
 		if err != nil {
 			l.Errorw("HasBlockingSubscription error", logger.Field("error", err.Error()), logger.Field("userId", req.UserId))
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "check user subscription error: %v", err.Error())
@@ -69,12 +69,12 @@ func (l *CreateUserSubscribeLogic) CreateUserSubscribe(req *dto.CreateUserSubscr
 		UUID:        uuid.New().String(),
 		Status:      user.SubscribeStatusActive,
 	}
-	if err = l.svcCtx.Store.User().InsertSubscribe(l.ctx, &userSub); err != nil {
+	if err = l.svcCtx.Store.UserSubscription().InsertSubscribe(l.ctx, &userSub); err != nil {
 		l.Errorw("InsertSubscribe error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "InsertSubscribe error: %v", err.Error())
 	}
 
-	err = l.svcCtx.Store.User().UpdateUserCache(l.ctx, userInfo)
+	err = l.svcCtx.Store.UserCache().UpdateUserCache(l.ctx, userInfo)
 	if err != nil {
 		l.Errorw("UpdateUserCache error", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "UpdateUserCache error: %v", err.Error())

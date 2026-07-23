@@ -28,7 +28,7 @@ func NewUpdateUserSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext
 }
 
 func (l *UpdateUserSubscribeLogic) UpdateUserSubscribe(req *dto.UpdateUserSubscribeRequest) error {
-	userSub, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, req.UserSubscribeId)
+	userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, req.UserSubscribeId)
 	if err != nil {
 		l.Errorw("FindOneUserSubscribe failed:", logger.Field("error", err.Error()), logger.Field("userSubscribeId", req.UserSubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneUserSubscribe failed: %v", err.Error())
@@ -40,7 +40,7 @@ func (l *UpdateUserSubscribeLogic) UpdateUserSubscribe(req *dto.UpdateUserSubscr
 		userSub.Status = 1
 	}
 
-	err = l.svcCtx.Store.User().UpdateSubscribe(l.ctx, &user.Subscribe{
+	err = l.svcCtx.Store.UserSubscription().UpdateSubscribe(l.ctx, &user.Subscribe{
 		Id:          userSub.Id,
 		UserId:      userSub.UserId,
 		OrderId:     userSub.OrderId,
@@ -60,7 +60,7 @@ func (l *UpdateUserSubscribeLogic) UpdateUserSubscribe(req *dto.UpdateUserSubscr
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "UpdateSubscribe failed: %v", err.Error())
 	}
 	// Clear user subscribe cache
-	if err = l.svcCtx.Store.User().ClearSubscribeCache(l.ctx, userSub); err != nil {
+	if err = l.svcCtx.Store.UserCache().ClearSubscribeCache(l.ctx, userSub); err != nil {
 		l.Errorw("ClearSubscribeCache failed:", logger.Field("error", err.Error()), logger.Field("userSubscribeId", userSub.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}

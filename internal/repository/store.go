@@ -29,6 +29,12 @@ type Store interface {
 	Ticket() TicketRepo
 	TrafficLog() TrafficRepo
 	User() UserRepo
+	UserAuth() UserAuthRepo
+	UserSubscription() UserSubscriptionRepo
+	UserDevice() UserDeviceRepo
+	UserWithdrawal() UserWithdrawalRepo
+	SubscriptionTraffic() SubscriptionTrafficRepo
+	UserCache() UserCacheRepo
 
 	// DB returns the underlying *gorm.DB for infrastructure integrations.
 	DB() *gorm.DB
@@ -61,7 +67,7 @@ type GormStore struct {
 	task         TaskRepo
 	ticket       TicketRepo
 	trafficLog   TrafficRepo
-	user         UserRepo
+	user         *userRepo
 }
 
 // DB returns the underlying *gorm.DB for infrastructure integrations.
@@ -121,6 +127,14 @@ func (s *GormStore) Task() TaskRepo                 { return s.task }
 func (s *GormStore) Ticket() TicketRepo             { return s.ticket }
 func (s *GormStore) TrafficLog() TrafficRepo        { return s.trafficLog }
 func (s *GormStore) User() UserRepo                 { return s.user }
+func (s *GormStore) UserAuth() UserAuthRepo         { return s.user }
+func (s *GormStore) UserSubscription() UserSubscriptionRepo {
+	return s.user
+}
+func (s *GormStore) UserDevice() UserDeviceRepo                   { return s.user }
+func (s *GormStore) UserWithdrawal() UserWithdrawalRepo           { return s.user }
+func (s *GormStore) SubscriptionTraffic() SubscriptionTrafficRepo { return s.user }
+func (s *GormStore) UserCache() UserCacheRepo                     { return s.user }
 
 // InTx runs fn within a database transaction. A new GormStore backed by the
 // transaction is passed to fn, so all repository operations inside fn share

@@ -87,7 +87,7 @@ func (l *QuotaTaskLogic) ProcessTask(ctx context.Context, t *asynq.Task) error {
 				logger.Field("error", err.Error()),
 				logger.Field("userIDs", userIds))
 		}
-		err = l.svcCtx.Store.User().ClearUserCache(ctx, users...)
+		err = l.svcCtx.Store.UserCache().ClearUserCache(ctx, users...)
 		if err != nil {
 			logger.WithContext(ctx).Error("[QuotaTaskLogic.ProcessTask] clear user cache error",
 				logger.Field("error", err.Error()),
@@ -96,7 +96,7 @@ func (l *QuotaTaskLogic) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	}
 
 	// 清理用户订阅缓存
-	err = l.svcCtx.Store.User().ClearSubscribeCache(ctx, subscribes...)
+	err = l.svcCtx.Store.UserCache().ClearSubscribeCache(ctx, subscribes...)
 	if err != nil {
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.ProcessTask] clear subscribe cache error",
 			logger.Field("error", err.Error()))
@@ -154,7 +154,7 @@ func (l *QuotaTaskLogic) parseTaskData(ctx context.Context, taskInfo *task.Task)
 }
 
 func (l *QuotaTaskLogic) getSubscribes(ctx context.Context, subscriberIDs []int64) ([]*user.Subscribe, error) {
-	subscribes, err := l.svcCtx.Store.User().FindSubscribesByIds(ctx, subscriberIDs)
+	subscribes, err := l.svcCtx.Store.UserSubscription().FindSubscribesByIds(ctx, subscriberIDs)
 	if err != nil {
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.getSubscribes] find subscribes error",
 			logger.Field("error", err.Error()),
@@ -262,7 +262,7 @@ func (l *QuotaTaskLogic) processSubscription(ctx context.Context, store reposito
 
 	// 只有在有更新时才保存订阅信息
 	if updated {
-		if err := store.User().UpdateSubscribe(ctx, sub); err != nil {
+		if err := store.UserSubscription().UpdateSubscribe(ctx, sub); err != nil {
 			*errors = append(*errors, ErrorInfo{
 				UserSubscribeId: sub.Id,
 				Error:           "update subscription error: " + err.Error(),

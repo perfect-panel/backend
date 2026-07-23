@@ -297,7 +297,7 @@ func TestQueryUserSubscribeFiltersSharedCachedList(t *testing.T) {
 	redisClient := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})
 	t.Cleanup(func() { _ = redisClient.Close() })
 
-	repo := newUserRepo(nil, redisClient).(*userRepo)
+	repo := newUserRepo(nil, redisClient)
 	cacheKey := fmt.Sprintf("%s%d", cacheUserSubscribeUserPrefix, 42)
 	cached := []*user.SubscribeDetails{
 		{Id: 3, UserId: 42, Status: 1},

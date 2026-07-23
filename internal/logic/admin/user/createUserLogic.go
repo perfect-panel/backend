@@ -51,7 +51,7 @@ func (l *CreateUserLogic) CreateUser(req *dto.CreateUserRequest) error {
 
 	if req.TelephoneAreaCode != "" && req.Telephone != "" {
 		phone := fmt.Sprintf("%s-%s", req.TelephoneAreaCode, req.Telephone)
-		_, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", phone)
+		_, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "mobile", phone)
 		if err == nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.TelephoneExist), "telephone exist")
 		}
@@ -61,7 +61,7 @@ func (l *CreateUserLogic) CreateUser(req *dto.CreateUserRequest) error {
 		})
 	}
 	if req.Email != "" {
-		_, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "email", req.Email)
+		_, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "email", req.Email)
 		if err == nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.EmailExist), "email exist")
 		}

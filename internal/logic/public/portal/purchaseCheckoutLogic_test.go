@@ -32,7 +32,10 @@ func (s *balancePaymentStore) InTx(ctx context.Context, fn func(repository.Store
 
 func (s *balancePaymentStore) Order() repository.OrderRepo { return s.orders }
 func (s *balancePaymentStore) User() repository.UserRepo   { return s.users }
-func (s *balancePaymentStore) Log() repository.LogRepo     { return s.logs }
+func (s *balancePaymentStore) UserCache() repository.UserCacheRepo {
+	return s.users
+}
+func (s *balancePaymentStore) Log() repository.LogRepo { return s.logs }
 
 type balancePaymentOrderRepo struct {
 	repository.OrderRepo
@@ -65,6 +68,7 @@ func (r *balancePaymentOrderRepo) UpdateOrderStatusFrom(_ context.Context, order
 
 type balancePaymentUserRepo struct {
 	repository.UserRepo
+	repository.UserCacheRepo
 	user *userEntity.User
 }
 

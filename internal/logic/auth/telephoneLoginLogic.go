@@ -48,7 +48,7 @@ func (l *TelephoneLoginLogic) TelephoneLogin(req *dto.TelephoneLoginRequest, ip,
 	}
 	loginStatus := false
 
-	authMethodInfo, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
+	authMethodInfo, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserNotExist), "user telephone not exist: %v", req.Telephone)

@@ -31,7 +31,7 @@ func NewCreateQuotaTaskLogic(ctx context.Context, svcCtx *svc.ServiceContext) *C
 }
 
 func (l *CreateQuotaTaskLogic) CreateQuotaTask(req *dto.CreateQuotaTaskRequest) error {
-	subIds, err := l.svcCtx.Store.User().QuerySubscribeIdsByFilter(l.ctx, &user.SubscribeFilter{
+	subIds, err := l.svcCtx.Store.UserSubscription().QuerySubscribeIdsByFilter(l.ctx, &user.SubscribeFilter{
 		Subscribers: req.Subscribers,
 		IsActive:    req.IsActive,
 		StartTime:   req.StartTime,

@@ -83,7 +83,7 @@ func (l *CommissionWithdrawLogic) CommissionWithdraw(req *dto.CommissionWithdraw
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "Failed to create commission log for user %d: %v", u.Id, err)
 		}
 
-		if err = store.User().InsertWithdrawal(l.ctx, &user.Withdrawal{
+		if err = store.UserWithdrawal().InsertWithdrawal(l.ctx, &user.Withdrawal{
 			UserId:  u.Id,
 			Amount:  req.Amount,
 			Content: req.Content,
@@ -99,7 +99,7 @@ func (l *CommissionWithdrawLogic) CommissionWithdraw(req *dto.CommissionWithdraw
 		return nil, err
 	}
 	if updatedUser != nil {
-		if cacheErr := l.svcCtx.Store.User().ClearUserCache(l.ctx, updatedUser); cacheErr != nil {
+		if cacheErr := l.svcCtx.Store.UserCache().ClearUserCache(l.ctx, updatedUser); cacheErr != nil {
 			l.Errorf("Failed to clear commission cache for user %d: %v", u.Id, cacheErr)
 		}
 	}

@@ -60,7 +60,7 @@ func GetAuthMethod(l *QueryUserAffiliateListLogic, item *user.User) user.AuthMet
 	authMethod := user.AuthMethods{}
 	authMethods := item.AuthMethods
 	if len(authMethods) == 0 {
-		methods, errs := l.svcCtx.Store.User().FindUserAuthMethods(l.ctx, item.Id)
+		methods, errs := l.svcCtx.Store.UserAuth().FindUserAuthMethods(l.ctx, item.Id)
 		if errs == nil {
 			for _, method := range methods {
 				authMethods = append(authMethods, *method)

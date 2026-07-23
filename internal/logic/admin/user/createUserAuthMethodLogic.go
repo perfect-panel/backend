@@ -30,7 +30,7 @@ func NewCreateUserAuthMethodLogic(ctx context.Context, svcCtx *svc.ServiceContex
 
 func (l *CreateUserAuthMethodLogic) CreateUserAuthMethod(req *dto.CreateUserAuthMethodRequest) error {
 	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
-		return store.User().UpsertUserAuthMethod(l.ctx, &user.AuthMethods{
+		return store.UserAuth().UpsertUserAuthMethod(l.ctx, &user.AuthMethods{
 			UserId:         req.UserId,
 			AuthType:       req.AuthType,
 			AuthIdentifier: req.AuthIdentifier,

@@ -63,7 +63,7 @@ func (l *TelephoneUserRegisterLogic) TelephoneUserRegister(req *dto.TelephoneReg
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.VerifyCodeError), "code error")
 	}
 	// Check if the user exists
-	_, err = l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
+	_, err = l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "mobile", phoneNumber)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		l.Errorw("FindOneByTelephone Error", logger.Field("error", err))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query user info failed: %v", err.Error())
@@ -239,5 +239,5 @@ func (l *TelephoneUserRegisterLogic) activeTrial(store repository.Store, uid int
 		UUID:        uuidx.NewUUID().String(),
 		Status:      1,
 	}
-	return userSub, store.User().InsertSubscribe(l.ctx, userSub)
+	return userSub, store.UserSubscription().InsertSubscribe(l.ctx, userSub)
 }

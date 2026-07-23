@@ -68,7 +68,7 @@ func (l *PurchaseLogic) Purchase(req *dto.PurchaseOrderRequest) (resp *dto.Purch
 	}
 
 	if l.svcCtx.Config.Subscribe.SingleModel {
-		hasBlockingSubscription, err := store.User().HasBlockingSubscription(l.ctx, u.Id)
+		hasBlockingSubscription, err := store.UserSubscription().HasBlockingSubscription(l.ctx, u.Id)
 		if err != nil {
 			l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "check user subscription error: %v", err.Error())
@@ -97,7 +97,7 @@ func (l *PurchaseLogic) Purchase(req *dto.PurchaseOrderRequest) (resp *dto.Purch
 
 	// check subscribe plan limit
 	if sub.Quota > 0 {
-		count, err := store.User().CountQuotaConsumingSubscriptions(l.ctx, u.Id, req.SubscribeId)
+		count, err := store.UserSubscription().CountQuotaConsumingSubscriptions(l.ctx, u.Id, req.SubscribeId)
 		if err != nil {
 			l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("subscribe_id", req.SubscribeId))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "count user subscriptions error: %v", err.Error())
@@ -221,7 +221,7 @@ func (l *PurchaseLogic) Purchase(req *dto.PurchaseOrderRequest) (resp *dto.Purch
 		}
 
 		if sub.Quota > 0 {
-			count, e := txStore.User().CountQuotaConsumingSubscriptions(l.ctx, u.Id, req.SubscribeId)
+			count, e := txStore.UserSubscription().CountQuotaConsumingSubscriptions(l.ctx, u.Id, req.SubscribeId)
 			if e != nil {
 				l.Errorw("[Purchase] Database query error", logger.Field("error", e.Error()), logger.Field("user_id", u.Id), logger.Field("subscribe_id", req.SubscribeId))
 				return e

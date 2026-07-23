@@ -27,7 +27,7 @@ func NewGetUserSubscribeByIdLogic(ctx context.Context, svcCtx *svc.ServiceContex
 }
 
 func (l *GetUserSubscribeByIdLogic) GetUserSubscribeById(req *dto.GetUserSubscribeByIdRequest) (resp *dto.UserSubscribeDetail, err error) {
-	sub, err := l.svcCtx.Store.User().FindOneSubscribeDetailsById(l.ctx, req.Id)
+	sub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribeDetailsById(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[GetUserSubscribeByIdLogic] FindOneSubscribeDetailsById error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneSubscribeDetailsById error: %v", err.Error())

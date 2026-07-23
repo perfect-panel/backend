@@ -27,19 +27,19 @@ func NewDeleteUserSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext
 
 func (l *DeleteUserSubscribeLogic) DeleteUserSubscribe(req *dto.DeleteUserSubscribeRequest) error {
 	// find user subscribe by ID
-	userSubscribe, err := l.svcCtx.Store.User().FindOneSubscribe(l.ctx, req.UserSubscribeId)
+	userSubscribe, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, req.UserSubscribeId)
 	if err != nil {
 		l.Errorw("failed to find user subscribe", logger.Field("error", err.Error()), logger.Field("userSubscribeId", req.UserSubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to find user subscribe: %v", err.Error())
 	}
 
-	err = l.svcCtx.Store.User().DeleteSubscribeById(l.ctx, req.UserSubscribeId)
+	err = l.svcCtx.Store.UserSubscription().DeleteSubscribeById(l.ctx, req.UserSubscribeId)
 	if err != nil {
 		l.Errorw("failed to delete user subscribe", logger.Field("error", err.Error()), logger.Field("userSubscribeId", req.UserSubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseDeletedError), "failed to delete user subscribe: %v", err.Error())
 	}
 	// Clear user subscribe cache
-	if err = l.svcCtx.Store.User().ClearSubscribeCache(l.ctx, userSubscribe); err != nil {
+	if err = l.svcCtx.Store.UserCache().ClearSubscribeCache(l.ctx, userSubscribe); err != nil {
 		l.Errorw("failed to clear user subscribe cache", logger.Field("error", err.Error()), logger.Field("userSubscribeId", req.UserSubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "failed to clear user subscribe cache: %v", err.Error())
 	}

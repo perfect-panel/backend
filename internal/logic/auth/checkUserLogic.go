@@ -27,7 +27,7 @@ func NewCheckUserLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CheckUs
 }
 
 func (l *CheckUserLogic) CheckUser(req *dto.CheckUserRequest) (resp *dto.CheckUserResponse, err error) {
-	authMethod, err := l.svcCtx.Store.User().FindUserAuthMethodByOpenID(l.ctx, "email", req.Email)
+	authMethod, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, "email", req.Email)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user by email error: %v", err.Error())
 	}

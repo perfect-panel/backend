@@ -35,7 +35,7 @@ func (l *GetOAuthMethodsLogic) GetOAuthMethods() (resp *dto.GetOAuthMethodsRespo
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	methods, err := l.svcCtx.Store.User().FindUserAuthMethods(l.ctx, u.Id)
+	methods, err := l.svcCtx.Store.UserAuth().FindUserAuthMethods(l.ctx, u.Id)
 	if err != nil {
 		l.Errorw("find user auth methods failed:", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user auth methods failed: %v", err.Error())
