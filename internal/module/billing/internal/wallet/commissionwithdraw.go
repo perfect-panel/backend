@@ -1,4 +1,4 @@
-package user
+package wallet
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
@@ -18,15 +17,15 @@ import (
 type CommissionWithdrawLogic struct {
 	logger.Logger
 	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	deps Deps
 }
 
 // Commission Withdraw
-func NewCommissionWithdrawLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CommissionWithdrawLogic {
+func newCommissionWithdrawLogic(ctx context.Context, deps Deps) *CommissionWithdrawLogic {
 	return &CommissionWithdrawLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -42,11 +41,11 @@ func (l *CommissionWithdrawLogic) CommissionWithdraw(req *dto.CommissionWithdraw
 	}
 
 	var updatedUser *user.User
-	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+	err = l.deps.Tx.InBillingTx(l.ctx, func(store repository.BillingStore) error {
 		// Do not rely on the user object placed in the request context: it can
 		// be stale while another withdrawal or commission credit is committed.
 		// The row lock serializes the balance check and debit.
-		lockedUser, txErr := store.User().FindOneForUpdate(l.ctx, u.Id)
+		lockedUser, txErr := store.Wallet().FindOneForUpdate(l.ctx, u.Id)
 		if txErr != nil {
 			return txErr
 		}
@@ -54,7 +53,7 @@ func (l *CommissionWithdrawLogic) CommissionWithdraw(req *dto.CommissionWithdraw
 			return errors.Wrapf(xerr.NewErrCode(xerr.UserCommissionNotEnough), "User %d has insufficient commission balance", u.Id)
 		}
 		lockedUser.Commission -= req.Amount
-		if err = store.User().UpdateCommission(l.ctx, lockedUser); err != nil {
+		if err = store.Wallet().UpdateCommission(l.ctx, lockedUser); err != nil {
 			l.Errorf("Failed to update user %d commission balance: %v", u.Id, err)
 			return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "Failed to update user %d commission balance: %v", u.Id, err)
 		}
@@ -99,7 +98,7 @@ func (l *CommissionWithdrawLogic) CommissionWithdraw(req *dto.CommissionWithdraw
 		return nil, err
 	}
 	if updatedUser != nil {
-		if cacheErr := l.svcCtx.Store.UserCache().ClearUserCache(l.ctx, updatedUser); cacheErr != nil {
+		if cacheErr := l.deps.Cache.ClearUserCache(l.ctx, updatedUser); cacheErr != nil {
 			l.Errorf("Failed to clear commission cache for user %d: %v", u.Id, cacheErr)
 		}
 	}

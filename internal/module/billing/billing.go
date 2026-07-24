@@ -18,6 +18,7 @@ import (
 	"github.com/perfect-panel/server/internal/module/billing/internal/portal"
 	"github.com/perfect-panel/server/internal/module/billing/internal/userorder"
 	v2orch "github.com/perfect-panel/server/internal/module/billing/internal/v2"
+	"github.com/perfect-panel/server/internal/module/billing/internal/wallet"
 	"github.com/perfect-panel/server/internal/repository"
 )
 
@@ -85,6 +86,16 @@ type Service interface {
 	// V2AuthorizeEventStream validates the stream ticket and returns the
 	// initial snapshot with the ticket expiry.
 	V2AuthorizeEventStream(ctx context.Context, orderNo, ticket string) (dto.V2OrderSnapshot, time.Time, error)
+
+	// The wallet flows resolve the current user from the request context:
+	// commission withdrawal, balance/commission statements and the affiliate
+	// earnings overview.
+	CommissionWithdraw(ctx context.Context, req *dto.CommissionWithdrawRequest) (*dto.WithdrawalLog, error)
+	QueryUserBalanceLog(ctx context.Context) (*dto.QueryUserBalanceLogListResponse, error)
+	QueryUserCommissionLog(ctx context.Context, req *dto.QueryUserCommissionLogListRequest) (*dto.QueryUserCommissionLogListResponse, error)
+	QueryWithdrawalLog(ctx context.Context, req *dto.QueryWithdrawalLogListRequest) (*dto.QueryWithdrawalLogListResponse, error)
+	QueryUserAffiliate(ctx context.Context) (*dto.QueryUserAffiliateCountResponse, error)
+	QueryUserAffiliateList(ctx context.Context, req *dto.QueryUserAffiliateListRequest) (*dto.QueryUserAffiliateListResponse, error)
 }
 
 // ErrIdempotencyKeyReused is handled as HTTP 409 by the V2 handler. It is a
@@ -118,6 +129,14 @@ type (
 	ActivationTaskQueue = portal.ActivationQueue
 	ExchangeRateCache   = portal.ExchangeRateCache
 	PortalConfig        = portal.Config
+)
+
+// AffiliateReader and AuthMethodReader re-export the wallet subdomain's
+// read-only ports onto the identity domain (referral tree, masked login
+// identifiers); the legacy user repository satisfies both structurally.
+type (
+	AffiliateReader  = wallet.AffiliateReader
+	AuthMethodReader = wallet.AuthMethodReader
 )
 
 // Transactor is the module's window onto billing-scoped transactions; the
@@ -158,6 +177,13 @@ type Deps struct {
 	Host string
 	// IsGatewayMode reports whether notify URLs must use the gateway prefix.
 	IsGatewayMode func() bool
+
+	// Wallet-specific dependencies: audit-log statements, user cache
+	// invalidation and the identity-domain read ports.
+	Logs        repository.LogRepo
+	UserCache   repository.UserCacheRepo
+	Affiliates  AffiliateReader
+	AuthMethods AuthMethodReader
 
 	// Portal-specific dependencies.
 	PortalPlans        PortalPlanReader
@@ -203,6 +229,13 @@ func New(deps Deps) Service {
 		callbacks:  callbacks.NewService(deps.Orders, deps.Queue),
 		portal:     portalSvc,
 		checkout:   checkoutSvc,
+		wallet: wallet.NewService(wallet.Deps{
+			Logs:        deps.Logs,
+			Cache:       deps.UserCache,
+			Affiliates:  deps.Affiliates,
+			AuthMethods: deps.AuthMethods,
+			Tx:          deps.Tx,
+		}),
 		v2: v2orch.NewService(v2orch.Deps{
 			Orders:       deps.Orders,
 			Checkout:     checkoutSvc,
@@ -222,6 +255,7 @@ type service struct {
 	portal     *portal.Service
 	callbacks  *callbacks.Service
 	v2         *v2orch.Service
+	wallet     *wallet.Service
 }
 
 func (s *service) CreateOrder(ctx context.Context, req *dto.CreateOrderRequest) error {
@@ -370,4 +404,28 @@ func (s *service) V2Session(ctx context.Context, orderNo, checkoutToken string) 
 
 func (s *service) V2AuthorizeEventStream(ctx context.Context, orderNo, ticket string) (dto.V2OrderSnapshot, time.Time, error) {
 	return s.v2.AuthorizeEventStream(ctx, orderNo, ticket)
+}
+
+func (s *service) CommissionWithdraw(ctx context.Context, req *dto.CommissionWithdrawRequest) (*dto.WithdrawalLog, error) {
+	return s.wallet.CommissionWithdraw(ctx, req)
+}
+
+func (s *service) QueryUserBalanceLog(ctx context.Context) (*dto.QueryUserBalanceLogListResponse, error) {
+	return s.wallet.QueryUserBalanceLog(ctx)
+}
+
+func (s *service) QueryUserCommissionLog(ctx context.Context, req *dto.QueryUserCommissionLogListRequest) (*dto.QueryUserCommissionLogListResponse, error) {
+	return s.wallet.QueryUserCommissionLog(ctx, req)
+}
+
+func (s *service) QueryWithdrawalLog(ctx context.Context, req *dto.QueryWithdrawalLogListRequest) (*dto.QueryWithdrawalLogListResponse, error) {
+	return s.wallet.QueryWithdrawalLog(ctx, req)
+}
+
+func (s *service) QueryUserAffiliate(ctx context.Context) (*dto.QueryUserAffiliateCountResponse, error) {
+	return s.wallet.QueryUserAffiliate(ctx)
+}
+
+func (s *service) QueryUserAffiliateList(ctx context.Context, req *dto.QueryUserAffiliateListRequest) (*dto.QueryUserAffiliateListResponse, error) {
+	return s.wallet.QueryUserAffiliateList(ctx, req)
 }

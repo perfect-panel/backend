@@ -1,4 +1,4 @@
-package user
+package wallet
 
 import (
 	"context"
@@ -11,22 +11,21 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
 type QueryUserAffiliateLogic struct {
 	logger.Logger
 	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	deps Deps
 }
 
 // Query User Balance Log
-func NewQueryUserAffiliateLogic(ctx context.Context, svcCtx *svc.ServiceContext) *QueryUserAffiliateLogic {
+func newQueryUserAffiliateLogic(ctx context.Context, deps Deps) *QueryUserAffiliateLogic {
 	return &QueryUserAffiliateLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -36,11 +35,11 @@ func (l *QueryUserAffiliateLogic) QueryUserAffiliate() (resp *dto.QueryUserAffil
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	total, err := l.svcCtx.Store.User().CountAffiliates(l.ctx, u.Id)
+	total, err := l.deps.Affiliates.CountAffiliates(l.ctx, u.Id)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Affiliate failed: %v", err)
 	}
-	sum, err := l.svcCtx.Store.Log().SumAmountByTypeAndObjectID(l.ctx, log.TypeCommission.Uint8(), u.Id)
+	sum, err := l.deps.Logs.SumAmountByTypeAndObjectID(l.ctx, log.TypeCommission.Uint8(), u.Id)
 	if err != nil {
 		l.Errorf("[QueryUserAffiliate] sum commission amount failed: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Affiliate sum commission failed: %v", err)

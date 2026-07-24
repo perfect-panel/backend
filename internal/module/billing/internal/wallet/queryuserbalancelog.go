@@ -1,4 +1,4 @@
-package user
+package wallet
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/user"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -17,15 +16,15 @@ import (
 type QueryUserBalanceLogLogic struct {
 	logger.Logger
 	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	deps Deps
 }
 
 // NewQueryUserBalanceLogLogic Query User Balance Log
-func NewQueryUserBalanceLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *QueryUserBalanceLogLogic {
+func newQueryUserBalanceLogLogic(ctx context.Context, deps Deps) *QueryUserBalanceLogLogic {
 	return &QueryUserBalanceLogLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -36,7 +35,7 @@ func (l *QueryUserBalanceLogLogic) QueryUserBalanceLog() (resp *dto.QueryUserBal
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 
-	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
+	data, total, err := l.deps.Logs.FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     1,
 		Size:     100,
 		Type:     log.TypeBalance.Uint8(),

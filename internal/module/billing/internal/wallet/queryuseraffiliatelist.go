@@ -1,4 +1,4 @@
-package user
+package wallet
 
 import (
 	"context"
@@ -10,22 +10,21 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
 type QueryUserAffiliateListLogic struct {
 	logger.Logger
 	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	deps Deps
 }
 
 // Query User Affiliate List
-func NewQueryUserAffiliateListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *QueryUserAffiliateListLogic {
+func newQueryUserAffiliateListLogic(ctx context.Context, deps Deps) *QueryUserAffiliateListLogic {
 	return &QueryUserAffiliateListLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -35,7 +34,7 @@ func (l *QueryUserAffiliateListLogic) QueryUserAffiliateList(req *dto.QueryUserA
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	data, total, err := l.svcCtx.Store.User().QueryAffiliateList(l.ctx, u.Id, req.Page, req.Size)
+	data, total, err := l.deps.Affiliates.QueryAffiliateList(l.ctx, u.Id, req.Page, req.Size)
 	if err != nil {
 		l.Errorw("Query User Affiliate List failed: %v", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Affiliate List failed: %v", err.Error())
@@ -60,7 +59,7 @@ func GetAuthMethod(l *QueryUserAffiliateListLogic, item *user.User) user.AuthMet
 	authMethod := user.AuthMethods{}
 	authMethods := item.AuthMethods
 	if len(authMethods) == 0 {
-		methods, errs := l.svcCtx.Store.UserAuth().FindUserAuthMethods(l.ctx, item.Id)
+		methods, errs := l.deps.AuthMethods.FindUserAuthMethods(l.ctx, item.Id)
 		if errs == nil {
 			for _, method := range methods {
 				authMethods = append(authMethods, *method)

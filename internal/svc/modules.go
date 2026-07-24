@@ -43,6 +43,11 @@ func newBillingModule(c config.Config, store repository.Store, queue *asynq.Clie
 		Host:          c.Host,
 		IsGatewayMode: report.IsGatewayMode,
 
+		Logs:        store.Log(),
+		UserCache:   store.UserCache(),
+		Affiliates:  store.User(),
+		AuthMethods: store.UserAuth(),
+
 		PortalPlans:        store.Subscribe(),
 		GuestAccounts:      store.UserAuth(),
 		Sessions:           rds,

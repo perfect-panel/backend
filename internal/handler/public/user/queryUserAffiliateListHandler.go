@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/public/user"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func QueryUserAffiliateListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := user.NewQueryUserAffiliateListLogic(c, svcCtx)
-		resp, err := l.QueryUserAffiliateList(&req)
+		resp, err := svcCtx.Billing.QueryUserAffiliateList(c, &req)
 		result.HttpResult(ctx, resp, err)
 	}
 }
