@@ -14,13 +14,15 @@ import (
 	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/internal/repository"
 	emailworker "github.com/perfect-panel/server/internal/worker/email"
+	"github.com/perfect-panel/server/pkg/exchangeRate"
 	"github.com/perfect-panel/server/pkg/logger"
 	queuetypes "github.com/perfect-panel/server/queue/types"
+	"github.com/redis/go-redis/v9"
 )
 
 // newBillingModule wires the billing module against the legacy store and the
 // asynq client (ADR-001 step 4).
-func newBillingModule(c config.Config, store repository.Store, queue *asynq.Client) billing.Service {
+func newBillingModule(c config.Config, store repository.Store, queue *asynq.Client, rds *redis.Client, rate *exchangeRate.Cache) billing.Service {
 	return billing.New(billing.Deps{
 		Orders:        store.Order(),
 		Payments:      store.Payment(),
@@ -34,6 +36,22 @@ func newBillingModule(c config.Config, store repository.Store, queue *asynq.Clie
 		CurrencyUnit:  c.Currency.Unit,
 		Host:          c.Host,
 		IsGatewayMode: report.IsGatewayMode,
+
+		PortalPlans:        store.Subscribe(),
+		GuestAccounts:      store.UserAuth(),
+		Sessions:           rds,
+		GuestCheckoutCache: rds,
+		ActivationQueue:    queue,
+		ExchangeRate:       rate,
+		Portal: billing.PortalConfig{
+			Host:              c.Host,
+			SiteName:          c.Site.SiteName,
+			CurrencyUnit:      c.Currency.Unit,
+			CurrencyAccessKey: c.Currency.AccessKey,
+			JwtSecret:         c.JwtAuth.AccessSecret,
+			JwtExpire:         c.JwtAuth.AccessExpire,
+			IsGatewayMode:     report.IsGatewayMode,
+		},
 	})
 }
 

@@ -4,36 +4,22 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/perfect-panel/server/pkg/tool"
-
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
-type PrePurchaseOrderLogic struct {
-	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
-}
-
-// Pre Purchase Order
-func NewPrePurchaseOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *PrePurchaseOrderLogic {
-	return &PrePurchaseOrderLogic{
-		Logger: logger.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
-	}
-}
-
-func (l *PrePurchaseOrderLogic) PrePurchaseOrder(req *dto.PrePurchaseOrderRequest) (resp *dto.PrePurchaseOrderResponse, err error) {
+// PrePurchase calculates the guest order pricing preview without creating an
+// order.
+func (s *Service) PrePurchase(ctx context.Context, req *dto.PrePurchaseOrderRequest) (*dto.PrePurchaseOrderResponse, error) {
+	log := logger.WithContext(ctx)
 	// find subscribe plan
-	sub, err := l.svcCtx.Store.Subscribe().FindOne(l.ctx, req.SubscribeId)
+	sub, err := s.deps.Plans.FindOne(ctx, req.SubscribeId)
 	if err != nil {
-		l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.SubscribeId))
+		log.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.SubscribeId))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
 	}
 	var discount float64 = 1
@@ -47,7 +33,7 @@ func (l *PrePurchaseOrderLogic) PrePurchaseOrder(req *dto.PrePurchaseOrderReques
 	discountAmount := price - amount
 	var coupon int64
 	if req.Coupon != "" {
-		couponInfo, err := l.svcCtx.Store.Coupon().FindOneByCode(l.ctx, req.Coupon)
+		couponInfo, err := s.deps.Coupons.FindOneByCode(ctx, req.Coupon)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotExist), "coupon not found")
@@ -71,9 +57,9 @@ func (l *PrePurchaseOrderLogic) PrePurchaseOrder(req *dto.PrePurchaseOrderReques
 	amount -= coupon
 	var feeAmount int64
 	if req.Payment != 0 {
-		payment, err := l.svcCtx.Store.Payment().FindOne(l.ctx, req.Payment)
+		payment, err := s.deps.Payments.FindOne(ctx, req.Payment)
 		if err != nil {
-			l.Logger.Error("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
+			log.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment method error: %v", err.Error())
 		}
 		if err := ensurePaymentAvailable(payment); err != nil {
@@ -86,13 +72,12 @@ func (l *PrePurchaseOrderLogic) PrePurchaseOrder(req *dto.PrePurchaseOrderReques
 		amount += feeAmount
 	}
 
-	resp = &dto.PrePurchaseOrderResponse{
+	return &dto.PrePurchaseOrderResponse{
 		Price:          price,
 		Amount:         amount,
 		Discount:       discountAmount,
 		Coupon:         req.Coupon,
 		CouponDiscount: coupon,
 		FeeAmount:      feeAmount,
-	}
-	return
+	}, nil
 }

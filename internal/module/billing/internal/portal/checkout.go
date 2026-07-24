@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/model/entity/log"
-	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/exchangeRate"
@@ -60,6 +59,9 @@ type CheckoutConfig struct {
 	CurrencyUnit      string
 	CurrencyAccessKey string
 	ClientIP          string
+	// IsGatewayMode reports whether notify URLs must use the gateway prefix;
+	// injected so the module does not read process-global state.
+	IsGatewayMode func() bool
 }
 
 // GuestCheckoutCache provides the one Redis operation needed to validate
@@ -533,7 +535,7 @@ func (l *PurchaseCheckoutLogic) paymentPublicBaseURL(config *payment.Payment) st
 		}
 		baseURL = "https://" + strings.TrimSuffix(host, "/")
 	}
-	if report.IsGatewayMode() {
+	if l.deps.Config.IsGatewayMode != nil && l.deps.Config.IsGatewayMode() {
 		baseURL = strings.TrimSuffix(baseURL, "/") + "/api"
 	}
 	return strings.TrimSuffix(baseURL, "/")

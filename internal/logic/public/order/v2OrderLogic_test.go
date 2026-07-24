@@ -11,6 +11,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/dto"
 	orderEntity "github.com/perfect-panel/server/internal/model/entity/order"
 	userEntity "github.com/perfect-panel/server/internal/model/entity/user"
+	"github.com/perfect-panel/server/internal/module/billing"
 	"github.com/perfect-panel/server/internal/repository"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
@@ -175,6 +176,10 @@ func TestV2GuestSessionExchangeRequiresActivatedAccount(t *testing.T) {
 		Config: config.Config{JwtAuth: config.JwtAuth{AccessSecret: "session-secret", AccessExpire: 3600}},
 		Store:  v2TicketStore{orders: orders},
 		Redis:  redisClient,
+		Billing: billing.New(billing.Deps{
+			Sessions: redisClient,
+			Portal:   billing.PortalConfig{JwtSecret: "session-secret", JwtExpire: 3600},
+		}),
 	})
 
 	if _, err := logic.Session(orderInfo.OrderNo, guestCapability); err == nil {

@@ -127,8 +127,13 @@ internal/module/<name>/
    订阅域读取（`PlanReader`/`UserSubscriptionReader`，legacy repo 结构化满足）、订单队列
    （激活 + 延迟关单）、单订阅模式与币种配置；`notify.SettleVerifiedPayment` 的结算逻辑
    （CAS 标记已付 + 激活入队）收编为模块内部函数，close 的网关结算（Stripe/EPay）随迁。
-   `v2OrderLogic`（SSE 票据/幂等编排/portal 结账胶水）暂留 legacy 层改调门面，随 portal
-   checkout 迁移后收编。
+   **portal 门店子域也已迁入 billing**（`internal/module/billing/internal/portal`）：
+   访客预下单、网关/余额结账（本就是六边形结构的 `PurchaseCheckoutLogic` 原样收编，
+   `report.IsGatewayMode` 全局改注入）、订单状态轮询 + 会话兑换（jwt/redis 经端口注入）、
+   门店套餐/支付方式列表；`ClientIP` 由 handler 写入请求上下文、模块内解析。
+   `v2OrderLogic`（SSE 票据/幂等编排）暂留 legacy 层，四个建单分支、结账、会话兑换
+   全部改调 billing 门面；`internal/logic/public/portal` 包已删除，logic 冻结基线的
+   `public/order→portal` 边与 svc 基线的 portal 条目一并收缩。
 4. **域优先重组**：把 `logic/admin/<域>` + `logic/public/<域>` + `queue/logic/<域>` 收拢进
    `internal/module/<域>/internal/service`，handler 变薄。试点顺序：`support`（耦合最低）
    → `billing`（刚硬化过、测试最全）→ 其余。

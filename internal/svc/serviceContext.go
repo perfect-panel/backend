@@ -69,16 +69,17 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	authLimiter := limit.NewPeriodLimit(86400, 15, rds, config.SendCountLimitKeyPrefix, limit.Align())
 	store := repository.NewGormStore(db, rds)
 	queue := NewAsynqClient(c)
+	rate := exchangeRate.NewCache(0)
 	srv := &ServiceContext{
 		Redis:        rds,
 		Config:       c,
 		Queue:        queue,
 		Inspector:    NewAsynqInspector(c),
-		ExchangeRate: exchangeRate.NewCache(0),
+		ExchangeRate: rate,
 		GeoIP:        geoIP,
 		Store:        store,
 		Support:      newSupportModule(store, queue),
-		Billing:      newBillingModule(c, store, queue),
+		Billing:      newBillingModule(c, store, queue, rds, rate),
 		//NodeCache:   cache.NewNodeCacheClient(rds),
 		AuthLimiter: authLimiter,
 	}

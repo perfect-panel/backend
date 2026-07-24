@@ -12,6 +12,7 @@ import (
 	"github.com/perfect-panel/server/internal/module/billing/internal/adminpayment"
 	"github.com/perfect-panel/server/internal/module/billing/internal/checkout"
 	"github.com/perfect-panel/server/internal/module/billing/internal/coupon"
+	"github.com/perfect-panel/server/internal/module/billing/internal/portal"
 	"github.com/perfect-panel/server/internal/module/billing/internal/userorder"
 	"github.com/perfect-panel/server/internal/repository"
 )
@@ -51,6 +52,18 @@ type Service interface {
 	// CloseOrder settles gateway-collected money instead of closing, releases
 	// coupon and gift reservations, and returns reserved plan inventory.
 	CloseOrder(ctx context.Context, req *dto.CloseOrderRequest) error
+
+	// The portal flows serve the guest storefront; checkout resolves the
+	// client IP from the request context.
+	PortalPurchase(ctx context.Context, req *dto.PortalPurchaseRequest) (*dto.PortalPurchaseResponse, error)
+	PortalPrePurchase(ctx context.Context, req *dto.PrePurchaseOrderRequest) (*dto.PrePurchaseOrderResponse, error)
+	PortalCheckout(ctx context.Context, req *dto.CheckoutOrderRequest) (*dto.CheckoutOrderResponse, error)
+	QueryPurchaseOrder(ctx context.Context, req *dto.QueryPurchaseOrderRequest) (*dto.QueryPurchaseOrderResponse, error)
+	GetAvailablePaymentMethods(ctx context.Context) (*dto.GetAvailablePaymentMethodsResponse, error)
+	GetPortalSubscription(ctx context.Context, req *dto.GetSubscriptionRequest) (*dto.GetSubscriptionResponse, error)
+	// IssuePortalSession exchanges a completed guest purchase for a normal
+	// authenticated session.
+	IssuePortalSession(ctx context.Context, userID int64) (string, error)
 }
 
 // Order lifecycle constants shared with the V2 orchestration layer.
@@ -66,6 +79,18 @@ type PlanReader = checkout.PlanReader
 // UserSubscriptionReader re-exports the checkout subdomain's port onto the
 // subscription domain's user subscriptions.
 type UserSubscriptionReader = checkout.UserSubscriptionReader
+
+// Portal re-exports the guest storefront subdomain's ports and configuration
+// for the composition root.
+type (
+	PortalPlanReader    = portal.PlanReader
+	GuestAccountReader  = portal.GuestAccountReader
+	SessionStore        = portal.SessionStore
+	GuestCheckoutCache  = portal.GuestCheckoutCache
+	ActivationTaskQueue = portal.ActivationQueue
+	ExchangeRateCache   = portal.ExchangeRateCache
+	PortalConfig        = portal.Config
+)
 
 // Transactor is the module's window onto billing-scoped transactions; the
 // repository store satisfies it structurally.
@@ -105,6 +130,15 @@ type Deps struct {
 	Host string
 	// IsGatewayMode reports whether notify URLs must use the gateway prefix.
 	IsGatewayMode func() bool
+
+	// Portal-specific dependencies.
+	PortalPlans        PortalPlanReader
+	GuestAccounts      GuestAccountReader
+	Sessions           SessionStore
+	GuestCheckoutCache GuestCheckoutCache
+	ActivationQueue    ActivationTaskQueue
+	ExchangeRate       ExchangeRateCache
+	Portal             PortalConfig
 }
 
 func New(deps Deps) Service {
@@ -113,6 +147,20 @@ func New(deps Deps) Service {
 		payments:   adminpayment.NewService(deps.Payments, deps.Orders, deps.Tx, deps.Host, deps.IsGatewayMode),
 		coupons:    coupon.NewService(deps.Coupons),
 		userOrders: userorder.NewService(deps.Orders),
+		portal: portal.NewService(portal.Deps{
+			Orders:             deps.Orders,
+			Coupons:            deps.Coupons,
+			Payments:           deps.Payments,
+			UserAuths:          deps.GuestAccounts,
+			Plans:              deps.PortalPlans,
+			Store:              deps.Store,
+			Sessions:           deps.Sessions,
+			Queue:              deps.Queue,
+			GuestCheckoutCache: deps.GuestCheckoutCache,
+			ActivationQueue:    deps.ActivationQueue,
+			ExchangeRate:       deps.ExchangeRate,
+			Config:             deps.Portal,
+		}),
 		checkout: checkout.NewService(checkout.Deps{
 			Orders:       deps.Orders,
 			Coupons:      deps.Coupons,
@@ -133,6 +181,7 @@ type service struct {
 	coupons    *coupon.Service
 	userOrders *userorder.Service
 	checkout   *checkout.Service
+	portal     *portal.Service
 }
 
 func (s *service) CreateOrder(ctx context.Context, req *dto.CreateOrderRequest) error {
@@ -217,4 +266,32 @@ func (s *service) PreCreateOrder(ctx context.Context, req *dto.PurchaseOrderRequ
 
 func (s *service) CloseOrder(ctx context.Context, req *dto.CloseOrderRequest) error {
 	return s.checkout.Close(ctx, req)
+}
+
+func (s *service) PortalPurchase(ctx context.Context, req *dto.PortalPurchaseRequest) (*dto.PortalPurchaseResponse, error) {
+	return s.portal.Purchase(ctx, req)
+}
+
+func (s *service) PortalPrePurchase(ctx context.Context, req *dto.PrePurchaseOrderRequest) (*dto.PrePurchaseOrderResponse, error) {
+	return s.portal.PrePurchase(ctx, req)
+}
+
+func (s *service) PortalCheckout(ctx context.Context, req *dto.CheckoutOrderRequest) (*dto.CheckoutOrderResponse, error) {
+	return s.portal.Checkout(ctx, req)
+}
+
+func (s *service) QueryPurchaseOrder(ctx context.Context, req *dto.QueryPurchaseOrderRequest) (*dto.QueryPurchaseOrderResponse, error) {
+	return s.portal.QueryPurchaseOrder(ctx, req)
+}
+
+func (s *service) GetAvailablePaymentMethods(ctx context.Context) (*dto.GetAvailablePaymentMethodsResponse, error) {
+	return s.portal.GetAvailablePaymentMethods(ctx)
+}
+
+func (s *service) GetPortalSubscription(ctx context.Context, req *dto.GetSubscriptionRequest) (*dto.GetSubscriptionResponse, error) {
+	return s.portal.GetSubscription(ctx, req)
+}
+
+func (s *service) IssuePortalSession(ctx context.Context, userID int64) (string, error) {
+	return s.portal.IssueSession(ctx, userID)
 }

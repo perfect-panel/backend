@@ -3,11 +3,11 @@ package portal
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/orderflow"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/payment"
@@ -15,36 +15,17 @@ import (
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
-	queue "github.com/perfect-panel/server/queue/types"
-	"time"
-
-	"github.com/hibiken/asynq"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
-type PurchaseLogic struct {
-	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
-}
-
-// NewPurchaseLogic Purchase subscription
-func NewPurchaseLogic(ctx context.Context, svcCtx *svc.ServiceContext) *PurchaseLogic {
-	return &PurchaseLogic{
-		Logger: logger.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
-	}
-}
-
-const (
-	CloseOrderTimeMinutes = 15
-)
-
-func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.PortalPurchaseResponse, err error) {
+// Purchase creates a guest pre-order: the billing transaction reserves the
+// coupon and creates the pending order, then plan inventory is reserved in
+// its own subscription-domain transaction (ADR-001 step 2).
+func (s *Service) Purchase(ctx context.Context, req *dto.PortalPurchaseRequest) (*dto.PortalPurchaseResponse, error) {
+	log := logger.WithContext(ctx)
 	// find user auth
-	userAuth, err := l.svcCtx.Store.UserAuth().FindUserAuthMethodByOpenID(l.ctx, req.AuthType, req.Identifier)
+	userAuth, err := s.deps.UserAuths.FindUserAuthMethodByOpenID(ctx, req.AuthType, req.Identifier)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user auth error: %v", err.Error())
 	}
@@ -52,9 +33,9 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.UserExist), "user already exists")
 	}
 	// find subscribe plan
-	sub, err := l.svcCtx.Store.Subscribe().FindOne(l.ctx, req.SubscribeId)
+	sub, err := s.deps.Plans.FindOne(ctx, req.SubscribeId)
 	if err != nil {
-		l.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.SubscribeId))
+		log.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.SubscribeId))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
 	}
 
@@ -81,7 +62,7 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 	var couponAmount int64 = 0
 	// Calculate the coupon deduction
 	if req.Coupon != "" {
-		couponInfo, err := l.svcCtx.Store.Coupon().FindOneByCode(l.ctx, req.Coupon)
+		couponInfo, err := s.deps.Coupons.FindOneByCode(ctx, req.Coupon)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotExist), "coupon not found")
@@ -104,9 +85,9 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 	// Calculate the handling fee
 	amount -= couponAmount
 	// find payment method
-	paymentConfig, err := l.svcCtx.Store.Payment().FindOne(l.ctx, req.Payment)
+	paymentConfig, err := s.deps.Payments.FindOne(ctx, req.Payment)
 	if err != nil {
-		l.Logger.Error("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
+		log.Errorw("[Purchase] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.PaymentMethodNotFound), "find payment method error: %v", err.Error())
 	}
 	if err := ensurePaymentAvailable(paymentConfig); err != nil {
@@ -124,7 +105,7 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 	}
 	amount += feeAmount
 	// create order
-	checkoutToken := orderflow.GuestCheckoutToken(l.ctx)
+	checkoutToken := orderflow.GuestCheckoutToken(ctx)
 	if checkoutToken == "" {
 		checkoutToken = random.KeyNew(32, 1)
 	}
@@ -150,11 +131,12 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 		GuestInviteCode:        req.InviteCode,
 		GuestCheckoutTokenHash: constant.CheckoutTokenHash(checkoutToken),
 	}
-	orderflow.ApplyIdempotency(l.ctx, orderInfo)
-	// save order
-	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+	orderflow.ApplyIdempotency(ctx, orderInfo)
+	// Billing-domain transaction: coupon reservation and order creation
+	// settle together.
+	err = s.deps.Store.InBillingTx(ctx, func(store repository.BillingStore) error {
 		if orderInfo.Coupon != "" {
-			reserved, reserveErr := store.Coupon().ReserveUsage(l.ctx, orderInfo.Coupon, timeutil.Now().Unix())
+			reserved, reserveErr := store.Coupon().ReserveUsage(ctx, orderInfo.Coupon, timeutil.Now().Unix())
 			if reserveErr != nil {
 				return reserveErr
 			}
@@ -163,33 +145,33 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 			}
 			orderInfo.CouponReserved = true
 		}
+
 		// save guest order
-		if err = store.Order().Insert(l.ctx, orderInfo); err != nil {
+		if err = store.Order().Insert(ctx, orderInfo); err != nil {
 			return err
 		}
 		return nil
 	})
 	if err != nil {
-		l.Errorw("[Purchase] Database transaction error", logger.Field("error", err.Error()))
+		log.Errorw("[Purchase] Database transaction error", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "transaction error: %v", err.Error())
 	}
 	// Reserve plan inventory in its own subscription-domain transaction
-	// (ADR-001 step 2). On failure the guest order is closed inline — this
-	// package cannot reuse the public order close logic without an import
-	// cycle, and guest pre-orders only hold a coupon reservation.
-	if err := orderflow.ReserveInventoryOnce(l.ctx, l.svcCtx.Store, orderInfo.OrderNo, sub.Id); err != nil {
-		closeErr := l.svcCtx.Store.InBillingTx(l.ctx, func(store repository.BillingStore) error {
-			closed, e := store.Order().UpdateOrderStatusFrom(l.ctx, orderInfo.OrderNo, 1, 3)
+	// (ADR-001 step 2). On failure the guest order is closed inline; guest
+	// pre-orders only hold a coupon reservation.
+	if err := orderflow.ReserveInventoryOnce(ctx, s.deps.Store, orderInfo.OrderNo, sub.Id); err != nil {
+		closeErr := s.deps.Store.InBillingTx(ctx, func(store repository.BillingStore) error {
+			closed, e := store.Order().UpdateOrderStatusFrom(ctx, orderInfo.OrderNo, 1, 3)
 			if e != nil {
 				return e
 			}
 			if closed && orderInfo.CouponReserved {
-				return store.Coupon().ReleaseUsage(l.ctx, orderInfo.Coupon)
+				return store.Coupon().ReleaseUsage(ctx, orderInfo.Coupon)
 			}
 			return nil
 		})
 		if closeErr != nil {
-			l.Errorw("[Purchase] Close order after reservation failure failed", logger.Field("error", closeErr.Error()), logger.Field("orderNo", orderInfo.OrderNo))
+			log.Errorw("[Purchase] Close order after reservation failure failed", logger.Field("error", closeErr.Error()), logger.Field("orderNo", orderInfo.OrderNo))
 		}
 		if errors.Is(err, orderflow.ErrOutOfStock) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeOutOfStock), "subscribe out of stock")
@@ -197,20 +179,10 @@ func (l *PurchaseLogic) Purchase(req *dto.PortalPurchaseRequest) (resp *dto.Port
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "reserve inventory error: %v", err.Error())
 	}
 	// Deferred task
-	payload := queue.DeferCloseOrderPayload{
-		OrderNo: orderInfo.OrderNo,
-	}
-	val, err := json.Marshal(payload)
-	if err != nil {
-		l.Errorw("[CloseOrder Task] Marshal payload error", logger.Field("error", err.Error()), logger.Field("payload", payload))
-	}
-	task := asynq.NewTask(queue.DeferCloseOrder, val, asynq.MaxRetry(3))
-	taskInfo, err := l.svcCtx.Queue.Enqueue(task, asynq.ProcessIn(CloseOrderTimeMinutes*time.Minute))
-	if err != nil {
-		l.Errorw("[CloseOrder Task] Enqueue task error", logger.Field("error", err.Error()), logger.Field("task", taskInfo))
+	if err := s.deps.Queue.EnqueueDeferredClose(ctx, orderInfo.OrderNo); err != nil {
+		log.Errorw("[CloseOrder Task] Enqueue task error", logger.Field("error", err.Error()), logger.Field("orderNo", orderInfo.OrderNo))
 	} else {
-		l.Infow("[CloseOrder Task] Enqueue task success", logger.Field("TaskID", taskInfo.ID))
+		log.Infow("[CloseOrder Task] Enqueue task success", logger.Field("orderNo", orderInfo.OrderNo))
 	}
-	resp = &dto.PortalPurchaseResponse{OrderNo: orderInfo.OrderNo, CheckoutToken: checkoutToken}
-	return resp, nil
+	return &dto.PortalPurchaseResponse{OrderNo: orderInfo.OrderNo, CheckoutToken: checkoutToken}, nil
 }

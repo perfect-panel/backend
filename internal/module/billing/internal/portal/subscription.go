@@ -6,34 +6,19 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/subscribe"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 
-type GetSubscriptionLogic struct {
-	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
-}
-
-// NewGetSubscriptionLogic Get Subscription
-func NewGetSubscriptionLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetSubscriptionLogic {
-	return &GetSubscriptionLogic{
-		Logger: logger.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
-	}
-}
-
-func (l *GetSubscriptionLogic) GetSubscription(req *dto.GetSubscriptionRequest) (resp *dto.GetSubscriptionResponse, err error) {
-	resp = &dto.GetSubscriptionResponse{
+// GetSubscription lists the storefront's visible subscription plans.
+func (s *Service) GetSubscription(ctx context.Context, req *dto.GetSubscriptionRequest) (*dto.GetSubscriptionResponse, error) {
+	resp := &dto.GetSubscriptionResponse{
 		List: make([]dto.Subscribe, 0),
 	}
 	// Get the subscription list
-	_, data, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
+	_, data, err := s.deps.Plans.FilterList(ctx, &subscribe.FilterParams{
 		Page:            1,
 		Size:            9999,
 		Show:            true,
@@ -41,7 +26,7 @@ func (l *GetSubscriptionLogic) GetSubscription(req *dto.GetSubscriptionRequest) 
 		DefaultLanguage: true,
 	})
 	if err != nil {
-		l.Errorw("[Site GetSubscription]", logger.Field("err", err.Error()))
+		logger.WithContext(ctx).Errorw("[Site GetSubscription]", logger.Field("err", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get subscription list error: %v", err.Error())
 	}
 	list := make([]dto.Subscribe, len(data))
@@ -57,5 +42,5 @@ func (l *GetSubscriptionLogic) GetSubscription(req *dto.GetSubscriptionRequest) 
 		list[i] = sub
 	}
 	resp.List = list
-	return
+	return resp, nil
 }

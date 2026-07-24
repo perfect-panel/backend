@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perfect-panel/server/internal/logic/public/portal"
 	"github.com/perfect-panel/server/internal/model/dto"
 	orderEntity "github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/model/entity/user"
@@ -181,7 +180,7 @@ func (l *V2OrderLogic) Session(orderNo, checkoutToken string) (*dto.V2OrderSessi
 	if orderInfo.UserId == 0 || (orderInfo.Status != 2 && orderInfo.Status != 5) {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.OrderStatusError), "guest account is not ready")
 	}
-	token, err := portal.IssuePurchaseSession(l.ctx, l.svcCtx, orderInfo.UserId)
+	token, err := l.svcCtx.Billing.IssuePortalSession(l.ctx, orderInfo.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +191,7 @@ func (l *V2OrderLogic) createOrder(ctx context.Context, req *dto.V2CreateOrderRe
 	switch req.Type {
 	case v2OrderTypePurchase:
 		if l.currentUser() == nil {
-			resp, e := portal.NewPurchaseLogic(ctx, l.svcCtx).Purchase(&dto.PortalPurchaseRequest{
+			resp, e := l.svcCtx.Billing.PortalPurchase(ctx, &dto.PortalPurchaseRequest{
 				AuthType: req.Guest.AuthType, Identifier: req.Guest.Identifier, Password: req.Guest.Password,
 				Payment: req.PaymentID, SubscribeId: req.SubscribeID, Quantity: req.Quantity,
 				Coupon: req.Coupon, InviteCode: req.Guest.InviteCode,
@@ -241,7 +240,7 @@ func (l *V2OrderLogic) createOrder(ctx context.Context, req *dto.V2CreateOrderRe
 func (l *V2OrderLogic) checkoutResponse(orderInfo *orderEntity.Order, checkoutToken, returnURL string) (*dto.V2OrderResponse, error) {
 	var paymentResp *dto.V2OrderPayment
 	if orderInfo.Status == 1 {
-		checkout, err := l.newCheckoutLogic().PurchaseCheckout(&dto.CheckoutOrderRequest{
+		checkout, err := l.svcCtx.Billing.PortalCheckout(l.ctx, &dto.CheckoutOrderRequest{
 			OrderNo: orderInfo.OrderNo, CheckoutToken: checkoutToken, ReturnUrl: returnURL,
 		})
 		if err != nil {
@@ -267,21 +266,6 @@ func (l *V2OrderLogic) checkoutResponse(orderInfo *orderEntity.Order, checkoutTo
 		Events:        l.eventResponse(orderInfo.OrderNo, ticket, expiresAt),
 		CheckoutToken: checkoutTokenForResponse(orderInfo, checkoutToken),
 	}, nil
-}
-
-func (l *V2OrderLogic) newCheckoutLogic() *portal.PurchaseCheckoutLogic {
-	clientIP, _ := l.ctx.Value(constant.CtxKeyClientIP).(string)
-	return portal.NewPurchaseCheckoutLogic(l.ctx, portal.CheckoutDependencies{
-		Store:              portal.NewCheckoutStore(l.svcCtx.Store),
-		GuestCheckoutCache: l.svcCtx.Redis,
-		ActivationQueue:    l.svcCtx.Queue,
-		Config: portal.CheckoutConfig{
-			Host: l.svcCtx.Config.Host, SiteName: l.svcCtx.Config.Site.SiteName,
-			CurrencyUnit: l.svcCtx.Config.Currency.Unit, CurrencyAccessKey: l.svcCtx.Config.Currency.AccessKey,
-			ClientIP: clientIP,
-		},
-		ExchangeRateCache: l.svcCtx.ExchangeRate,
-	})
 }
 
 func (l *V2OrderLogic) snapshot(orderInfo *orderEntity.Order) dto.V2OrderSnapshot {
