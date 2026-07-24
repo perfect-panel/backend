@@ -1,11 +1,10 @@
-package user
+package selfsub
 
 import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	usermodel "github.com/perfect-panel/server/internal/model/entity/user"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -14,16 +13,16 @@ import (
 
 type PreUnsubscribeLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // NewPreUnsubscribeLogic Pre Unsubscribe
-func NewPreUnsubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *PreUnsubscribeLogic {
+func newPreUnsubscribeLogic(ctx context.Context, deps Deps) *PreUnsubscribeLogic {
 	return &PreUnsubscribeLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -33,7 +32,7 @@ func (l *PreUnsubscribeLogic) PreUnsubscribe(req *dto.PreUnsubscribeRequest) (re
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 
-	userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, req.Id)
+	userSub, err := l.deps.UserSubs.FindOneSubscribe(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("[PreUnsubscribeLogic] FindOneSubscribe failed", logger.Field("err", err.Error()), logger.Field("reqId", req.Id))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneSubscribe failed: %v", err.Error())
@@ -45,7 +44,7 @@ func (l *PreUnsubscribeLogic) PreUnsubscribe(req *dto.PreUnsubscribeRequest) (re
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "user subscribe does not belong to current user")
 	}
 
-	remainingAmount, err := CalculateRemainingAmount(l.ctx, l.svcCtx, req.Id)
+	remainingAmount, err := CalculateRemainingAmount(l.ctx, l.deps, req.Id)
 	if err != nil {
 		l.Errorw("[PreUnsubscribeLogic] Calculate Remaining Amount Error:", logger.Field("err", err.Error()))
 		return nil, err

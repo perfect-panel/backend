@@ -1,4 +1,4 @@
-package user
+package selfsub
 
 import (
 	"context"
@@ -18,22 +18,21 @@ import (
 	"github.com/perfect-panel/server/internal/model/entity/user"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
 type UnsubscribeLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // NewUnsubscribeLogic creates a new instance of UnsubscribeLogic for handling subscription cancellation
-func NewUnsubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UnsubscribeLogic {
+func newUnsubscribeLogic(ctx context.Context, deps Deps) *UnsubscribeLogic {
 	return &UnsubscribeLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -58,7 +57,7 @@ func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 	}
 
 	// find user subscription by ID
-	userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribe(l.ctx, req.Id)
+	userSub, err := l.deps.UserSubs.FindOneSubscribe(l.ctx, req.Id)
 	if err != nil {
 		l.Errorw("FindOneSubscribe failed", logger.Field("error", err.Error()), logger.Field("reqId", req.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "FindOneSubscribe failed: %v", err.Error())
@@ -84,13 +83,13 @@ func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 		}
 	} else {
 		// Calculate the remaining amount to refund based on unused subscription time/traffic
-		remainingAmount, err := CalculateRemainingAmount(l.ctx, l.svcCtx, req.Id)
+		remainingAmount, err := CalculateRemainingAmount(l.ctx, l.deps, req.Id)
 		if err != nil {
 			return err
 		}
 		// Subscription-domain transaction: flip the status and durably record
 		// what the billing stage owes.
-		err = l.svcCtx.Store.InSubscriptionTx(l.ctx, func(store repository.SubscriptionStore) error {
+		err = l.deps.Store.InSubscriptionTx(l.ctx, func(store repository.SubscriptionStore) error {
 			// Re-read the subscription under a row lock. The context user is
 			// only an authorization principal and can be stale.
 			lockedSub, err := store.UserSubscription().FindOneSubscribeForUpdate(l.ctx, req.Id)
@@ -123,12 +122,12 @@ func (l *UnsubscribeLogic) Unsubscribe(req *dto.UnsubscribeRequest) error {
 	}
 
 	//clear user subscription cache
-	if err = l.svcCtx.Store.UserCache().ClearSubscribeCache(l.ctx, userSub); err != nil {
+	if err = l.deps.Cache.ClearSubscribeCache(l.ctx, userSub); err != nil {
 		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("userSubscribeId", userSub.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}
 	// Clear subscription cache
-	if err = l.svcCtx.Store.Subscribe().ClearCache(l.ctx, userSub.SubscribeId); err != nil {
+	if err = l.deps.Plans.ClearCache(l.ctx, userSub.SubscribeId); err != nil {
 		l.Errorw("ClearSubscribeCache failed", logger.Field("error", err.Error()), logger.Field("subscribeId", userSub.SubscribeId))
 		return errors.Wrapf(xerr.NewErrCode(xerr.ERROR), "ClearSubscribeCache failed: %v", err.Error())
 	}
@@ -142,14 +141,14 @@ func (l *UnsubscribeLogic) hasUnsettledRefund(status uint8, subKey string) (bool
 	if status != user.SubscribeStatusDeducted {
 		return false, nil
 	}
-	cancelled, err := l.svcCtx.Store.Inbox().Find(l.ctx, unsubscribeCancelConsumer, subKey)
+	cancelled, err := l.deps.Inbox.Find(l.ctx, unsubscribeCancelConsumer, subKey)
 	if err != nil {
 		return false, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find cancellation marker failed: %v", err.Error())
 	}
 	if cancelled == nil {
 		return false, nil
 	}
-	refunded, err := l.svcCtx.Store.Inbox().Find(l.ctx, unsubscribeRefundConsumer, subKey)
+	refunded, err := l.deps.Inbox.Find(l.ctx, unsubscribeRefundConsumer, subKey)
 	if err != nil {
 		return false, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find refund marker failed: %v", err.Error())
 	}
@@ -159,14 +158,14 @@ func (l *UnsubscribeLogic) hasUnsettledRefund(status uint8, subKey string) (bool
 // settleRefundOnce credits the refund recorded by the cancellation marker in
 // a billing-domain transaction, guarded by the refund marker.
 func (l *UnsubscribeLogic) settleRefundOnce(userID, subID int64, subKey string) error {
-	cancelled, err := l.svcCtx.Store.Inbox().Find(l.ctx, unsubscribeCancelConsumer, subKey)
+	cancelled, err := l.deps.Inbox.Find(l.ctx, unsubscribeCancelConsumer, subKey)
 	if err != nil {
 		return err
 	}
 	if cancelled == nil {
 		return fmt.Errorf("cancellation marker missing for subscription %s", subKey)
 	}
-	refunded, err := l.svcCtx.Store.Inbox().Find(l.ctx, unsubscribeRefundConsumer, subKey)
+	refunded, err := l.deps.Inbox.Find(l.ctx, unsubscribeRefundConsumer, subKey)
 	if err != nil {
 		return err
 	}
@@ -177,7 +176,7 @@ func (l *UnsubscribeLogic) settleRefundOnce(userID, subID int64, subKey string) 
 	if err != nil {
 		return err
 	}
-	return l.svcCtx.Store.InBillingTx(l.ctx, func(store repository.BillingStore) error {
+	return l.deps.Store.InBillingTx(l.ctx, func(store repository.BillingStore) error {
 		// Subscriptions created by an administrator have no associated order.
 		// They can be cancelled, but there is no payment to refund.
 		if orderID != 0 {

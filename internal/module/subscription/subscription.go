@@ -9,6 +9,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/module/subscription/internal/delivery"
 	"github.com/perfect-panel/server/internal/module/subscription/internal/plan"
+	"github.com/perfect-panel/server/internal/module/subscription/internal/selfsub"
 	"github.com/perfect-panel/server/internal/module/subscription/internal/storefront"
 	"github.com/perfect-panel/server/internal/module/subscription/internal/usersub"
 	"github.com/perfect-panel/server/internal/repository"
@@ -39,6 +40,18 @@ type Service interface {
 	Deliver(ctx context.Context, meta RequestMeta, req *dto.SubscribeRequest) (*dto.SubscribeResponse, error)
 	// IsUserAgentAllowed gates delivery by the configured user-agent allowlist.
 	IsUserAgentAllowed(ctx context.Context, userAgent string) bool
+
+	// User self-service subscription management.
+	QueryUserSubscribe(ctx context.Context) (*dto.QueryUserSubscribeListResponse, error)
+	// ResetOwnSubscribeToken is the self-service variant; ownership of the
+	// subscription is enforced against the request context.
+	ResetOwnSubscribeToken(ctx context.Context, req *dto.ResetUserSubscribeTokenRequest) error
+	GetSubscribeLog(ctx context.Context, req *dto.GetSubscribeLogRequest) (*dto.GetSubscribeLogResponse, error)
+	UpdateUserSubscribeNote(ctx context.Context, req *dto.UpdateUserSubscribeNoteRequest) error
+	PreUnsubscribe(ctx context.Context, req *dto.PreUnsubscribeRequest) (*dto.PreUnsubscribeResponse, error)
+	// Unsubscribe cancels in a subscription transaction and settles the
+	// refund in a billing transaction, resumable via the idempotent inbox.
+	Unsubscribe(ctx context.Context, req *dto.UnsubscribeRequest) error
 
 	// Admin-side user subscription management.
 	CreateUserSubscribe(ctx context.Context, req *dto.CreateUserSubscribeRequest) error
@@ -89,9 +102,11 @@ type Deps struct {
 	Devices repository.UserDeviceRepo
 	Cache   repository.UserCacheRepo
 	Traffic repository.TrafficRepo
-	// FullStore is the transitional full-store dependency for the admin
-	// subscription transactions.
+	// FullStore is the transitional full-store dependency for the admin and
+	// self-service subscription transactions.
 	FullStore repository.Store
+	Orders    repository.OrderRepo
+	Inbox     repository.InboxRepo
 	// SingleModel forbids holding more than one blocking subscription.
 	SingleModel bool
 }
@@ -112,6 +127,17 @@ func New(deps Deps) Service {
 			Nodes:          deps.Nodes,
 			Logs:           deps.Logs,
 			ConfigSnapshot: deps.DeliveryConfig,
+		}),
+		selfSubs: selfsub.NewService(selfsub.Deps{
+			UserSubs:    deps.UserSubs,
+			Plans:       deps.Plans,
+			Users:       deps.Users,
+			Orders:      deps.Orders,
+			Cache:       deps.Cache,
+			Logs:        deps.Logs,
+			Inbox:       deps.Inbox,
+			Store:       deps.FullStore,
+			SingleModel: deps.SingleModel,
 		}),
 		userSubs: usersub.NewService(usersub.Deps{
 			Plans:       deps.Plans,
@@ -139,6 +165,7 @@ type service struct {
 	storefront *storefront.Service
 	delivery   *delivery.Service
 	userSubs   *usersub.Service
+	selfSubs   *selfsub.Service
 }
 
 func (s *service) CreateSubscribe(ctx context.Context, req *dto.CreateSubscribeRequest) error {
@@ -259,4 +286,28 @@ func (s *service) ResetUserSubscribeTraffic(ctx context.Context, req *dto.ResetU
 
 func (s *service) ToggleUserSubscribeStatus(ctx context.Context, req *dto.ToggleUserSubscribeStatusRequest) error {
 	return s.userSubs.ToggleUserSubscribeStatus(ctx, req)
+}
+
+func (s *service) QueryUserSubscribe(ctx context.Context) (*dto.QueryUserSubscribeListResponse, error) {
+	return s.selfSubs.QueryUserSubscribe(ctx)
+}
+
+func (s *service) ResetOwnSubscribeToken(ctx context.Context, req *dto.ResetUserSubscribeTokenRequest) error {
+	return s.selfSubs.ResetUserSubscribeToken(ctx, req)
+}
+
+func (s *service) GetSubscribeLog(ctx context.Context, req *dto.GetSubscribeLogRequest) (*dto.GetSubscribeLogResponse, error) {
+	return s.selfSubs.GetSubscribeLog(ctx, req)
+}
+
+func (s *service) UpdateUserSubscribeNote(ctx context.Context, req *dto.UpdateUserSubscribeNoteRequest) error {
+	return s.selfSubs.UpdateUserSubscribeNote(ctx, req)
+}
+
+func (s *service) PreUnsubscribe(ctx context.Context, req *dto.PreUnsubscribeRequest) (*dto.PreUnsubscribeResponse, error) {
+	return s.selfSubs.PreUnsubscribe(ctx, req)
+}
+
+func (s *service) Unsubscribe(ctx context.Context, req *dto.UnsubscribeRequest) error {
+	return s.selfSubs.Unsubscribe(ctx, req)
 }

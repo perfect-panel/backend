@@ -1,4 +1,4 @@
-package user
+package selfsub
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/user"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -19,16 +18,16 @@ import (
 
 type QueryUserSubscribeLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Query User Subscribe
-func NewQueryUserSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *QueryUserSubscribeLogic {
+func newQueryUserSubscribeLogic(ctx context.Context, deps Deps) *QueryUserSubscribeLogic {
 	return &QueryUserSubscribeLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -38,7 +37,7 @@ func (l *QueryUserSubscribeLogic) QueryUserSubscribe() (resp *dto.QueryUserSubsc
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
-	data, err := l.svcCtx.Store.UserSubscription().QueryUserSubscribe(l.ctx, u.Id, 0, 1, 2, 3)
+	data, err := l.deps.UserSubs.QueryUserSubscribe(l.ctx, u.Id, 0, 1, 2, 3)
 	if err != nil {
 		l.Errorw("[QueryUserSubscribeLogic] Query User Subscribe Error:", logger.Field("err", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "Query User Subscribe Error")

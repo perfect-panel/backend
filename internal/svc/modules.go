@@ -158,6 +158,8 @@ func newSubscriptionModule(store repository.Store, srv *ServiceContext) subscrip
 		Devices:     store.UserDevice(),
 		Cache:       store.UserCache(),
 		Traffic:     store.TrafficLog(),
+		Orders:      store.Order(),
+		Inbox:       store.Inbox(),
 		FullStore:   store,
 		SingleModel: srv.Config.Subscribe.SingleModel,
 		DeliveryConfig: func() subscription.DeliveryConfig {

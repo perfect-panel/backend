@@ -1,4 +1,4 @@
-package user
+package selfsub
 
 import (
 	"context"
@@ -6,11 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/dto"
 	usermodel "github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger/logtest"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -75,10 +73,13 @@ func (s *fakeStore) UserSubscription() repository.UserSubscriptionRepo {
 	return s.uRepo
 }
 
-func newFakeSvcCtx(uRepo *fakeUserRepo) *svc.ServiceContext {
-	return &svc.ServiceContext{
-		Store:  &fakeStore{uRepo: uRepo},
-		Config: config.Config{},
+func newFakeDeps(uRepo *fakeUserRepo) Deps {
+	store := &fakeStore{uRepo: uRepo}
+	return Deps{
+		UserSubs: uRepo,
+		Users:    uRepo,
+		Inbox:    store.Inbox(),
+		Store:    store,
 	}
 }
 
@@ -114,7 +115,7 @@ func TestPreUnsubscribe_WrongOwner_ReturnsInvalidAccess(t *testing.T) {
 		},
 	}
 
-	logic := NewPreUnsubscribeLogic(ctx, newFakeSvcCtx(u))
+	logic := newPreUnsubscribeLogic(ctx, newFakeDeps(u))
 	resp, err := logic.PreUnsubscribe(&dto.PreUnsubscribeRequest{Id: subID})
 
 	if code := errCode(t, err); code != xerr.InvalidAccess {
@@ -149,7 +150,7 @@ func TestPreUnsubscribe_OwnerBypassesAuthGate(t *testing.T) {
 		},
 	}
 
-	logic := NewPreUnsubscribeLogic(ctx, newFakeSvcCtx(u))
+	logic := newPreUnsubscribeLogic(ctx, newFakeDeps(u))
 	resp, err := logic.PreUnsubscribe(&dto.PreUnsubscribeRequest{Id: subID})
 
 	if code := errCode(t, err); code == xerr.InvalidAccess {
@@ -185,7 +186,7 @@ func TestUnsubscribe_WrongOwner_ReturnsInvalidAccess(t *testing.T) {
 		},
 	}
 
-	logic := NewUnsubscribeLogic(ctx, newFakeSvcCtx(u))
+	logic := newUnsubscribeLogic(ctx, newFakeDeps(u))
 	err := logic.Unsubscribe(&dto.UnsubscribeRequest{Id: subID})
 
 	if code := errCode(t, err); code != xerr.InvalidAccess {
@@ -217,7 +218,7 @@ func TestUnsubscribe_OwnerBypassesAuthGate(t *testing.T) {
 		},
 	}
 
-	logic := NewUnsubscribeLogic(ctx, newFakeSvcCtx(u))
+	logic := newUnsubscribeLogic(ctx, newFakeDeps(u))
 	err := logic.Unsubscribe(&dto.UnsubscribeRequest{Id: subID})
 
 	if code := errCode(t, err); code == xerr.InvalidAccess {

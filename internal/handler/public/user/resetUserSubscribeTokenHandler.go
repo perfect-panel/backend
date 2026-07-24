@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/public/user"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func ResetUserSubscribeTokenHandler(svcCtx *svc.ServiceContext) app.HandlerFunc 
 			return
 		}
 
-		l := user.NewResetUserSubscribeTokenLogic(c, svcCtx)
-		err := l.ResetUserSubscribeToken(&req)
+		err := svcCtx.Subscription.ResetOwnSubscribeToken(c, &req)
 		result.HttpResult(ctx, nil, err)
 	}
 }

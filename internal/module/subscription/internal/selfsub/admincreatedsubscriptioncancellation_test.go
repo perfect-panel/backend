@@ -1,4 +1,4 @@
-package user
+package selfsub
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/perfect-panel/server/internal/model/dto"
 	usermodel "github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger/logtest"
 	"gorm.io/gorm"
@@ -143,7 +142,14 @@ func TestUnsubscribe_AdminCreatedSubscription_SkipsRefund(t *testing.T) {
 		subscribeRepo: subscribeRepo,
 	}
 	ctx := context.WithValue(context.Background(), constant.CtxKeyUser, currentUser)
-	logic := NewUnsubscribeLogic(ctx, &svc.ServiceContext{Store: store})
+	logic := newUnsubscribeLogic(ctx, Deps{
+		UserSubs: store.userRepo,
+		Users:    store.userRepo,
+		Cache:    store.userRepo,
+		Plans:    store.subscribeRepo,
+		Inbox:    store.Inbox(),
+		Store:    store,
+	})
 
 	err := logic.Unsubscribe(&dto.UnsubscribeRequest{Id: subscribeID})
 
