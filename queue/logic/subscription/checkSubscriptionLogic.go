@@ -28,81 +28,62 @@ func NewCheckSubscriptionLogic(svc *svc.ServiceContext) *CheckSubscriptionLogic 
 func (l *CheckSubscriptionLogic) ProcessTask(ctx context.Context, _ *asynq.Task) error {
 	logger.Infof("[CheckSubscription] Start check subscription: %s", timeutil.Now().Format("2006-01-02 15:04:05"))
 	// Check subscription traffic
-	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
-		list, err := store.UserSubscription().FindTrafficExceededSubscribes(ctx)
-		if err != nil {
-			logger.Errorw("[Check Subscription Traffic] Query subscribe failed", logger.Field("error", err.Error()))
-			return err
-		}
-		var ids []int64
-		for _, item := range list {
-			ids = append(ids, item.Id)
-		}
-		if len(ids) > 0 {
-			if err = store.UserSubscription().MarkSubscribesFinished(ctx, ids, 2, timeutil.Now()); err != nil {
-				logger.Errorw("[Check Subscription Traffic] Update subscribe status failed", logger.Field("error", err.Error()))
-				return nil
-			}
-			err = l.sendTrafficNotify(ctx, ids)
-			if err != nil {
-				logger.Errorw("[Check Subscription Traffic] Send email failed", logger.Field("error", err.Error()))
-				return nil
-			}
-
-			if len(list) > 0 {
-				if err = store.UserCache().ClearSubscribeCache(ctx, list...); err != nil {
-					logger.Errorw("[Check Subscription Traffic] Clear subscribe cache failed", logger.Field("error", err.Error()))
-					return err
-				}
-			}
-			l.clearServerCache(ctx, list...)
-			logger.Infow("[Check Subscription Traffic] Update subscribe status", logger.Field("user_ids", ids), logger.Field("count", int64(len(ids))))
-
-		} else {
-			logger.Info("[Check Subscription Traffic] No subscribe need to update")
-		}
-
-		return nil
-	})
-	if err != nil {
+	if err := l.markSubscribes(ctx, 2, "[Check Subscription Traffic]", l.sendTrafficNotify,
+		func(store repository.Store) ([]*user.Subscribe, error) {
+			return store.UserSubscription().FindTrafficExceededSubscribes(ctx)
+		}); err != nil {
 		logger.Error("[CheckSubscription] Transaction failed", logger.Field("error", err.Error()))
 	}
 	// Check subscription expire
-	err = l.svc.Store.InTx(ctx, func(store repository.Store) error {
-		list, err := store.UserSubscription().FindExpiredSubscribes(ctx, timeutil.Now())
+	if err := l.markSubscribes(ctx, 3, "[Check Subscription Expire]", l.sendExpiredNotify,
+		func(store repository.Store) ([]*user.Subscribe, error) {
+			return store.UserSubscription().FindExpiredSubscribes(ctx, timeutil.Now())
+		}); err != nil {
+		logger.Info("[CheckSubscription] Transaction failed", logger.Field("error", err.Error()))
+	}
+	return nil
+}
+
+// markSubscribes commits the status flip in a subscription-domain transaction;
+// notifications and cache invalidation are retryable side effects that run
+// after the commit (ADR-001 step 2).
+func (l *CheckSubscriptionLogic) markSubscribes(ctx context.Context, status uint8, tag string, notify func(context.Context, []int64) error, find func(repository.Store) ([]*user.Subscribe, error)) error {
+	var list []*user.Subscribe
+	err := l.svc.Store.InTx(ctx, func(store repository.Store) error {
+		var err error
+		list, err = find(store)
 		if err != nil {
-			logger.Error("[Check Subscription] Find subscribe failed", logger.Field("error", err.Error()))
+			logger.Errorw(tag+" Query subscribe failed", logger.Field("error", err.Error()))
 			return err
 		}
-		var ids []int64
+		if len(list) == 0 {
+			return nil
+		}
+		ids := make([]int64, 0, len(list))
 		for _, item := range list {
 			ids = append(ids, item.Id)
 		}
-		if len(ids) > 0 {
-			if err = store.UserSubscription().MarkSubscribesFinished(ctx, ids, 3, timeutil.Now()); err != nil {
-				logger.Error("[Check Subscription Expire] Update subscribe status failed", logger.Field("error", err.Error()))
-				return err
-			}
-			err = l.sendExpiredNotify(ctx, ids)
-			if err != nil {
-				logger.Error("[Check Subscription Expire] Send email failed", logger.Field("error", err.Error()))
-				return nil
-			}
-			if err = store.UserCache().ClearSubscribeCache(ctx, list...); err != nil {
-				logger.Errorw("[Check Subscription Traffic] Clear subscribe cache failed", logger.Field("error", err.Error()))
-				return err
-			}
-			l.clearServerCache(ctx, list...)
-
-			logger.Info("[Check Subscription Expire] Update subscribe status", logger.Field("user_ids", ids), logger.Field("count", int64(len(ids))))
-		} else {
-			logger.Info("[Check Subscription Expire] No subscribe need to update")
-		}
-		return nil
+		return store.UserSubscription().MarkSubscribesFinished(ctx, ids, status, timeutil.Now())
 	})
 	if err != nil {
-		logger.Info("[CheckSubscription] Transaction failed", logger.Field("error", err.Error()))
+		return err
 	}
+	if len(list) == 0 {
+		logger.Info(tag + " No subscribe need to update")
+		return nil
+	}
+	ids := make([]int64, 0, len(list))
+	for _, item := range list {
+		ids = append(ids, item.Id)
+	}
+	if err := notify(ctx, ids); err != nil {
+		logger.Errorw(tag+" Send email failed", logger.Field("error", err.Error()))
+	}
+	if err := l.svc.Store.UserCache().ClearSubscribeCache(ctx, list...); err != nil {
+		logger.Errorw(tag+" Clear subscribe cache failed", logger.Field("error", err.Error()))
+	}
+	l.clearServerCache(ctx, list...)
+	logger.Infow(tag+" Update subscribe status", logger.Field("user_ids", ids), logger.Field("count", int64(len(ids))))
 	return nil
 }
 

@@ -77,6 +77,15 @@ internal/module/<name>/
      `repository.InboxRepo`。每个域步骤在自己的事务内插入 `(consumer, event_key)` 标记，
      使 at-least-once 投递与对账重放天然安全；唯一约束同时解决并发竞争（输者回滚）。
      拆分为微服务时各消费方带走自己的 consumer 行，成为其私有 inbox 表。
+   - ✅ **领域判定澄清（钱包归 billing）**：`User.Balance / GiftAmount / Commission` 的资金变动
+     是 billing 域操作（正文模块表已将"余额与提现"划归 billing），这些列暂住 user 表属数据
+     债务，第 5 步拆出独立 wallet 表。因此"锁 user 行 + 扣减余额/赠金/佣金 + 审计日志 + 订单写"
+     的事务是**单域（billing）事务**，无需事件化。据此重分类为合规的事务点：
+     `renewalLogic`、`resetTrafficLogic`、`purchaseCheckoutLogic`（余额结账）、
+     `commissionWithdrawLogic`、`updateUserBasicInfoLogic`（管理员调账）、`trafficStatLogic`
+     （network 统计 + 审计）。
+   - ✅ **checkSubscriptionLogic（2 处）**：事务收窄为纯 subscription 域写（查询 + 批量置状态），
+     邮件通知与用户/服务器缓存失效移到提交后执行（可重试副作用）。
    - ✅ **首个改造完成：`queue/logic/order/activateOrderLogic`**。原单一跨 4 域事务拆为
      四个单域事务：① identity 访客建号（inbox 存 userId 供重放重绑）→ ② subscription/identity
      履约（开通/续费/重置/充值）→ ③ identity 佣金 → ④ billing 结算（优惠券计数 + Paid→Finished
