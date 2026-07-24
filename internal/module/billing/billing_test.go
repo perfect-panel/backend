@@ -15,10 +15,19 @@ import (
 type fakeOrderRepo struct {
 	repository.OrderRepo
 	order        *orderEntity.Order
+	details      *orderEntity.Details
 	pendingCount int64
 	inserted     *orderEntity.Order
 	markedPaid   bool
 	closed       bool
+}
+
+func (f *fakeOrderRepo) FindOneDetailsByOrderNo(_ context.Context, orderNo string) (*orderEntity.Details, error) {
+	if f.details == nil || f.details.OrderNo != orderNo {
+		return nil, gorm.ErrRecordNotFound
+	}
+	copy := *f.details
+	return &copy, nil
 }
 
 func (f *fakeOrderRepo) FindOne(_ context.Context, id int64) (*orderEntity.Order, error) {
@@ -133,6 +142,15 @@ func newBillingService(orders *fakeOrderRepo, payments *fakePaymentRepo) (billin
 		Host:     "panel.example.com",
 	})
 	return svc, fakes
+}
+
+func newBillingServiceWithCoupons(coupons *fakeCouponRepo) billing.Service {
+	return billing.New(billing.Deps{
+		Orders:   &fakeOrderRepo{},
+		Payments: &fakePaymentRepo{},
+		Coupons:  coupons,
+		Queue:    &fakeActivationQueue{},
+	})
 }
 
 func TestUpdateOrderStatusRejectsInvalidTransitions(t *testing.T) {

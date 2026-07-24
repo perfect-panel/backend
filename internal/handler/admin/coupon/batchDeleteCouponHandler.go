@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/admin/coupon"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func BatchDeleteCouponHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := coupon.NewBatchDeleteCouponLogic(ctx, svcCtx)
-		err := l.BatchDeleteCoupon(&req)
+		err := svcCtx.Billing.BatchDeleteCoupon(ctx, &req)
 		result.HttpResult(c, nil, err)
 	}
 }

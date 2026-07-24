@@ -24,6 +24,7 @@ func newBillingModule(c config.Config, store repository.Store, queue *asynq.Clie
 	return billing.New(billing.Deps{
 		Orders:        store.Order(),
 		Payments:      store.Payment(),
+		Coupons:       store.Coupon(),
 		Tx:            store,
 		Queue:         activationQueue{client: queue},
 		Host:          c.Host,

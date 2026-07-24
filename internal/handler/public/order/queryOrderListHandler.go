@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/public/order"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func QueryOrderListHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := order.NewQueryOrderListLogic(c, svcCtx)
-		resp, err := l.QueryOrderList(&req)
+		resp, err := svcCtx.Billing.QueryOrderList(c, &req)
 		result.HttpResult(ctx, resp, err)
 	}
 }
