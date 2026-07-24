@@ -76,6 +76,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Store:        store,
 		Support: support.New(support.Deps{
 			Announcements: store.Announcement(),
+			Ads:           store.Ads(),
 		}),
 		//NodeCache:   cache.NewNodeCacheClient(rds),
 		AuthLimiter: authLimiter,
