@@ -46,6 +46,7 @@ type Store interface {
 	InSubscriptionTx(ctx context.Context, fn func(SubscriptionStore) error) error
 	InIdentityTx(ctx context.Context, fn func(IdentityStore) error) error
 	InNetworkTx(ctx context.Context, fn func(NetworkStore) error) error
+	InPlatformTx(ctx context.Context, fn func(PlatformStore) error) error
 }
 
 var _ Store = (*GormStore)(nil)

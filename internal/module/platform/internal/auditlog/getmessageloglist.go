@@ -1,42 +1,41 @@
-package log
+package auditlog
 
 import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/log"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 
-type FilterMobileLogLogic struct {
+type GetMessageLogListLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
-// Filter mobile log
-func NewFilterMobileLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FilterMobileLogLogic {
-	return &FilterMobileLogLogic{
+// NewGetMessageLogListLogic Get message log list
+func newGetMessageLogListLogic(ctx context.Context, deps Deps) *GetMessageLogListLogic {
+	return &GetMessageLogListLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
-func (l *FilterMobileLogLogic) FilterMobileLog(req *dto.FilterLogParams) (resp *dto.FilterMobileLogResponse, err error) {
-	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
+func (l *GetMessageLogListLogic) GetMessageLogList(req *dto.GetMessageLogListRequest) (resp *dto.GetMessageLogListResponse, err error) {
+
+	data, total, err := l.deps.Logs.FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:   req.Page,
 		Size:   req.Size,
-		Type:   log.TypeMobileMessage.Uint8(),
-		Data:   req.Date,
+		Type:   req.Type,
 		Search: req.Search,
 	})
 
 	if err != nil {
-		l.Errorf("[FilterMobileLog] failed to filter system log: %v", err.Error())
+		l.Errorf("[GetMessageLogList] failed to filter system log: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter system log: %v", err.Error())
 	}
 
@@ -46,7 +45,7 @@ func (l *FilterMobileLogLogic) FilterMobileLog(req *dto.FilterLogParams) (resp *
 		var content log.Message
 		err = content.Unmarshal([]byte(datum.Content))
 		if err != nil {
-			l.Errorf("[FilterMobileLog] failed to unmarshal content: %v", err.Error())
+			l.Errorf("[GetMessageLogList] failed to unmarshal content: %v", err.Error())
 			continue
 		}
 		list = append(list, dto.MessageLog{
@@ -61,7 +60,7 @@ func (l *FilterMobileLogLogic) FilterMobileLog(req *dto.FilterLogParams) (resp *
 		})
 	}
 
-	return &dto.FilterMobileLogResponse{
+	return &dto.GetMessageLogListResponse{
 		Total: total,
 		List:  list,
 	}, nil

@@ -1,13 +1,11 @@
-package log
+package auditlog
 
 import (
 	"context"
 	"reflect"
 
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -16,16 +14,16 @@ import (
 
 type UpdateLogSettingLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // NewUpdateLogSettingLogic Update log setting
-func NewUpdateLogSettingLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateLogSettingLogic {
+func newUpdateLogSettingLogic(ctx context.Context, deps Deps) *UpdateLogSettingLogic {
 	return &UpdateLogSettingLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -33,7 +31,7 @@ func (l *UpdateLogSettingLogic) UpdateLogSetting(req *dto.LogSetting) error {
 	v := reflect.ValueOf(*req)
 	// Get the reflection type of the structure
 	t := v.Type()
-	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+	err := l.deps.Store.InPlatformTx(l.ctx, func(store repository.PlatformStore) error {
 		systemStore := store.System()
 		for i := 0; i < v.NumField(); i++ {
 			// Get the field name
@@ -62,9 +60,8 @@ func (l *UpdateLogSettingLogic) UpdateLogSetting(req *dto.LogSetting) error {
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), " update log setting error: %v", err)
 	}
 
-	l.svcCtx.Config.Log = config.Log{
-		AutoClear: *req.AutoClear,
-		ClearDays: req.ClearDays,
+	if l.deps.OnLogSettingChanged != nil {
+		l.deps.OnLogSettingChanged(*req.AutoClear, req.ClearDays)
 	}
 
 	return nil

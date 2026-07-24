@@ -10,6 +10,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/module/billing"
+	"github.com/perfect-panel/server/internal/module/platform"
 	"github.com/perfect-panel/server/internal/module/support"
 	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/internal/repository"
@@ -85,6 +86,24 @@ func (q activationQueue) EnqueueDeferredClose(ctx context.Context, orderNo strin
 	task := asynq.NewTask(queuetypes.DeferCloseOrder, payload, asynq.MaxRetry(3))
 	_, err = q.client.EnqueueContext(ctx, task, asynq.ProcessIn(billing.CloseOrderTimeMinutes*time.Minute))
 	return err
+}
+
+// newPlatformModule wires the platform module against the legacy store. The
+// log-retention callbacks read and mutate the running configuration exactly
+// as the legacy logic did.
+func newPlatformModule(store repository.Store, srv *ServiceContext) platform.Service {
+	return platform.New(platform.Deps{
+		Logs:    store.Log(),
+		System:  store.System(),
+		Traffic: store.TrafficLog(),
+		Store:   store,
+		OnLogSettingChanged: func(autoClear bool, clearDays int64) {
+			srv.Config.Log = config.Log{AutoClear: autoClear, ClearDays: clearDays}
+		},
+		LogRetention: func() (bool, int64) {
+			return srv.Config.Log.AutoClear, srv.Config.Log.ClearDays
+		},
+	})
 }
 
 // newSupportModule wires the support module against the legacy store. The

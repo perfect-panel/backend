@@ -1,11 +1,10 @@
-package log
+package auditlog
 
 import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/log"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -13,21 +12,21 @@ import (
 
 type FilterRegisterLogLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Filter register log
-func NewFilterRegisterLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FilterRegisterLogLogic {
+func newFilterRegisterLogLogic(ctx context.Context, deps Deps) *FilterRegisterLogLogic {
 	return &FilterRegisterLogLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
 func (l *FilterRegisterLogLogic) FilterRegisterLog(req *dto.FilterRegisterLogRequest) (resp *dto.FilterRegisterLogResponse, err error) {
-	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
+	data, total, err := l.deps.Logs.FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:     req.Page,
 		Size:     req.Size,
 		Type:     log.TypeRegister.Uint8(),

@@ -1,4 +1,4 @@
-package log
+package auditlog
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/traffic"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -15,16 +14,16 @@ import (
 
 type FilterTrafficLogDetailsLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // NewFilterTrafficLogDetailsLogic Filter traffic log details
-func NewFilterTrafficLogDetailsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FilterTrafficLogDetailsLogic {
+func newFilterTrafficLogDetailsLogic(ctx context.Context, deps Deps) *FilterTrafficLogDetailsLogic {
 	return &FilterTrafficLogDetailsLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -44,7 +43,7 @@ func (l *FilterTrafficLogDetailsLogic) FilterTrafficLogDetails(req *dto.FilterTr
 		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		end = start.Add(24 * time.Hour)
 	}
-	data, total, err := l.svcCtx.Store.TrafficLog().QueryTrafficLogDetails(l.ctx, &traffic.TrafficLogDetailsFilter{
+	data, total, err := l.deps.Traffic.QueryTrafficLogDetails(l.ctx, &traffic.TrafficLogDetailsFilter{
 		ServerId:    req.ServerId,
 		UserId:      req.UserId,
 		SubscribeId: req.SubscribeId,

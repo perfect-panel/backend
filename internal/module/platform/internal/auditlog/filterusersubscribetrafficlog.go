@@ -1,4 +1,4 @@
-package log
+package auditlog
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/log"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -15,16 +14,16 @@ import (
 
 type FilterUserSubscribeTrafficLogLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // NewFilterUserSubscribeTrafficLogLogic Filter user subscribe traffic log
-func NewFilterUserSubscribeTrafficLogLogic(ctx context.Context, svcCtx *svc.ServiceContext) *FilterUserSubscribeTrafficLogLogic {
+func newFilterUserSubscribeTrafficLogLogic(ctx context.Context, deps Deps) *FilterUserSubscribeTrafficLogLogic {
 	return &FilterUserSubscribeTrafficLogLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -45,7 +44,7 @@ func (l *FilterUserSubscribeTrafficLogLogic) FilterUserSubscribeTrafficLog(req *
 		start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, timeutil.Location())
 		end := start.Add(24 * time.Hour)
 
-		userTraffic, err := l.svcCtx.Store.TrafficLog().QueryUserTrafficRanking(l.ctx, start, end)
+		userTraffic, err := l.deps.Traffic.QueryUserTrafficRanking(l.ctx, start, end)
 		if err != nil {
 			l.Errorw("[FilterUserSubscribeTrafficLog] Query Database Error", logger.Field("error", err.Error()))
 			return nil, err
@@ -79,7 +78,7 @@ func (l *FilterUserSubscribeTrafficLogLogic) FilterUserSubscribeTrafficLog(req *
 
 		need := endIdx - todayTotal
 		historyPage := (need + req.Size - 1) / req.Size // 算出需要的历史页数
-		historyData, historyTotal, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
+		historyData, historyTotal, err := l.deps.Logs.FilterSystemLog(l.ctx, &log.FilterParams{
 			Page: historyPage,
 			Size: need,
 			Type: log.TypeSubscribeTraffic.Uint8(),
@@ -119,7 +118,7 @@ func (l *FilterUserSubscribeTrafficLogLogic) FilterUserSubscribeTrafficLog(req *
 		}, nil
 	}
 	var data []*log.SystemLog
-	data, total, err = l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
+	data, total, err = l.deps.Logs.FilterSystemLog(l.ctx, &log.FilterParams{
 		Page: req.Page,
 		Size: req.Size,
 		Type: log.TypeSubscribeTraffic.Uint8(),

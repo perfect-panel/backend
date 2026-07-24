@@ -68,6 +68,14 @@ type NetworkStore interface {
 	Log() LogRepo
 }
 
+// PlatformStore is the platform domain's transactional surface: system
+// settings and audit/message logs.
+type PlatformStore interface {
+	System() SystemRepo
+	Log() LogRepo
+	Inbox() InboxRepo
+}
+
 // The full store satisfies every domain view; the scoped transactions below
 // hand out the narrowed interface.
 var (
@@ -75,6 +83,7 @@ var (
 	_ SubscriptionStore = (*GormStore)(nil)
 	_ IdentityStore     = (*GormStore)(nil)
 	_ NetworkStore      = (*GormStore)(nil)
+	_ PlatformStore     = (*GormStore)(nil)
 )
 
 // Wallet exposes the billing view of the user table's money columns.
@@ -105,5 +114,12 @@ func (s *GormStore) InIdentityTx(ctx context.Context, fn func(IdentityStore) err
 func (s *GormStore) InNetworkTx(ctx context.Context, fn func(NetworkStore) error) error {
 	return s.InTx(ctx, func(store Store) error {
 		return fn(store.(NetworkStore))
+	})
+}
+
+// InPlatformTx runs fn inside a transaction scoped to the platform domain.
+func (s *GormStore) InPlatformTx(ctx context.Context, fn func(PlatformStore) error) error {
+	return s.InTx(ctx, func(store Store) error {
+		return fn(store.(PlatformStore))
 	})
 }

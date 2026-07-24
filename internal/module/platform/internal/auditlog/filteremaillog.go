@@ -1,42 +1,41 @@
-package log
+package auditlog
 
 import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/log"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 
-type GetMessageLogListLogic struct {
+type FilterEmailLogLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
-// NewGetMessageLogListLogic Get message log list
-func NewGetMessageLogListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetMessageLogListLogic {
-	return &GetMessageLogListLogic{
+// NewFilterEmailLogLogic Filter email log
+func newFilterEmailLogLogic(ctx context.Context, deps Deps) *FilterEmailLogLogic {
+	return &FilterEmailLogLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
-func (l *GetMessageLogListLogic) GetMessageLogList(req *dto.GetMessageLogListRequest) (resp *dto.GetMessageLogListResponse, err error) {
-
-	data, total, err := l.svcCtx.Store.Log().FilterSystemLog(l.ctx, &log.FilterParams{
+func (l *FilterEmailLogLogic) FilterEmailLog(req *dto.FilterLogParams) (resp *dto.FilterEmailLogResponse, err error) {
+	data, total, err := l.deps.Logs.FilterSystemLog(l.ctx, &log.FilterParams{
 		Page:   req.Page,
 		Size:   req.Size,
-		Type:   req.Type,
+		Type:   log.TypeEmailMessage.Uint8(),
+		Data:   req.Date,
 		Search: req.Search,
 	})
 
 	if err != nil {
-		l.Errorf("[GetMessageLogList] failed to filter system log: %v", err.Error())
+		l.Errorf("[FilterEmailLog] failed to filter system log: %v", err.Error())
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "failed to filter system log: %v", err.Error())
 	}
 
@@ -46,7 +45,7 @@ func (l *GetMessageLogListLogic) GetMessageLogList(req *dto.GetMessageLogListReq
 		var content log.Message
 		err = content.Unmarshal([]byte(datum.Content))
 		if err != nil {
-			l.Errorf("[GetMessageLogList] failed to unmarshal content: %v", err.Error())
+			l.Errorf("[FilterEmailLog] failed to unmarshal content: %v", err.Error())
 			continue
 		}
 		list = append(list, dto.MessageLog{
@@ -61,7 +60,7 @@ func (l *GetMessageLogListLogic) GetMessageLogList(req *dto.GetMessageLogListReq
 		})
 	}
 
-	return &dto.GetMessageLogListResponse{
+	return &dto.FilterEmailLogResponse{
 		Total: total,
 		List:  list,
 	}, nil
