@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -182,5 +184,74 @@ func TestOrderRepoUpdateRejectsStateMutationOutsideTransition(t *testing.T) {
 	}
 	if len(events) != 1 {
 		t.Fatalf("event count = %d, want only creation event", len(events))
+	}
+}
+
+func TestOrderRepoUpdatePreservesIdempotencyAndGuestHashes(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:order-update-immutable-hashes?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := db.AutoMigrate(&order.Order{}, &order.Event{}); err != nil {
+		t.Fatalf("migrate schema: %v", err)
+	}
+	redisServer := miniredis.RunT(t)
+	redisClient := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})
+	t.Cleanup(func() { _ = redisClient.Close() })
+	repo := newOrderRepo(db, redisClient)
+
+	// Two V1-style orders have SQL NULL idempotency columns.  Before the fix,
+	// Select("*") changed both to the same empty string and the second update
+	// violated the unique index.
+	for _, orderNo := range []string{"legacy-one", "legacy-two"} {
+		data := &order.Order{OrderNo: orderNo, Status: 1}
+		if err := repo.Insert(context.Background(), data); err != nil {
+			t.Fatalf("insert %s: %v", orderNo, err)
+		}
+		data.UserId = 100
+		if err := repo.Update(context.Background(), data); err != nil {
+			t.Fatalf("update %s: %v", orderNo, err)
+		}
+	}
+	var nullIdempotencyKeys int64
+	if err := db.Model(&order.Order{}).Where("idempotency_key IS NULL").Count(&nullIdempotencyKeys).Error; err != nil {
+		t.Fatalf("count NULL idempotency keys: %v", err)
+	}
+	if nullIdempotencyKeys != 2 {
+		t.Fatalf("NULL idempotency keys = %d, want 2", nullIdempotencyKeys)
+	}
+
+	keyed := &order.Order{
+		OrderNo:                "v2-keyed",
+		Status:                 1,
+		IdempotencyKey:         "idempotency-key",
+		IdempotencyHash:        strings.Repeat("a", 64),
+		GuestCheckoutTokenHash: strings.Repeat("b", 64),
+	}
+	if err := repo.Insert(context.Background(), keyed); err != nil {
+		t.Fatalf("insert keyed order: %v", err)
+	}
+	// Simulate a narrow caller that only intends to update UserId.  The generic
+	// update must not clear immutable creation-time values it was not given.
+	if err := repo.Update(context.Background(), &order.Order{
+		Id: keyed.Id, Status: keyed.Status, StateVersion: keyed.StateVersion, UserId: 200,
+	}); err != nil {
+		t.Fatalf("update keyed order: %v", err)
+	}
+	var snapshot struct {
+		IdempotencyKey         sql.NullString
+		IdempotencyHash        sql.NullString
+		GuestCheckoutTokenHash string
+	}
+	if err := db.Model(&order.Order{}).
+		Select("idempotency_key, idempotency_hash, guest_checkout_token_hash").
+		Where("id = ?", keyed.Id).
+		Take(&snapshot).Error; err != nil {
+		t.Fatalf("load keyed order: %v", err)
+	}
+	if !snapshot.IdempotencyKey.Valid || snapshot.IdempotencyKey.String != keyed.IdempotencyKey ||
+		!snapshot.IdempotencyHash.Valid || snapshot.IdempotencyHash.String != keyed.IdempotencyHash ||
+		snapshot.GuestCheckoutTokenHash != keyed.GuestCheckoutTokenHash {
+		t.Fatalf("immutable hashes changed: %+v", snapshot)
 	}
 }

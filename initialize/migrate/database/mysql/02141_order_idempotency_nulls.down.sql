@@ -1,0 +1,1 @@
+-- Data normalization is intentionally irreversible.

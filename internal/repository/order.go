@@ -162,6 +162,11 @@ func (m *orderRepo) Update(ctx context.Context, data *order.Order, tx ...*gorm.D
 		result := conn.Model(&order.Order{}).
 			Where("id = ? AND status = ? AND state_version = ?", data.Id, old.Status, old.StateVersion).
 			Select("*").
+			// These values are assigned only when an order is created.  Generic
+			// updates intentionally keep their database values: a Go string zero
+			// value cannot represent the SQL NULL used by legacy/V1 orders, and
+			// Select("*") would otherwise rewrite that NULL as an empty string.
+			Omit("IdempotencyKey", "IdempotencyHash", "GuestCheckoutTokenHash").
 			Updates(data)
 		if result.Error != nil {
 			return result.Error
