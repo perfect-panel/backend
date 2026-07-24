@@ -19,6 +19,7 @@ type Store interface {
 	Client() ClientRepo
 	Coupon() CouponRepo
 	Document() DocumentRepo
+	Inbox() InboxRepo
 	Log() LogRepo
 	Node() NodeRepo
 	Order() OrderRepo
@@ -56,6 +57,7 @@ type GormStore struct {
 	client       ClientRepo
 	coupon       CouponRepo
 	document     DocumentRepo
+	inbox        InboxRepo
 	log          LogRepo
 	node         NodeRepo
 	order        OrderRepo
@@ -87,6 +89,7 @@ func newGormStore(db *gorm.DB, rds *redis.Client, invalidations *cache.Invalidat
 		client:        newClientRepo(db),
 		coupon:        newCouponRepo(db, rds, invalidations),
 		document:      newDocumentRepo(db, rds, invalidations),
+		inbox:         newInboxRepo(db),
 		log:           newLogRepo(db),
 		node:          newNodeRepo(db, rds, nodeRetrier),
 		order:         newOrderRepo(db, rds, invalidations),
@@ -114,6 +117,7 @@ func (s *GormStore) Auth() AuthRepo                 { return s.auth }
 func (s *GormStore) Client() ClientRepo             { return s.client }
 func (s *GormStore) Coupon() CouponRepo             { return s.coupon }
 func (s *GormStore) Document() DocumentRepo         { return s.document }
+func (s *GormStore) Inbox() InboxRepo               { return s.inbox }
 func (s *GormStore) Log() LogRepo                   { return s.log }
 func (s *GormStore) Node() NodeRepo                 { return s.node }
 func (s *GormStore) Order() OrderRepo               { return s.order }
