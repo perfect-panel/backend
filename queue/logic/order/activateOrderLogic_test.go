@@ -243,22 +243,6 @@ func TestActivateResetTrafficTxClearsFinishedAt(t *testing.T) {
 	}
 }
 
-func TestResetTrafficClearsFinishedAt(t *testing.T) {
-	logic, store := newResetTrafficTestLogic(t)
-
-	if err := logic.ResetTraffic(context.Background(), &orderEntity.Order{
-		OrderNo: "reset-order", UserId: 7, SubscribeToken: "subscription-token",
-	}); err != nil {
-		t.Fatalf("reset traffic: %v", err)
-	}
-	if store.users.subscription.FinishedAt != nil {
-		t.Fatal("legacy reset traffic left FinishedAt set")
-	}
-	if store.users.subscription.Status != userEntity.SubscribeStatusActive {
-		t.Fatalf("status = %d, want active", store.users.subscription.Status)
-	}
-}
-
 func newResetTrafficTestLogic(t *testing.T) (*ActivateOrderLogic, *activationStore) {
 	t.Helper()
 	finishedAt := time.Now().Add(-time.Hour)
