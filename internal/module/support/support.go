@@ -11,6 +11,7 @@ import (
 	"github.com/perfect-panel/server/internal/module/support/internal/ads"
 	"github.com/perfect-panel/server/internal/module/support/internal/announcement"
 	"github.com/perfect-panel/server/internal/module/support/internal/document"
+	"github.com/perfect-panel/server/internal/module/support/internal/ticket"
 	"github.com/perfect-panel/server/internal/repository"
 )
 
@@ -42,6 +43,18 @@ type Service interface {
 	// user before returning the content.
 	QueryDocumentDetail(ctx context.Context, req *dto.QueryDocumentDetailRequest) (*dto.Document, error)
 	QueryDocumentList(ctx context.Context) (*dto.QueryDocumentListResponse, error)
+
+	CreateTicketFollow(ctx context.Context, req *dto.CreateTicketFollowRequest) error
+	GetTicketList(ctx context.Context, req *dto.GetTicketListRequest) (*dto.GetTicketListResponse, error)
+	GetTicket(ctx context.Context, req *dto.GetTicketRequest) (*dto.Ticket, error)
+	UpdateTicketStatus(ctx context.Context, req *dto.UpdateTicketStatusRequest) error
+	// The user-facing ticket operations resolve the current user from the
+	// request context and enforce ticket ownership.
+	CreateUserTicket(ctx context.Context, req *dto.CreateUserTicketRequest) error
+	CreateUserTicketFollow(ctx context.Context, req *dto.CreateUserTicketFollowRequest) error
+	GetUserTicketDetails(ctx context.Context, req *dto.GetUserTicketDetailRequest) (*dto.Ticket, error)
+	GetUserTicketList(ctx context.Context, req *dto.GetUserTicketListRequest) (*dto.GetUserTicketListResponse, error)
+	UpdateUserTicketStatus(ctx context.Context, req *dto.UpdateUserTicketStatusRequest) error
 }
 
 // SubscriptionReader is the support module's port onto the subscription
@@ -60,6 +73,7 @@ type Deps struct {
 	Announcements repository.AnnouncementRepo
 	Ads           repository.AdsRepo
 	Documents     repository.DocumentRepo
+	Tickets       repository.TicketRepo
 	Subscriptions SubscriptionReader
 }
 
@@ -68,6 +82,7 @@ func New(deps Deps) Service {
 		announcements: announcement.NewService(deps.Announcements),
 		ads:           ads.NewService(deps.Ads),
 		documents:     document.NewService(deps.Documents, deps.Subscriptions),
+		tickets:       ticket.NewService(deps.Tickets),
 	}
 }
 
@@ -75,6 +90,7 @@ type service struct {
 	announcements *announcement.Service
 	ads           *ads.Service
 	documents     *document.Service
+	tickets       *ticket.Service
 }
 
 func (s *service) CreateAnnouncement(ctx context.Context, req *dto.CreateAnnouncementRequest) error {
@@ -151,4 +167,40 @@ func (s *service) QueryDocumentDetail(ctx context.Context, req *dto.QueryDocumen
 
 func (s *service) QueryDocumentList(ctx context.Context) (*dto.QueryDocumentListResponse, error) {
 	return s.documents.QueryList(ctx)
+}
+
+func (s *service) CreateTicketFollow(ctx context.Context, req *dto.CreateTicketFollowRequest) error {
+	return s.tickets.CreateFollow(ctx, req)
+}
+
+func (s *service) GetTicketList(ctx context.Context, req *dto.GetTicketListRequest) (*dto.GetTicketListResponse, error) {
+	return s.tickets.List(ctx, req)
+}
+
+func (s *service) GetTicket(ctx context.Context, req *dto.GetTicketRequest) (*dto.Ticket, error) {
+	return s.tickets.GetDetail(ctx, req)
+}
+
+func (s *service) UpdateTicketStatus(ctx context.Context, req *dto.UpdateTicketStatusRequest) error {
+	return s.tickets.UpdateStatus(ctx, req)
+}
+
+func (s *service) CreateUserTicket(ctx context.Context, req *dto.CreateUserTicketRequest) error {
+	return s.tickets.CreateUserTicket(ctx, req)
+}
+
+func (s *service) CreateUserTicketFollow(ctx context.Context, req *dto.CreateUserTicketFollowRequest) error {
+	return s.tickets.CreateUserFollow(ctx, req)
+}
+
+func (s *service) GetUserTicketDetails(ctx context.Context, req *dto.GetUserTicketDetailRequest) (*dto.Ticket, error) {
+	return s.tickets.GetUserDetail(ctx, req)
+}
+
+func (s *service) GetUserTicketList(ctx context.Context, req *dto.GetUserTicketListRequest) (*dto.GetUserTicketListResponse, error) {
+	return s.tickets.GetUserList(ctx, req)
+}
+
+func (s *service) UpdateUserTicketStatus(ctx context.Context, req *dto.UpdateUserTicketStatusRequest) error {
+	return s.tickets.UpdateUserStatus(ctx, req)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/admin/ticket"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func GetTicketHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := ticket.NewGetTicketLogic(ctx, svcCtx)
-		resp, err := l.GetTicket(&req)
+		resp, err := svcCtx.Support.GetTicket(ctx, &req)
 		result.HttpResult(c, resp, err)
 	}
 }

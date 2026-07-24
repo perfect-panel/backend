@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/public/ticket"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func CreateUserTicketFollowHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := ticket.NewCreateUserTicketFollowLogic(c, svcCtx)
-		err := l.CreateUserTicketFollow(&req)
+		err := svcCtx.Support.CreateUserTicketFollow(c, &req)
 		result.HttpResult(ctx, nil, err)
 	}
 }

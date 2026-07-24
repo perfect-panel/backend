@@ -15,6 +15,7 @@ func newSupportModule(store repository.Store) support.Service {
 		Announcements: store.Announcement(),
 		Ads:           store.Ads(),
 		Documents:     store.Document(),
+		Tickets:       store.Ticket(),
 		Subscriptions: subscriptionReader{store: store},
 	})
 }
