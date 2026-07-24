@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/admin/marketing"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func QueryQuotaTaskPreCountHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := marketing.NewQueryQuotaTaskPreCountLogic(c, svcCtx)
-		resp, err := l.QueryQuotaTaskPreCount(&req)
+		resp, err := svcCtx.Support.QueryQuotaTaskPreCount(c, &req)
 		result.HttpResult(ctx, resp, err)
 	}
 }

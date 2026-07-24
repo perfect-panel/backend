@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/admin/marketing"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func GetPreSendEmailCountHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := marketing.NewGetPreSendEmailCountLogic(c, svcCtx)
-		resp, err := l.GetPreSendEmailCount(&req)
+		resp, err := svcCtx.Support.GetPreSendEmailCount(c, &req)
 		result.HttpResult(ctx, resp, err)
 	}
 }

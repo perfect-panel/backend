@@ -6,11 +6,14 @@ package support
 
 import (
 	"context"
+	"time"
 
 	"github.com/perfect-panel/server/internal/model/dto"
+	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/module/support/internal/ads"
 	"github.com/perfect-panel/server/internal/module/support/internal/announcement"
 	"github.com/perfect-panel/server/internal/module/support/internal/document"
+	"github.com/perfect-panel/server/internal/module/support/internal/marketing"
 	"github.com/perfect-panel/server/internal/module/support/internal/ticket"
 	"github.com/perfect-panel/server/internal/repository"
 )
@@ -55,6 +58,16 @@ type Service interface {
 	GetUserTicketDetails(ctx context.Context, req *dto.GetUserTicketDetailRequest) (*dto.Ticket, error)
 	GetUserTicketList(ctx context.Context, req *dto.GetUserTicketListRequest) (*dto.GetUserTicketListResponse, error)
 	UpdateUserTicketStatus(ctx context.Context, req *dto.UpdateUserTicketStatusRequest) error
+
+	CreateBatchSendEmailTask(ctx context.Context, req *dto.CreateBatchSendEmailTaskRequest) error
+	GetPreSendEmailCount(ctx context.Context, req *dto.GetPreSendEmailCountRequest) (*dto.GetPreSendEmailCountResponse, error)
+	GetBatchSendEmailTaskList(ctx context.Context, req *dto.GetBatchSendEmailTaskListRequest) (*dto.GetBatchSendEmailTaskListResponse, error)
+	GetBatchSendEmailTaskStatus(ctx context.Context, req *dto.GetBatchSendEmailTaskStatusRequest) (*dto.GetBatchSendEmailTaskStatusResponse, error)
+	StopBatchSendEmailTask(ctx context.Context, req *dto.StopBatchSendEmailTaskRequest) error
+	CreateQuotaTask(ctx context.Context, req *dto.CreateQuotaTaskRequest) error
+	QueryQuotaTaskList(ctx context.Context, req *dto.QueryQuotaTaskListRequest) (*dto.QueryQuotaTaskListResponse, error)
+	QueryQuotaTaskPreCount(ctx context.Context, req *dto.QueryQuotaTaskPreCountRequest) (*dto.QueryQuotaTaskPreCountResponse, error)
+	QueryQuotaTaskStatus(ctx context.Context, req *dto.QueryQuotaTaskStatusRequest) (*dto.QueryQuotaTaskStatusResponse, error)
 }
 
 // SubscriptionReader is the support module's port onto the subscription
@@ -63,6 +76,35 @@ type Service interface {
 // facade will implement it once that module exists.
 type SubscriptionReader interface {
 	HasActiveSubscription(ctx context.Context, userID int64) (bool, error)
+}
+
+// EmailRecipientReader is the module's port onto the identity domain for
+// selecting campaign recipients; the legacy user repository satisfies it
+// structurally.
+type EmailRecipientReader interface {
+	QueryEmailRecipients(ctx context.Context, filter *user.EmailRecipientFilter) ([]string, error)
+	CountEmailRecipients(ctx context.Context, filter *user.EmailRecipientFilter) (int64, error)
+}
+
+// SubscriptionSelector is the module's port onto the subscription domain for
+// selecting quota-task targets; the legacy user-subscription repository
+// satisfies it structurally.
+type SubscriptionSelector interface {
+	QuerySubscribeIdsByFilter(ctx context.Context, filter *user.SubscribeFilter) ([]int64, error)
+	CountSubscribesByFilter(ctx context.Context, filter *user.SubscribeFilter) (int64, error)
+}
+
+// MarketingQueue schedules asynchronous execution of marketing tasks; the
+// composition root adapts the asynq client so queue task types stay out of
+// the module.
+type MarketingQueue interface {
+	EnqueueBatchEmail(ctx context.Context, taskID int64, processAt time.Time) (queueTaskID string, err error)
+	EnqueueQuota(ctx context.Context, taskID int64) error
+}
+
+// BatchEmailStopper aborts a running batch-email worker, if any.
+type BatchEmailStopper interface {
+	StopBatchEmail(taskID int64)
 }
 
 // Deps declares everything the module needs; the composition root
@@ -74,7 +116,12 @@ type Deps struct {
 	Ads           repository.AdsRepo
 	Documents     repository.DocumentRepo
 	Tickets       repository.TicketRepo
+	Tasks         repository.TaskRepo
 	Subscriptions SubscriptionReader
+	Recipients    EmailRecipientReader
+	QuotaTargets  SubscriptionSelector
+	Queue         MarketingQueue
+	EmailStopper  BatchEmailStopper
 }
 
 func New(deps Deps) Service {
@@ -83,6 +130,7 @@ func New(deps Deps) Service {
 		ads:           ads.NewService(deps.Ads),
 		documents:     document.NewService(deps.Documents, deps.Subscriptions),
 		tickets:       ticket.NewService(deps.Tickets),
+		marketing:     marketing.NewService(deps.Tasks, deps.Recipients, deps.QuotaTargets, deps.Queue, deps.EmailStopper),
 	}
 }
 
@@ -91,6 +139,7 @@ type service struct {
 	ads           *ads.Service
 	documents     *document.Service
 	tickets       *ticket.Service
+	marketing     *marketing.Service
 }
 
 func (s *service) CreateAnnouncement(ctx context.Context, req *dto.CreateAnnouncementRequest) error {
@@ -203,4 +252,40 @@ func (s *service) GetUserTicketList(ctx context.Context, req *dto.GetUserTicketL
 
 func (s *service) UpdateUserTicketStatus(ctx context.Context, req *dto.UpdateUserTicketStatusRequest) error {
 	return s.tickets.UpdateUserStatus(ctx, req)
+}
+
+func (s *service) CreateBatchSendEmailTask(ctx context.Context, req *dto.CreateBatchSendEmailTaskRequest) error {
+	return s.marketing.CreateBatchSendEmailTask(ctx, req)
+}
+
+func (s *service) GetPreSendEmailCount(ctx context.Context, req *dto.GetPreSendEmailCountRequest) (*dto.GetPreSendEmailCountResponse, error) {
+	return s.marketing.GetPreSendEmailCount(ctx, req)
+}
+
+func (s *service) GetBatchSendEmailTaskList(ctx context.Context, req *dto.GetBatchSendEmailTaskListRequest) (*dto.GetBatchSendEmailTaskListResponse, error) {
+	return s.marketing.GetBatchSendEmailTaskList(ctx, req)
+}
+
+func (s *service) GetBatchSendEmailTaskStatus(ctx context.Context, req *dto.GetBatchSendEmailTaskStatusRequest) (*dto.GetBatchSendEmailTaskStatusResponse, error) {
+	return s.marketing.GetBatchSendEmailTaskStatus(ctx, req)
+}
+
+func (s *service) StopBatchSendEmailTask(ctx context.Context, req *dto.StopBatchSendEmailTaskRequest) error {
+	return s.marketing.StopBatchSendEmailTask(ctx, req)
+}
+
+func (s *service) CreateQuotaTask(ctx context.Context, req *dto.CreateQuotaTaskRequest) error {
+	return s.marketing.CreateQuotaTask(ctx, req)
+}
+
+func (s *service) QueryQuotaTaskList(ctx context.Context, req *dto.QueryQuotaTaskListRequest) (*dto.QueryQuotaTaskListResponse, error) {
+	return s.marketing.QueryQuotaTaskList(ctx, req)
+}
+
+func (s *service) QueryQuotaTaskPreCount(ctx context.Context, req *dto.QueryQuotaTaskPreCountRequest) (*dto.QueryQuotaTaskPreCountResponse, error) {
+	return s.marketing.QueryQuotaTaskPreCount(ctx, req)
+}
+
+func (s *service) QueryQuotaTaskStatus(ctx context.Context, req *dto.QueryQuotaTaskStatusRequest) (*dto.QueryQuotaTaskStatusResponse, error) {
+	return s.marketing.QueryQuotaTaskStatus(ctx, req)
 }
