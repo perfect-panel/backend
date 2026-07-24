@@ -37,9 +37,6 @@ type Store interface {
 	SubscriptionTraffic() SubscriptionTrafficRepo
 	UserCache() UserCacheRepo
 
-	// DB returns the underlying *gorm.DB for infrastructure integrations.
-	DB() *gorm.DB
-
 	InTx(ctx context.Context, fn func(store Store) error) error
 }
 
@@ -71,9 +68,6 @@ type GormStore struct {
 	trafficLog   TrafficRepo
 	user         *userRepo
 }
-
-// DB returns the underlying *gorm.DB for infrastructure integrations.
-func (s *GormStore) DB() *gorm.DB { return s.db }
 
 // NewGormStore creates a new GormStore with all domain repositories initialized.
 func NewGormStore(db *gorm.DB, rds *redis.Client) *GormStore {
