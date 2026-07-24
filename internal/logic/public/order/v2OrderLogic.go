@@ -17,6 +17,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/dto"
 	orderEntity "github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/model/entity/user"
+	"github.com/perfect-panel/server/internal/module/billing"
 	"github.com/perfect-panel/server/internal/orderflow"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
@@ -201,7 +202,7 @@ func (l *V2OrderLogic) createOrder(ctx context.Context, req *dto.V2CreateOrderRe
 			}
 			return resp.OrderNo, resp.CheckoutToken, nil
 		}
-		resp, e := NewPurchaseLogic(ctx, l.svcCtx).Purchase(&dto.PurchaseOrderRequest{
+		resp, e := l.svcCtx.Billing.Purchase(ctx, &dto.PurchaseOrderRequest{
 			SubscribeId: req.SubscribeID, Quantity: req.Quantity, Payment: req.PaymentID, Coupon: req.Coupon,
 		})
 		if e != nil {
@@ -209,7 +210,7 @@ func (l *V2OrderLogic) createOrder(ctx context.Context, req *dto.V2CreateOrderRe
 		}
 		return resp.OrderNo, "", nil
 	case v2OrderTypeRenewal:
-		resp, e := NewRenewalLogic(ctx, l.svcCtx).Renewal(&dto.RenewalOrderRequest{
+		resp, e := l.svcCtx.Billing.Renewal(ctx, &dto.RenewalOrderRequest{
 			UserSubscribeID: req.UserSubscribeID, Quantity: req.Quantity, Payment: req.PaymentID, Coupon: req.Coupon,
 		})
 		if e != nil {
@@ -217,7 +218,7 @@ func (l *V2OrderLogic) createOrder(ctx context.Context, req *dto.V2CreateOrderRe
 		}
 		return resp.OrderNo, "", nil
 	case v2OrderTypeResetTraffic:
-		resp, e := NewResetTrafficLogic(ctx, l.svcCtx).ResetTraffic(&dto.ResetTrafficOrderRequest{
+		resp, e := l.svcCtx.Billing.ResetTraffic(ctx, &dto.ResetTrafficOrderRequest{
 			UserSubscribeID: req.UserSubscribeID, Payment: req.PaymentID,
 		})
 		if e != nil {
@@ -225,7 +226,7 @@ func (l *V2OrderLogic) createOrder(ctx context.Context, req *dto.V2CreateOrderRe
 		}
 		return resp.OrderNo, "", nil
 	case v2OrderTypeRecharge:
-		resp, e := NewRechargeLogic(ctx, l.svcCtx).Recharge(&dto.RechargeOrderRequest{
+		resp, e := l.svcCtx.Billing.Recharge(ctx, &dto.RechargeOrderRequest{
 			Amount: req.Amount, Payment: req.PaymentID,
 		})
 		if e != nil {
@@ -289,7 +290,7 @@ func (l *V2OrderLogic) snapshot(orderInfo *orderEntity.Order) dto.V2OrderSnapsho
 		PaymentStatus: v2PaymentStatus(orderInfo.Status), FulfillmentStatus: v2FulfillmentStatus(orderInfo.Status),
 		StateVersion: orderInfo.StateVersion, Amount: orderInfo.Amount,
 		Currency:  l.svcCtx.Config.Currency.Unit,
-		ExpiresAt: orderInfo.CreatedAt.Add(CloseOrderTimeMinutes * time.Minute).Unix(),
+		ExpiresAt: orderInfo.CreatedAt.Add(billing.CloseOrderTimeMinutes * time.Minute).Unix(),
 	}
 }
 
@@ -330,7 +331,7 @@ func (l *V2OrderLogic) mintEventTicket(orderInfo *orderEntity.Order, checkoutTok
 	if err := l.authorizeOrder(orderInfo, checkoutToken); err != nil {
 		return "", 0, err
 	}
-	expiresAt := orderInfo.CreatedAt.Add((CloseOrderTimeMinutes * time.Minute) + v2EventTicketExtra)
+	expiresAt := orderInfo.CreatedAt.Add((billing.CloseOrderTimeMinutes * time.Minute) + v2EventTicketExtra)
 	if expiresAt.Before(time.Now()) {
 		expiresAt = time.Now().Add(v2EventTicketExtra)
 	}
@@ -440,7 +441,7 @@ func validateV2CreateRequest(req *dto.V2CreateOrderRequest, currentUser *user.Us
 	req.Type = strings.ToLower(strings.TrimSpace(req.Type))
 	switch req.Type {
 	case v2OrderTypePurchase:
-		if req.SubscribeID <= 0 || req.Quantity <= 0 || req.Quantity > MaxQuantity || req.UserSubscribeID != 0 || req.Amount != 0 {
+		if req.SubscribeID <= 0 || req.Quantity <= 0 || req.Quantity > billing.MaxQuantity || req.UserSubscribeID != 0 || req.Amount != 0 {
 			return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "invalid purchase parameters")
 		}
 		if currentUser == nil {
@@ -451,7 +452,7 @@ func validateV2CreateRequest(req *dto.V2CreateOrderRequest, currentUser *user.Us
 			return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "guest is only allowed for anonymous purchase")
 		}
 	case v2OrderTypeRenewal:
-		if currentUser == nil || req.UserSubscribeID <= 0 || req.Quantity <= 0 || req.Quantity > MaxQuantity || req.SubscribeID != 0 || req.Amount != 0 || req.Guest != nil {
+		if currentUser == nil || req.UserSubscribeID <= 0 || req.Quantity <= 0 || req.Quantity > billing.MaxQuantity || req.SubscribeID != 0 || req.Amount != 0 || req.Guest != nil {
 			return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "invalid renewal parameters")
 		}
 	case v2OrderTypeResetTraffic:

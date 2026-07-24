@@ -7,7 +7,6 @@ import (
 	"github.com/perfect-panel/server/pkg/logger"
 
 	"github.com/hibiken/asynq"
-	"github.com/perfect-panel/server/internal/logic/public/order"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/queue/types"
@@ -33,7 +32,7 @@ func (l *DeferCloseOrderLogic) ProcessTask(ctx context.Context, task *asynq.Task
 		return nil
 	}
 
-	err := order.NewCloseOrderLogic(ctx, l.svc).CloseOrder(&dto.CloseOrderRequest{
+	err := l.svc.Billing.CloseOrder(ctx, &dto.CloseOrderRequest{
 		OrderNo: payload.OrderNo,
 	})
 	count, ok := asynq.GetRetryCount(ctx)

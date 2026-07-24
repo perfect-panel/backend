@@ -126,6 +126,8 @@ func (f *fakeActivationQueue) EnqueueActivation(_ context.Context, orderNo strin
 	return nil
 }
 
+func (f *fakeActivationQueue) EnqueueDeferredClose(_ context.Context, _ string) error { return nil }
+
 type billingFakes struct {
 	orders   *fakeOrderRepo
 	payments *fakePaymentRepo

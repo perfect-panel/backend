@@ -1,54 +1,40 @@
-package order
+package checkout
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/entity/log"
-	"github.com/perfect-panel/server/pkg/payment/stripe"
-	"github.com/perfect-panel/server/pkg/timeutil"
-
-	"github.com/perfect-panel/server/internal/logic/notify"
 	"github.com/perfect-panel/server/internal/model/dto"
+	logEntity "github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/model/entity/payment"
 	"github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/orderflow"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	paymentPlatform "github.com/perfect-panel/server/pkg/payment"
-	"github.com/perfect-panel/server/pkg/payment/alipay"
 	"github.com/perfect-panel/server/pkg/payment/epay"
+	"github.com/perfect-panel/server/pkg/payment/stripe"
+	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/pkg/errors"
 )
-
-type CloseOrderLogic struct {
-	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
-}
 
 const orderTypeSubscribe uint8 = 1
 
-// NewCloseOrderLogic Close order
-func NewCloseOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CloseOrderLogic {
-	return &CloseOrderLogic{
-		Logger: logger.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
-	}
-}
-
-func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
-	store := l.svcCtx.Store
+// Close closes a pending order: the billing transaction releases the coupon
+// reservation and refunds the gift deduction, then the reserved plan
+// inventory returns in its own subscription-domain transaction (ADR-001
+// step 2). Orders whose gateway checkout already collected money are settled
+// instead of closed.
+func (s *Service) Close(ctx context.Context, req *dto.CloseOrderRequest) error {
+	log := logger.WithContext(ctx)
 	// Find order information by order number
-	orderInfo, err := store.Order().FindOneByOrderNo(l.ctx, req.OrderNo)
+	orderInfo, err := s.deps.Orders.FindOneByOrderNo(ctx, req.OrderNo)
 	if err != nil {
-		l.Errorw("[CloseOrder] Find order info failed",
+		log.Errorw("[CloseOrder] Find order info failed",
 			logger.Field("error", err.Error()),
 			logger.Field("orderNo", req.OrderNo),
 		)
@@ -57,12 +43,12 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 	// Public callers are authenticated by the route. Queue workers use a
 	// context without a user and are the only internal callers allowed to close
 	// any expired order.
-	if currentUser, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User); ok && currentUser != nil && orderInfo.UserId != currentUser.Id {
+	if currentUser, ok := ctx.Value(constant.CtxKeyUser).(*user.User); ok && currentUser != nil && orderInfo.UserId != currentUser.Id {
 		return errors.New("order does not belong to the current user")
 	}
 	// If the order status is not 1, it means that the order has been closed or paid
 	if orderInfo.Status != 1 {
-		l.Infow("[CloseOrder] Order status is not 1",
+		log.Infow("[CloseOrder] Order status is not 1",
 			logger.Field("orderNo", req.OrderNo),
 			logger.Field("status", orderInfo.Status),
 		)
@@ -70,11 +56,11 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 			// Resume a restoration lost between the close commit and the
 			// inventory transaction; RestoreInventoryOnce no-ops when the
 			// order never reserved or already restored.
-			return l.restoreReservedInventory(orderInfo)
+			return s.restoreReservedInventory(ctx, orderInfo)
 		}
 		return nil
 	}
-	settled, err := l.settleOrCancelGatewayOrder(orderInfo)
+	settled, err := s.settleOrCancelGatewayOrder(ctx, orderInfo)
 	if err != nil {
 		return err
 	}
@@ -83,13 +69,13 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 	}
 
 	var closed bool
-	err = store.InBillingTx(l.ctx, func(txStore repository.BillingStore) error {
+	err = s.deps.Store.InBillingTx(ctx, func(txStore repository.BillingStore) error {
 		// Only the still-pending order may be closed.  A payment callback can
 		// race this task, so an unconditional status write would otherwise turn
 		// a paid order back into a closed order.
-		closed, err = txStore.Order().UpdateOrderStatusFrom(l.ctx, req.OrderNo, 1, 3)
+		closed, err = txStore.Order().UpdateOrderStatusFrom(ctx, req.OrderNo, 1, 3)
 		if err != nil {
-			l.Errorw("[CloseOrder] Update order status failed",
+			log.Errorw("[CloseOrder] Update order status failed",
 				logger.Field("error", err.Error()),
 				logger.Field("orderNo", req.OrderNo),
 			)
@@ -99,7 +85,7 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 			return nil
 		}
 		if orderInfo.Coupon != "" && orderInfo.CouponReserved {
-			if err := txStore.Coupon().ReleaseUsage(l.ctx, orderInfo.Coupon); err != nil {
+			if err := txStore.Coupon().ReleaseUsage(ctx, orderInfo.Coupon); err != nil {
 				return err
 			}
 		}
@@ -108,9 +94,9 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 		// of the early return, also skipped restoration of reserved inventory.
 		// refund deduction amount to user deduction balance
 		if orderInfo.GiftAmount > 0 {
-			userInfo, err := txStore.Wallet().FindOneForUpdate(l.ctx, orderInfo.UserId)
+			userInfo, err := txStore.Wallet().FindOneForUpdate(ctx, orderInfo.UserId)
 			if err != nil {
-				l.Errorw("[CloseOrder] Find user info failed",
+				log.Errorw("[CloseOrder] Find user info failed",
 					logger.Field("error", err.Error()),
 					logger.Field("user_id", orderInfo.UserId),
 				)
@@ -118,9 +104,9 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 			}
 			deduction := userInfo.GiftAmount + orderInfo.GiftAmount
 			userInfo.GiftAmount = deduction
-			err = txStore.Wallet().UpdateBalanceFields(l.ctx, userInfo)
+			err = txStore.Wallet().UpdateBalanceFields(ctx, userInfo)
 			if err != nil {
-				l.Errorw("[CloseOrder] Refund deduction amount failed",
+				log.Errorw("[CloseOrder] Refund deduction amount failed",
 					logger.Field("error", err.Error()),
 					logger.Field("uid", orderInfo.UserId),
 					logger.Field("deduction", orderInfo.GiftAmount),
@@ -128,9 +114,8 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 				return err
 			}
 			// Record the deduction refund log
-
-			giftLog := log.Gift{
-				Type:        log.GiftTypeIncrease,
+			giftLog := logEntity.Gift{
+				Type:        logEntity.GiftTypeIncrease,
 				OrderNo:     orderInfo.OrderNo,
 				SubscribeId: 0,
 				Amount:      orderInfo.GiftAmount,
@@ -140,15 +125,15 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 			}
 			content, _ := giftLog.Marshal()
 
-			err = txStore.Log().Insert(l.ctx, &log.SystemLog{
+			err = txStore.Log().Insert(ctx, &logEntity.SystemLog{
 				Id:       0,
-				Type:     log.TypeGift.Uint8(),
+				Type:     logEntity.TypeGift.Uint8(),
 				Date:     timeutil.Now().Format(time.DateOnly),
 				ObjectID: userInfo.Id,
 				Content:  string(content),
 			})
 			if err != nil {
-				l.Errorw("[CloseOrder] Record cancellation refund log failed",
+				log.Errorw("[CloseOrder] Record cancellation refund log failed",
 					logger.Field("error", err.Error()),
 					logger.Field("uid", orderInfo.UserId),
 					logger.Field("deduction", orderInfo.GiftAmount),
@@ -168,7 +153,7 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 	// The reserved plan inventory returns in its own subscription-domain
 	// transaction (ADR-001 step 2). A crash before this point is resumed by
 	// the retried close task via the status==3 branch above.
-	return l.restoreReservedInventory(orderInfo)
+	return s.restoreReservedInventory(ctx, orderInfo)
 }
 
 // restoreReservedInventory returns the closed order's reserved inventory
@@ -176,12 +161,12 @@ func (l *CloseOrderLogic) CloseOrder(req *dto.CloseOrderRequest) error {
 // traffic resets reference a plan too, but never consumed stock, and the
 // reserve marker check inside RestoreInventoryOnce keeps them (and stock-out
 // compensation closes) from adding stock that was never taken.
-func (l *CloseOrderLogic) restoreReservedInventory(orderInfo *order.Order) error {
+func (s *Service) restoreReservedInventory(ctx context.Context, orderInfo *order.Order) error {
 	if orderInfo.Type != orderTypeSubscribe || orderInfo.SubscribeId <= 0 {
 		return nil
 	}
-	if err := orderflow.RestoreInventoryOnce(l.ctx, l.svcCtx.Store, orderInfo.OrderNo, orderInfo.SubscribeId); err != nil {
-		l.Errorw("[CloseOrder] Restore subscribe inventory failed",
+	if err := orderflow.RestoreInventoryOnce(ctx, s.deps.Store, orderInfo.OrderNo, orderInfo.SubscribeId); err != nil {
+		logger.WithContext(ctx).Errorw("[CloseOrder] Restore subscribe inventory failed",
 			logger.Field("error", err.Error()),
 			logger.Field("subscribeId", orderInfo.SubscribeId),
 			logger.Field("orderNo", orderInfo.OrderNo),
@@ -194,22 +179,22 @@ func (l *CloseOrderLogic) restoreReservedInventory(orderInfo *order.Order) error
 // settleOrCancelGatewayOrder ensures that closing locally cannot leave an
 // active provider checkout able to charge the user after stock and coupons
 // have been released.
-func (l *CloseOrderLogic) settleOrCancelGatewayOrder(orderInfo *order.Order) (bool, error) {
+func (s *Service) settleOrCancelGatewayOrder(ctx context.Context, orderInfo *order.Order) (bool, error) {
 	switch paymentPlatform.ParsePlatform(orderInfo.Method) {
 	case paymentPlatform.Stripe:
-		return l.settleOrCancelStripeOrder(orderInfo)
+		return s.settleOrCancelStripeOrder(ctx, orderInfo)
 	case paymentPlatform.EPay:
-		return l.settleEPayOrder(orderInfo)
+		return s.settleEPayOrder(ctx, orderInfo)
 	default:
 		return false, nil
 	}
 }
 
-func (l *CloseOrderLogic) settleOrCancelStripeOrder(orderInfo *order.Order) (bool, error) {
+func (s *Service) settleOrCancelStripeOrder(ctx context.Context, orderInfo *order.Order) (bool, error) {
 	if orderInfo.TradeNo == "" {
 		return false, nil
 	}
-	paymentConfig, err := l.svcCtx.Store.Payment().FindOne(l.ctx, orderInfo.PaymentId)
+	paymentConfig, err := s.deps.Payments.FindOne(ctx, orderInfo.PaymentId)
 	if err != nil {
 		return false, err
 	}
@@ -226,7 +211,7 @@ func (l *CloseOrderLogic) settleOrCancelStripeOrder(orderInfo *order.Order) (boo
 		OrderNo:   orderInfo.OrderNo,
 		Subscribe: "", // subscribe metadata is informational; immutable payment fields below are authoritative.
 		Amount:    orderInfo.Amount,
-		Currency:  l.svcCtx.Config.Currency.Unit,
+		Currency:  s.deps.CurrencyUnit,
 		Payment:   config.Payment,
 	}
 	paid, err := client.VerifyPaymentIntent(stripeOrder, orderInfo.TradeNo)
@@ -234,7 +219,7 @@ func (l *CloseOrderLogic) settleOrCancelStripeOrder(orderInfo *order.Order) (boo
 		return false, err
 	}
 	if paid {
-		if err := notify.SettleVerifiedPayment(l.ctx, l.svcCtx, orderInfo, orderInfo.TradeNo); err != nil {
+		if err := s.settleVerifiedPayment(ctx, orderInfo, orderInfo.TradeNo); err != nil {
 			return false, err
 		}
 		return true, nil
@@ -252,7 +237,7 @@ func (l *CloseOrderLogic) settleOrCancelStripeOrder(orderInfo *order.Order) (boo
 	if !paid {
 		return false, fmt.Errorf("cancel Stripe payment intent %s failed", orderInfo.TradeNo)
 	}
-	if err := notify.SettleVerifiedPayment(l.ctx, l.svcCtx, orderInfo, orderInfo.TradeNo); err != nil {
+	if err := s.settleVerifiedPayment(ctx, orderInfo, orderInfo.TradeNo); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -263,11 +248,11 @@ func (l *CloseOrderLogic) settleOrCancelStripeOrder(orderInfo *order.Order) (boo
 // locally and accepting a later customer charge with no fulfillment. Gateways
 // with an order-query endpoint are reconciled here; unsupported or unavailable
 // gateways remain pending for retry/manual resolution instead of losing funds.
-func (l *CloseOrderLogic) settleEPayOrder(orderInfo *order.Order) (bool, error) {
+func (s *Service) settleEPayOrder(ctx context.Context, orderInfo *order.Order) (bool, error) {
 	if orderInfo.PaymentCurrency == "" {
 		return false, nil // checkout was never started; safe to close.
 	}
-	paymentConfig, err := l.svcCtx.Store.Payment().FindOne(l.ctx, orderInfo.PaymentId)
+	paymentConfig, err := s.deps.Payments.FindOne(ctx, orderInfo.PaymentId)
 	if err != nil {
 		return false, err
 	}
@@ -289,88 +274,8 @@ func (l *CloseOrderLogic) settleEPayOrder(orderInfo *order.Order) (bool, error) 
 	if err != nil || result.OrderNo != orderInfo.OrderNo || result.MerchantID != config.Pid || result.Type != config.Type || amount != orderInfo.PaymentAmount || result.TradeNo == "" {
 		return false, fmt.Errorf("EPay order %s query does not match payment expectation", orderInfo.OrderNo)
 	}
-	if err := notify.SettleVerifiedPayment(l.ctx, l.svcCtx, orderInfo, result.TradeNo); err != nil {
+	if err := s.settleVerifiedPayment(ctx, orderInfo, result.TradeNo); err != nil {
 		return false, err
 	}
 	return true, nil
-}
-
-// confirmationPayment Determine whether the payment is successful
-//
-//nolint:unused
-func (l *CloseOrderLogic) confirmationPayment(order *order.Order) bool {
-	paymentConfig, err := l.svcCtx.Store.Payment().FindOne(l.ctx, order.PaymentId)
-	if err != nil {
-		l.Errorw("[CloseOrder] Find payment config failed", logger.Field("error", err.Error()), logger.Field("paymentMark", order.Method))
-		return false
-	}
-	switch order.Method {
-	case AlipayF2f:
-		if l.queryAlipay(paymentConfig, order.TradeNo) {
-			return true
-		}
-	case StripeAlipay:
-		if l.queryStripe(paymentConfig, order.TradeNo) {
-			return true
-		}
-	case StripeWeChatPay:
-		if l.queryStripe(paymentConfig, order.TradeNo) {
-			return true
-		}
-	default:
-		l.Infow("[CloseOrder] Unsupported payment method", logger.Field("paymentMethod", order.Method))
-	}
-	return false
-}
-
-// queryAlipay Query Alipay payment status
-//
-//nolint:unused
-func (l *CloseOrderLogic) queryAlipay(paymentConfig *payment.Payment, TradeNo string) bool {
-	config := payment.AlipayF2FConfig{}
-	if err := json.Unmarshal([]byte(paymentConfig.Config), &config); err != nil {
-		l.Errorw("[CloseOrder] Unmarshal payment config failed", logger.Field("error", err.Error()), logger.Field("paymentId", paymentConfig.Id))
-		return false
-	}
-	client := alipay.NewClient(alipay.Config{
-		AppId:       config.AppId,
-		PrivateKey:  config.PrivateKey,
-		PublicKey:   config.PublicKey,
-		InvoiceName: config.InvoiceName,
-		Sandbox:     config.Sandbox,
-	})
-	if client == nil {
-		return false
-	}
-	status, err := client.QueryTrade(l.ctx, TradeNo)
-	if err != nil {
-		l.Errorw("[CloseOrder] Query trade failed", logger.Field("error", err.Error()), logger.Field("TradeNo", TradeNo))
-		return false
-	}
-	if status == alipay.Success || status == alipay.Finished {
-		return true
-	}
-	return false
-}
-
-// queryStripe Query Stripe payment status
-//
-//nolint:unused
-func (l *CloseOrderLogic) queryStripe(paymentConfig *payment.Payment, TradeNo string) bool {
-	config := payment.StripeConfig{}
-	if err := json.Unmarshal([]byte(paymentConfig.Config), &config); err != nil {
-		l.Errorw("[CloseOrder] Unmarshal payment config failed", logger.Field("error", err.Error()), logger.Field("paymentId", paymentConfig.Id))
-		return false
-	}
-	client := stripe.NewClient(stripe.Config{
-		PublicKey:     config.PublicKey,
-		SecretKey:     config.SecretKey,
-		WebhookSecret: config.WebhookSecret,
-	})
-	status, err := client.QueryOrderStatus(TradeNo)
-	if err != nil {
-		l.Errorw("[CloseOrder] Query order status failed", logger.Field("error", err.Error()), logger.Field("TradeNo", TradeNo))
-		return false
-	}
-	return status
 }

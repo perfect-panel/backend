@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/public/order"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func ResetTrafficHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := order.NewResetTrafficLogic(c, svcCtx)
-		resp, err := l.ResetTraffic(&req)
+		resp, err := svcCtx.Billing.ResetTraffic(c, &req)
 		result.HttpResult(ctx, resp, err)
 	}
 }

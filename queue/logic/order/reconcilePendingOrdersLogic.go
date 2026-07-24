@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
-	publicOrder "github.com/perfect-panel/server/internal/logic/public/order"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -40,7 +39,7 @@ func (l *ReconcilePendingOrdersLogic) ProcessTask(ctx context.Context, _ *asynq.
 			if orderInfo.CreatedAt.After(cutoff) {
 				continue
 			}
-			if err := publicOrder.NewCloseOrderLogic(ctx, l.svc).CloseOrder(&dto.CloseOrderRequest{OrderNo: orderInfo.OrderNo}); err != nil {
+			if err := l.svc.Billing.CloseOrder(ctx, &dto.CloseOrderRequest{OrderNo: orderInfo.OrderNo}); err != nil {
 				// Keep the order pending for a later reconciliation instead of
 				// failing the entire batch because one gateway is unavailable.
 				logger.WithContext(ctx).Error("[ReconcilePendingOrders] close failed",

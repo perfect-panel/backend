@@ -1,67 +1,48 @@
-package order
+package checkout
 
 import (
 	"context"
 	"encoding/json"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/entity/log"
-	"github.com/perfect-panel/server/internal/orderflow"
-	"github.com/perfect-panel/server/pkg/constant"
-	"github.com/perfect-panel/server/pkg/timeutil"
-
-	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/dto"
+	logEntity "github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/model/entity/user"
+	"github.com/perfect-panel/server/internal/orderflow"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
-	queue "github.com/perfect-panel/server/queue/types"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
-type RenewalLogic struct {
-	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
-}
-
-// NewRenewalLogic creates a new renewal logic instance for subscription renewal operations
-func NewRenewalLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RenewalLogic {
-	return &RenewalLogic{
-		Logger: logger.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
-	}
-}
-
 // Renewal processes subscription renewal orders including discount calculation,
 // coupon validation, gift amount deduction, fee calculation, and order creation
-func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalOrderResponse, err error) {
-	store := l.svcCtx.Store
-	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
+func (s *Service) Renewal(ctx context.Context, req *dto.RenewalOrderRequest) (*dto.RenewalOrderResponse, error) {
+	log := logger.WithContext(ctx)
+	u, ok := ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 	if req.Quantity <= 0 {
-		l.Debugf("[Renewal] Quantity is less than or equal to 0, setting to 1")
+		log.Debugf("[Renewal] Quantity is less than or equal to 0, setting to 1")
 		req.Quantity = 1
 	}
 
 	// Validate quantity limit
 	if req.Quantity > MaxQuantity {
-		l.Errorw("[Renewal] Quantity exceeds maximum limit", logger.Field("quantity", req.Quantity), logger.Field("max", MaxQuantity))
+		log.Errorw("[Renewal] Quantity exceeds maximum limit", logger.Field("quantity", req.Quantity), logger.Field("max", MaxQuantity))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "quantity exceeds maximum limit of %d", MaxQuantity)
 	}
 
 	orderNo := tool.GenerateTradeNo()
 	// find user subscribe
-	userSubscribe, err := store.UserSubscription().FindOneUserSubscribe(l.ctx, req.UserSubscribeID)
+	userSubscribe, err := s.deps.UserSubs.FindOneUserSubscribe(ctx, req.UserSubscribeID)
 	if err != nil {
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user subscribe error: %v", err.Error())
 	}
@@ -72,9 +53,9 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeNotAvailable), "deducted subscription cannot be renewed")
 	}
 	// find subscription
-	sub, err := store.Subscribe().FindOne(l.ctx, userSubscribe.SubscribeId)
+	sub, err := s.deps.Plans.FindOne(ctx, userSubscribe.SubscribeId)
 	if err != nil {
-		l.Errorw("[Renewal] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", userSubscribe.SubscribeId))
+		log.Errorw("[Renewal] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", userSubscribe.SubscribeId))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
 	}
 	// check subscribe plan status
@@ -93,7 +74,7 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 
 	// Validate amount to prevent overflow
 	if amount > MaxOrderAmount {
-		l.Errorw("[Renewal] Order amount exceeds maximum limit",
+		log.Errorw("[Renewal] Order amount exceeds maximum limit",
 			logger.Field("amount", amount),
 			logger.Field("max", MaxOrderAmount),
 			logger.Field("user_id", u.Id),
@@ -103,7 +84,7 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 
 	var coupon int64 = 0
 	if req.Coupon != "" {
-		couponInfo, err := store.Coupon().FindOneByCode(l.ctx, req.Coupon)
+		couponInfo, err := s.deps.Coupons.FindOneByCode(ctx, req.Coupon)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotExist), "coupon not found")
@@ -117,13 +98,12 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponInsufficientUsage), "coupon used")
 		}
 		couponSub := tool.StringToInt64Slice(couponInfo.Subscribe)
-
 		if len(couponSub) > 0 && !tool.Contains(couponSub, sub.Id) {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotApplicable), "coupon not match")
 		}
-		count, err := store.Order().CountUserCouponUsage(l.ctx, u.Id, req.Coupon)
+		count, err := s.deps.Orders.CountUserCouponUsage(ctx, u.Id, req.Coupon)
 		if err != nil {
-			l.Errorw("[Renewal] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("coupon", req.Coupon))
+			log.Errorw("[Renewal] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("coupon", req.Coupon))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
 		}
 		if couponInfo.UserLimit > 0 && count >= couponInfo.UserLimit {
@@ -131,9 +111,9 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 		}
 		coupon = calculateCoupon(amount, couponInfo)
 	}
-	payment, err := store.Payment().FindOne(l.ctx, req.Payment)
+	payment, err := s.deps.Payments.FindOne(ctx, req.Payment)
 	if err != nil {
-		l.Errorw("[Renewal] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
+		log.Errorw("[Renewal] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment error: %v", err.Error())
 	}
 	if err := ensurePaymentAvailable(payment); err != nil {
@@ -161,10 +141,11 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 		SubscribeId:    userSubscribe.SubscribeId,
 		SubscribeToken: userSubscribe.Token,
 	}
-	orderflow.ApplyIdempotency(l.ctx, &orderInfo)
-	// Database transaction
-	err = store.InTx(l.ctx, func(txStore repository.Store) error {
-		lockedUser, e := txStore.User().FindOneForUpdate(l.ctx, u.Id)
+	orderflow.ApplyIdempotency(ctx, &orderInfo)
+	// Billing-domain transaction: wallet deduction, coupon reservation and
+	// order creation settle together.
+	err = s.deps.Store.InBillingTx(ctx, func(txStore repository.BillingStore) error {
+		lockedUser, e := txStore.Wallet().FindOneForUpdate(ctx, u.Id)
 		if e != nil {
 			return e
 		}
@@ -180,7 +161,7 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 			return errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "order amount exceeds maximum limit")
 		}
 		if orderInfo.Coupon != "" {
-			reserved, reserveErr := txStore.Coupon().ReserveUsage(l.ctx, orderInfo.Coupon, timeutil.Now().Unix())
+			reserved, reserveErr := txStore.Coupon().ReserveUsage(ctx, orderInfo.Coupon, timeutil.Now().Unix())
 			if reserveErr != nil {
 				return reserveErr
 			}
@@ -192,13 +173,13 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 
 		if orderInfo.GiftAmount > 0 {
 			lockedUser.GiftAmount -= orderInfo.GiftAmount
-			if err := txStore.User().UpdateBalanceFields(l.ctx, lockedUser); err != nil {
-				l.Errorw("[Renewal] Database update error", logger.Field("error", err.Error()), logger.Field("user", lockedUser))
+			if err := txStore.Wallet().UpdateBalanceFields(ctx, lockedUser); err != nil {
+				log.Errorw("[Renewal] Database update error", logger.Field("error", err.Error()), logger.Field("user", lockedUser))
 				return err
 			}
 			// create deduction record
-			giftLog := log.Gift{
-				Type:        log.GiftTypeReduce,
+			giftLog := logEntity.Gift{
+				Type:        logEntity.GiftTypeReduce,
 				OrderNo:     orderInfo.OrderNo,
 				SubscribeId: 0,
 				Amount:      orderInfo.GiftAmount,
@@ -208,38 +189,25 @@ func (l *RenewalLogic) Renewal(req *dto.RenewalOrderRequest) (resp *dto.RenewalO
 			}
 			content, _ := giftLog.Marshal()
 
-			if err := txStore.Log().Insert(l.ctx, &log.SystemLog{
-				Type:     log.TypeGift.Uint8(),
+			if err := txStore.Log().Insert(ctx, &logEntity.SystemLog{
+				Type:     logEntity.TypeGift.Uint8(),
 				Date:     timeutil.Now().Format(time.DateOnly),
 				ObjectID: lockedUser.Id,
 				Content:  string(content),
 			}); err != nil {
-				l.Errorw("[Renewal] Database insert error", logger.Field("error", err.Error()), logger.Field("deductionLog", giftLog))
+				log.Errorw("[Renewal] Database insert error", logger.Field("error", err.Error()), logger.Field("deductionLog", giftLog))
 				return err
 			}
 		}
 		// insert order
-		return txStore.Order().Insert(l.ctx, &orderInfo)
+		return txStore.Order().Insert(ctx, &orderInfo)
 	})
 	if err != nil {
-		l.Errorw("[Renewal] Database insert error", logger.Field("error", err.Error()), logger.Field("order", orderInfo))
+		log.Errorw("[Renewal] Database insert error", logger.Field("error", err.Error()), logger.Field("order", orderInfo))
 		return nil, errors.Wrapf(err, "insert order error: %v", err.Error())
 	}
 	// Deferred task
-	payload := queue.DeferCloseOrderPayload{
-		OrderNo: orderInfo.OrderNo,
-	}
-	val, err := json.Marshal(payload)
-	if err != nil {
-		l.Errorw("[Renewal] Marshal payload error", logger.Field("error", err.Error()), logger.Field("payload", payload))
-	}
-	task := asynq.NewTask(queue.DeferCloseOrder, val, asynq.MaxRetry(3))
-	taskInfo, err := l.svcCtx.Queue.Enqueue(task, asynq.ProcessIn(CloseOrderTimeMinutes*time.Minute))
-	if err != nil {
-		l.Errorw("[Renewal] Enqueue task error", logger.Field("error", err.Error()), logger.Field("task", task))
-	} else {
-		l.Infow("[Renewal] Enqueue task success", logger.Field("TaskID", taskInfo.ID))
-	}
+	s.enqueueDeferredClose(ctx, "[Renewal]", orderInfo.OrderNo)
 	return &dto.RenewalOrderResponse{
 		OrderNo: orderInfo.OrderNo,
 	}, nil

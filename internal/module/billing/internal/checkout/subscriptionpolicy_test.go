@@ -1,34 +1,17 @@
-package order
+package checkout
 
 import (
 	"context"
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/subscribe"
 	userEntity "github.com/perfect-panel/server/internal/model/entity/user"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
-	"github.com/perfect-panel/server/pkg/constant"
 )
 
-type subscriptionPolicyStore struct {
-	repository.Store
-	users      *subscriptionPolicyUserRepo
-	subscribes *subscriptionPolicySubscribeRepo
-}
-
-func (s subscriptionPolicyStore) User() repository.UserRepo { return s.users }
-func (s subscriptionPolicyStore) UserSubscription() repository.UserSubscriptionRepo {
-	return s.users
-}
-func (s subscriptionPolicyStore) Subscribe() repository.SubscribeRepo { return s.subscribes }
-
-type subscriptionPolicyUserRepo struct {
-	repository.UserRepo
-	repository.UserSubscriptionRepo
+type policyUserSubs struct {
+	UserSubscriptionReader
 	blocking           bool
 	quotaCount         int64
 	subscription       *userEntity.Subscribe
@@ -37,42 +20,34 @@ type subscriptionPolicyUserRepo struct {
 	findSubscribeCalls int
 }
 
-func (r *subscriptionPolicyUserRepo) HasBlockingSubscription(_ context.Context, _ int64) (bool, error) {
+func (r *policyUserSubs) HasBlockingSubscription(_ context.Context, _ int64) (bool, error) {
 	r.hasBlockingCalls++
 	return r.blocking, nil
 }
 
-func (r *subscriptionPolicyUserRepo) CountQuotaConsumingSubscriptions(_ context.Context, _ int64, _ int64) (int64, error) {
+func (r *policyUserSubs) CountQuotaConsumingSubscriptions(_ context.Context, _ int64, _ int64) (int64, error) {
 	r.quotaCountCalls++
 	return r.quotaCount, nil
 }
 
-func (r *subscriptionPolicyUserRepo) FindOneSubscribe(_ context.Context, _ int64) (*userEntity.Subscribe, error) {
+func (r *policyUserSubs) FindOneSubscribe(_ context.Context, _ int64) (*userEntity.Subscribe, error) {
 	r.findSubscribeCalls++
 	return r.subscription, nil
 }
 
-type subscriptionPolicySubscribeRepo struct {
-	repository.SubscribeRepo
+type policyPlans struct {
 	subscribe *subscribe.Subscribe
 }
 
-func (r *subscriptionPolicySubscribeRepo) FindOne(_ context.Context, _ int64) (*subscribe.Subscribe, error) {
+func (r policyPlans) FindOne(_ context.Context, _ int64) (*subscribe.Subscribe, error) {
 	return r.subscribe, nil
 }
 
-func subscriptionPolicyContext() context.Context {
-	return context.WithValue(context.Background(), constant.CtxKeyUser, &userEntity.User{Id: 42})
-}
-
 func TestPurchaseSingleModelUsesBlockingSubscriptionPolicy(t *testing.T) {
-	users := &subscriptionPolicyUserRepo{blocking: true}
-	logic := NewPurchaseLogic(subscriptionPolicyContext(), &svc.ServiceContext{
-		Store:  subscriptionPolicyStore{users: users},
-		Config: config.Config{Subscribe: config.SubscribeConfig{SingleModel: true}},
-	})
+	users := &policyUserSubs{blocking: true}
+	svc := NewService(Deps{UserSubs: users, SingleModel: true})
 
-	_, err := logic.Purchase(&dto.PurchaseOrderRequest{SubscribeId: 10})
+	_, err := svc.Purchase(ownerContext(42), &dto.PurchaseOrderRequest{SubscribeId: 10})
 	if err == nil || !strings.Contains(err.Error(), "user has subscription") {
 		t.Fatalf("Purchase error = %v, want single-model rejection", err)
 	}
@@ -82,19 +57,14 @@ func TestPurchaseSingleModelUsesBlockingSubscriptionPolicy(t *testing.T) {
 }
 
 func TestPurchaseAllowsDeductedSubscriptionPastSingleModelCheck(t *testing.T) {
-	users := &subscriptionPolicyUserRepo{blocking: false}
-	logic := NewPurchaseLogic(subscriptionPolicyContext(), &svc.ServiceContext{
-		Store: subscriptionPolicyStore{
-			users: users,
-			subscribes: &subscriptionPolicySubscribeRepo{subscribe: &subscribe.Subscribe{
-				Sell:      boolPtr(true),
-				Inventory: 0,
-			}},
-		},
-		Config: config.Config{Subscribe: config.SubscribeConfig{SingleModel: true}},
+	users := &policyUserSubs{blocking: false}
+	svc := NewService(Deps{
+		UserSubs:    users,
+		Plans:       policyPlans{subscribe: &subscribe.Subscribe{Sell: boolPtr(true), Inventory: 0}},
+		SingleModel: true,
 	})
 
-	_, err := logic.Purchase(&dto.PurchaseOrderRequest{SubscribeId: 10})
+	_, err := svc.Purchase(ownerContext(42), &dto.PurchaseOrderRequest{SubscribeId: 10})
 	if err == nil || strings.Contains(err.Error(), "user has subscription") {
 		t.Fatalf("Purchase error = %v, want later validation after a non-blocking subscription", err)
 	}
@@ -107,13 +77,10 @@ func TestPurchaseAndPreCreateUseQuotaConsumingCount(t *testing.T) {
 	plan := &subscribe.Subscribe{Sell: boolPtr(true), Inventory: -1, Quota: 1}
 
 	t.Run("purchase", func(t *testing.T) {
-		users := &subscriptionPolicyUserRepo{quotaCount: 1}
-		logic := NewPurchaseLogic(subscriptionPolicyContext(), &svc.ServiceContext{Store: subscriptionPolicyStore{
-			users:      users,
-			subscribes: &subscriptionPolicySubscribeRepo{subscribe: plan},
-		}})
+		users := &policyUserSubs{quotaCount: 1}
+		svc := NewService(Deps{UserSubs: users, Plans: policyPlans{subscribe: plan}})
 
-		_, err := logic.Purchase(&dto.PurchaseOrderRequest{SubscribeId: 10})
+		_, err := svc.Purchase(ownerContext(42), &dto.PurchaseOrderRequest{SubscribeId: 10})
 		if err == nil || !strings.Contains(err.Error(), "quota limit") {
 			t.Fatalf("Purchase error = %v, want quota rejection", err)
 		}
@@ -123,13 +90,10 @@ func TestPurchaseAndPreCreateUseQuotaConsumingCount(t *testing.T) {
 	})
 
 	t.Run("pre-create", func(t *testing.T) {
-		users := &subscriptionPolicyUserRepo{quotaCount: 1}
-		logic := NewPreCreateOrderLogic(subscriptionPolicyContext(), &svc.ServiceContext{Store: subscriptionPolicyStore{
-			users:      users,
-			subscribes: &subscriptionPolicySubscribeRepo{subscribe: plan},
-		}})
+		users := &policyUserSubs{quotaCount: 1}
+		svc := NewService(Deps{UserSubs: users, Plans: policyPlans{subscribe: plan}})
 
-		_, err := logic.PreCreateOrder(&dto.PurchaseOrderRequest{SubscribeId: 10})
+		_, err := svc.PreCreateOrder(ownerContext(42), &dto.PurchaseOrderRequest{SubscribeId: 10})
 		if err == nil || !strings.Contains(err.Error(), "quota limit") {
 			t.Fatalf("PreCreateOrder error = %v, want quota rejection", err)
 		}
@@ -140,7 +104,7 @@ func TestPurchaseAndPreCreateUseQuotaConsumingCount(t *testing.T) {
 }
 
 func TestRenewalPreviewSkipsNewPurchaseQuotaAfterValidation(t *testing.T) {
-	users := &subscriptionPolicyUserRepo{
+	users := &policyUserSubs{
 		quotaCount: 1,
 		subscription: &userEntity.Subscribe{
 			Id:          22,
@@ -149,16 +113,12 @@ func TestRenewalPreviewSkipsNewPurchaseQuotaAfterValidation(t *testing.T) {
 			Status:      userEntity.SubscribeStatusExpired,
 		},
 	}
-	logic := NewPreCreateOrderLogic(subscriptionPolicyContext(), &svc.ServiceContext{Store: subscriptionPolicyStore{
-		users: users,
-		subscribes: &subscriptionPolicySubscribeRepo{subscribe: &subscribe.Subscribe{
-			Id:        10,
-			Quota:     1,
-			UnitPrice: 100,
-		}},
-	}})
+	svc := NewService(Deps{
+		UserSubs: users,
+		Plans:    policyPlans{subscribe: &subscribe.Subscribe{Id: 10, Quota: 1, UnitPrice: 100}},
+	})
 
-	_, err := logic.PreCreateOrder(&dto.PurchaseOrderRequest{
+	_, err := svc.PreCreateOrder(ownerContext(42), &dto.PurchaseOrderRequest{
 		SubscribeId:     10,
 		UserSubscribeId: 22,
 		Quantity:        1,
@@ -214,19 +174,16 @@ func TestRenewalPreviewValidatesTargetBeforeSkippingQuota(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			users := &subscriptionPolicyUserRepo{
+			users := &policyUserSubs{
 				quotaCount:   1,
 				subscription: tt.subscription,
 			}
-			logic := NewPreCreateOrderLogic(subscriptionPolicyContext(), &svc.ServiceContext{Store: subscriptionPolicyStore{
-				users: users,
-				subscribes: &subscriptionPolicySubscribeRepo{subscribe: &subscribe.Subscribe{
-					Id:    10,
-					Quota: 1,
-				}},
-			}})
+			svc := NewService(Deps{
+				UserSubs: users,
+				Plans:    policyPlans{subscribe: &subscribe.Subscribe{Id: 10, Quota: 1}},
+			})
 
-			_, err := logic.PreCreateOrder(&dto.PurchaseOrderRequest{
+			_, err := svc.PreCreateOrder(ownerContext(42), &dto.PurchaseOrderRequest{
 				SubscribeId:     10,
 				UserSubscribeId: 22,
 				Quantity:        1,

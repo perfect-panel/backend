@@ -1,54 +1,35 @@
-package order
+package checkout
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
-	"github.com/perfect-panel/server/internal/model/entity/log"
-	"github.com/perfect-panel/server/internal/orderflow"
-	"github.com/perfect-panel/server/pkg/constant"
-	"github.com/perfect-panel/server/pkg/timeutil"
-	"github.com/perfect-panel/server/pkg/xerr"
-
-	"github.com/hibiken/asynq"
 	"github.com/perfect-panel/server/internal/model/dto"
+	logEntity "github.com/perfect-panel/server/internal/model/entity/log"
 	"github.com/perfect-panel/server/internal/model/entity/order"
 	"github.com/perfect-panel/server/internal/model/entity/user"
+	"github.com/perfect-panel/server/internal/orderflow"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/perfect-panel/server/pkg/tool"
-	queue "github.com/perfect-panel/server/queue/types"
+	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 )
 
-type ResetTrafficLogic struct {
-	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
-}
-
-// Reset traffic
-func NewResetTrafficLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ResetTrafficLogic {
-	return &ResetTrafficLogic{
-		Logger: logger.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
-	}
-}
-
-func (l *ResetTrafficLogic) ResetTraffic(req *dto.ResetTrafficOrderRequest) (resp *dto.ResetTrafficOrderResponse, err error) {
-	store := l.svcCtx.Store
-	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
+// ResetTraffic creates a paid traffic-reset order for an active subscription.
+func (s *Service) ResetTraffic(ctx context.Context, req *dto.ResetTrafficOrderRequest) (*dto.ResetTrafficOrderResponse, error) {
+	log := logger.WithContext(ctx)
+	u, ok := ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 	// find user subscription
-	userSubscribe, err := store.UserSubscription().FindOneUserSubscribe(l.ctx, req.UserSubscribeID)
+	userSubscribe, err := s.deps.UserSubs.FindOneUserSubscribe(ctx, req.UserSubscribeID)
 	if err != nil {
-		l.Errorw("[ResetTraffic] Database query error", logger.Field("error", err.Error()), logger.Field("UserSubscribeID", req.UserSubscribeID))
+		log.Errorw("[ResetTraffic] Database query error", logger.Field("error", err.Error()), logger.Field("UserSubscribeID", req.UserSubscribeID))
 		return nil, errors.Wrapf(err, "find user subscribe error: %v", err.Error())
 	}
 	if userSubscribe.UserId != u.Id {
@@ -62,14 +43,14 @@ func (l *ResetTrafficLogic) ResetTraffic(req *dto.ResetTrafficOrderRequest) (res
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.SubscribeNotAvailable), "subscription expired")
 	}
 	if userSubscribe.Subscribe == nil {
-		l.Errorw("[ResetTraffic] subscribe not found", logger.Field("UserSubscribeID", req.UserSubscribeID))
+		log.Errorw("[ResetTraffic] subscribe not found", logger.Field("UserSubscribeID", req.UserSubscribeID))
 		return nil, errors.New("subscribe not found")
 	}
 	amount := userSubscribe.Subscribe.Replacement
 	// find payment method
-	payment, err := store.Payment().FindOne(l.ctx, req.Payment)
+	payment, err := s.deps.Payments.FindOne(ctx, req.Payment)
 	if err != nil {
-		l.Errorw("[ResetTraffic] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
+		log.Errorw("[ResetTraffic] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 		return nil, errors.Wrapf(err, "find payment error: %v", err.Error())
 	}
 	if err := ensurePaymentAvailable(payment); err != nil {
@@ -92,10 +73,11 @@ func (l *ResetTrafficLogic) ResetTraffic(req *dto.ResetTrafficOrderRequest) (res
 		SubscribeId:    userSubscribe.SubscribeId,
 		SubscribeToken: userSubscribe.Token,
 	}
-	orderflow.ApplyIdempotency(l.ctx, &orderInfo)
-	// Database transaction
-	err = store.InTx(l.ctx, func(txStore repository.Store) error {
-		lockedUser, e := txStore.User().FindOneForUpdate(l.ctx, u.Id)
+	orderflow.ApplyIdempotency(ctx, &orderInfo)
+	// Billing-domain transaction: wallet deduction and order creation settle
+	// together.
+	err = s.deps.Store.InBillingTx(ctx, func(txStore repository.BillingStore) error {
+		lockedUser, e := txStore.Wallet().FindOneForUpdate(ctx, u.Id)
 		if e != nil {
 			return e
 		}
@@ -113,13 +95,13 @@ func (l *ResetTrafficLogic) ResetTraffic(req *dto.ResetTrafficOrderRequest) (res
 
 		if orderInfo.GiftAmount > 0 {
 			lockedUser.GiftAmount -= orderInfo.GiftAmount
-			if err := txStore.User().UpdateBalanceFields(l.ctx, lockedUser); err != nil {
-				l.Errorw("[ResetTraffic] Database update error", logger.Field("error", err.Error()), logger.Field("user", lockedUser))
+			if err := txStore.Wallet().UpdateBalanceFields(ctx, lockedUser); err != nil {
+				log.Errorw("[ResetTraffic] Database update error", logger.Field("error", err.Error()), logger.Field("user", lockedUser))
 				return err
 			}
 			// create deduction record
-			giftLog := log.Gift{
-				Type:        log.GiftTypeReduce,
+			giftLog := logEntity.Gift{
+				Type:        logEntity.GiftTypeReduce,
 				OrderNo:     orderInfo.OrderNo,
 				SubscribeId: 0,
 				Amount:      orderInfo.GiftAmount,
@@ -129,38 +111,25 @@ func (l *ResetTrafficLogic) ResetTraffic(req *dto.ResetTrafficOrderRequest) (res
 			}
 			content, _ := giftLog.Marshal()
 
-			if err = txStore.Log().Insert(l.ctx, &log.SystemLog{
-				Type:     log.TypeGift.Uint8(),
+			if err := txStore.Log().Insert(ctx, &logEntity.SystemLog{
+				Type:     logEntity.TypeGift.Uint8(),
 				Date:     timeutil.Now().Format(time.DateOnly),
 				ObjectID: lockedUser.Id,
 				Content:  string(content),
 			}); err != nil {
-				l.Errorw("[ResetTraffic] Database insert error", logger.Field("error", err.Error()), logger.Field("deductionLog", content))
+				log.Errorw("[ResetTraffic] Database insert error", logger.Field("error", err.Error()), logger.Field("deductionLog", content))
 				return err
 			}
 		}
 		// insert order
-		return txStore.Order().Insert(l.ctx, &orderInfo)
+		return txStore.Order().Insert(ctx, &orderInfo)
 	})
 	if err != nil {
-		l.Errorw("[ResetTraffic] Database insert error", logger.Field("error", err.Error()), logger.Field("order", orderInfo))
+		log.Errorw("[ResetTraffic] Database insert error", logger.Field("error", err.Error()), logger.Field("order", orderInfo))
 		return nil, errors.Wrapf(err, "insert order error: %v", err.Error())
 	}
 	// Deferred task
-	payload := queue.DeferCloseOrderPayload{
-		OrderNo: orderInfo.OrderNo,
-	}
-	val, err := json.Marshal(payload)
-	if err != nil {
-		l.Errorw("[ResetTraffic] Marshal payload error", logger.Field("error", err.Error()), logger.Field("payload", payload))
-	}
-	task := asynq.NewTask(queue.DeferCloseOrder, val, asynq.MaxRetry(3))
-	taskInfo, err := l.svcCtx.Queue.Enqueue(task, asynq.ProcessIn(CloseOrderTimeMinutes*time.Minute))
-	if err != nil {
-		l.Errorw("[ResetTraffic] Enqueue task error", logger.Field("error", err.Error()), logger.Field("task", task))
-	} else {
-		l.Infow("[ResetTraffic] Enqueue task success", logger.Field("TaskID", taskInfo.ID))
-	}
+	s.enqueueDeferredClose(ctx, "[ResetTraffic]", orderInfo.OrderNo)
 	return &dto.ResetTrafficOrderResponse{
 		OrderNo: orderInfo.OrderNo,
 	}, nil

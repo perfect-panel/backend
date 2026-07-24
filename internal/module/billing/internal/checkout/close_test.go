@@ -1,4 +1,4 @@
-package order
+package checkout
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 	userEntity "github.com/perfect-panel/server/internal/model/entity/user"
 	"github.com/perfect-panel/server/internal/orderflow"
 	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/svc"
 	"gorm.io/gorm"
 )
 
@@ -50,6 +49,16 @@ func (s *closeOrderStore) Inbox() repository.InboxRepo {
 		s.inbox = &closeInboxRepo{records: map[string]string{}}
 	}
 	return s.inbox
+}
+
+// newCloseService wires the checkout service against the fake store; only the
+// dependencies the close flow touches are provided.
+func newCloseService(store *closeOrderStore) *Service {
+	return NewService(Deps{
+		Orders:   store.orders,
+		Payments: nil, // gateway settlement is not exercised: fake orders carry no gateway method
+		Store:    store,
+	})
 }
 
 type closeInboxRepo struct {
@@ -128,12 +137,6 @@ func (r *closeSubscribeRepo) FindOne(_ context.Context, id int64) (*subscribeEnt
 	return &copy, nil
 }
 
-func (r *closeSubscribeRepo) Update(_ context.Context, value *subscribeEntity.Subscribe, _ ...*gorm.DB) error {
-	r.updateCalls++
-	r.sub = value
-	return nil
-}
-
 func (r *closeSubscribeRepo) RestoreInventory(_ context.Context, id int64, _ ...*gorm.DB) error {
 	if r.sub == nil || r.sub.Id != id {
 		return gorm.ErrRecordNotFound
@@ -163,12 +166,6 @@ func (r *closeUserRepo) FindOneForUpdate(ctx context.Context, id int64) (*userEn
 	return r.FindOne(ctx, id)
 }
 
-func (r *closeUserRepo) Update(_ context.Context, value *userEntity.User, _ ...*gorm.DB) error {
-	r.updateCalls++
-	r.user = value
-	return nil
-}
-
 func (r *closeUserRepo) UpdateBalanceFields(_ context.Context, value *userEntity.User, _ ...*gorm.DB) error {
 	r.updateCalls++
 	r.user.Balance = value.Balance
@@ -191,9 +188,9 @@ func TestCloseOrderDoesNotOverwriteConcurrentPayment(t *testing.T) {
 		order:      &orderEntity.Order{Id: 1, OrderNo: "order-1", Status: 1},
 		transition: false, // callback already transitioned Pending -> Paid
 	}
-	logic := NewCloseOrderLogic(context.Background(), &svc.ServiceContext{Store: &closeOrderStore{orders: orders}})
+	svc := newCloseService(&closeOrderStore{orders: orders})
 
-	if err := logic.CloseOrder(&dto.CloseOrderRequest{OrderNo: "order-1"}); err != nil {
+	if err := svc.Close(context.Background(), &dto.CloseOrderRequest{OrderNo: "order-1"}); err != nil {
 		t.Fatalf("CloseOrder: %v", err)
 	}
 	if orders.from != 1 || orders.to != 3 {
@@ -212,9 +209,9 @@ func TestCloseOrderRetainsGuestOrderAndRestoresInventory(t *testing.T) {
 	subscribes := &closeSubscribeRepo{sub: &subscribeEntity.Subscribe{Id: 99, Inventory: 2}}
 	store := &closeOrderStore{orders: orders, subscribes: subscribes}
 	store.markReserved(t, "guest-order")
-	logic := NewCloseOrderLogic(context.Background(), &svc.ServiceContext{Store: store})
+	svc := newCloseService(store)
 
-	if err := logic.CloseOrder(&dto.CloseOrderRequest{OrderNo: "guest-order"}); err != nil {
+	if err := svc.Close(context.Background(), &dto.CloseOrderRequest{OrderNo: "guest-order"}); err != nil {
 		t.Fatalf("CloseOrder: %v", err)
 	}
 	if orders.order.Status != 3 {
@@ -238,9 +235,9 @@ func TestCloseOrderRefundsGiftAndRestoresInventory(t *testing.T) {
 	logs := &closeLogRepo{}
 	store := &closeOrderStore{orders: orders, subscribes: subscribes, users: users, logs: logs}
 	store.markReserved(t, "gift-order")
-	logic := NewCloseOrderLogic(context.Background(), &svc.ServiceContext{Store: store})
+	svc := newCloseService(store)
 
-	if err := logic.CloseOrder(&dto.CloseOrderRequest{OrderNo: "gift-order"}); err != nil {
+	if err := svc.Close(context.Background(), &dto.CloseOrderRequest{OrderNo: "gift-order"}); err != nil {
 		t.Fatalf("CloseOrder: %v", err)
 	}
 	if users.updateCalls != 1 || users.user.GiftAmount != 50 || logs.insertCalls != 1 {
@@ -253,22 +250,22 @@ func TestCloseOrderRefundsGiftAndRestoresInventory(t *testing.T) {
 
 func TestCloseOrderDoesNotRestoreInventoryForRenewalOrTrafficReset(t *testing.T) {
 	for _, orderType := range []uint8{2, 3} {
-		t.Run("type="+string(rune('0'+orderType)), func(t *testing.T) {
+		t.Run(fmt.Sprintf("type=%d", orderType), func(t *testing.T) {
 			orders := &closeOrderRepo{
 				order:      &orderEntity.Order{Id: 1, OrderNo: "existing-subscription-order", Type: orderType, SubscribeId: 99, Status: 1},
 				transition: true,
 			}
 			subscribes := &closeSubscribeRepo{sub: &subscribeEntity.Subscribe{Id: 99, Inventory: 2}}
-			logic := NewCloseOrderLogic(context.Background(), &svc.ServiceContext{Store: &closeOrderStore{orders: orders, subscribes: subscribes}})
+			svc := newCloseService(&closeOrderStore{orders: orders, subscribes: subscribes})
 
-			if err := logic.CloseOrder(&dto.CloseOrderRequest{OrderNo: "existing-subscription-order"}); err != nil {
+			if err := svc.Close(context.Background(), &dto.CloseOrderRequest{OrderNo: "existing-subscription-order"}); err != nil {
 				t.Fatalf("CloseOrder: %v", err)
 			}
 			if orders.order.Status != 3 {
 				t.Fatalf("status = %d, want closed", orders.order.Status)
 			}
 			if subscribes.updateCalls != 0 || subscribes.sub.Inventory != 2 {
-				t.Fatalf("unexpected inventory restoration, calls=%d inventory=%d", subscribes.updateCalls, subscribes.sub.Inventory)
+				t.Fatalf("renewal/reset close must not restore inventory, calls=%d inventory=%d", subscribes.updateCalls, subscribes.sub.Inventory)
 			}
 		})
 	}

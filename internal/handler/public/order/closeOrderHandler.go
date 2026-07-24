@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/public/order"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func CloseOrderHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := order.NewCloseOrderLogic(c, svcCtx)
-		err := l.CloseOrder(&req)
+		err := svcCtx.Billing.CloseOrder(c, &req)
 		result.HttpResult(ctx, nil, err)
 	}
 }

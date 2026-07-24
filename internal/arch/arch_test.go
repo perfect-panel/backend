@@ -31,7 +31,7 @@ const importPrefix = "github.com/perfect-panel/server/"
 var legacyLogicImports = map[string][]string{
 	"internal/logic/admin/server": {"internal/logic/nodeconfig"},
 	"internal/logic/auth":         {"internal/logic/common"},
-	"internal/logic/public/order": {"internal/logic/notify", "internal/logic/public/portal"},
+	"internal/logic/public/order": {"internal/logic/public/portal"},
 	"internal/logic/public/user":  {"internal/logic/auth/registerpolicy", "internal/logic/common", "internal/logic/telegram"},
 	"internal/logic/server":       {"internal/logic/nodeconfig"},
 }

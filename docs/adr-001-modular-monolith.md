@@ -122,7 +122,13 @@ internal/module/<name>/
    的包目录冻结为基线（71 项，只许收窄）——新代码必须走模块门面注入依赖；每迁移一个域，
    基线相应删项，收缩过程可度量。billing 模块（admin order/payment）已按此模式落地：
    激活入队、网关模式探测、站点 Host 全部经 Deps 注入，`ActivationEnqueuer` 端口在组装根
-   适配 asynq。
+   适配 asynq。**结账金流已整体迁入 billing**（`internal/module/billing/internal/checkout`）：
+   purchase/renewal/resetTraffic/recharge/preCreate/close 六个流程 + 计价助手，端口化了
+   订阅域读取（`PlanReader`/`UserSubscriptionReader`，legacy repo 结构化满足）、订单队列
+   （激活 + 延迟关单）、单订阅模式与币种配置；`notify.SettleVerifiedPayment` 的结算逻辑
+   （CAS 标记已付 + 激活入队）收编为模块内部函数，close 的网关结算（Stripe/EPay）随迁。
+   `v2OrderLogic`（SSE 票据/幂等编排/portal 结账胶水）暂留 legacy 层改调门面，随 portal
+   checkout 迁移后收编。
 4. **域优先重组**：把 `logic/admin/<域>` + `logic/public/<域>` + `queue/logic/<域>` 收拢进
    `internal/module/<域>/internal/service`，handler 变薄。试点顺序：`support`（耦合最低）
    → `billing`（刚硬化过、测试最全）→ 其余。

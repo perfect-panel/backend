@@ -1,58 +1,39 @@
-package order
+package checkout
 
 import (
 	"context"
 	"encoding/json"
 
-	"github.com/perfect-panel/server/pkg/tool"
-
-	"github.com/perfect-panel/server/pkg/constant"
-
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/user"
-	"github.com/perfect-panel/server/internal/svc"
+	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
-type PreCreateOrderLogic struct {
-	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
-}
-
-// NewPreCreateOrderLogic creates a new pre-create order logic instance for order preview operations.
-// It initializes the logger with context and sets up the service context for database operations.
-func NewPreCreateOrderLogic(ctx context.Context, svcCtx *svc.ServiceContext) *PreCreateOrderLogic {
-	return &PreCreateOrderLogic{
-		Logger: logger.WithContext(ctx),
-		ctx:    ctx,
-		svcCtx: svcCtx,
-	}
-}
-
 // PreCreateOrder calculates order pricing preview including discounts, coupons, gift amounts, and fees
 // without actually creating an order. It validates subscription plans, coupons, and payment methods
 // to provide accurate pricing information for the frontend order preview.
-func (l *PreCreateOrderLogic) PreCreateOrder(req *dto.PurchaseOrderRequest) (resp *dto.PreOrderResponse, err error) {
-	store := l.svcCtx.Store
-	u, ok := l.ctx.Value(constant.CtxKeyUser).(*user.User)
+func (s *Service) PreCreateOrder(ctx context.Context, req *dto.PurchaseOrderRequest) (*dto.PreOrderResponse, error) {
+	log := logger.WithContext(ctx)
+	u, ok := ctx.Value(constant.CtxKeyUser).(*user.User)
 	if !ok {
 		logger.Error("current user is not found in context")
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 
 	if req.Quantity <= 0 {
-		l.Debugf("[PreCreateOrder] Quantity is less than or equal to 0, setting to 1")
+		log.Debugf("[PreCreateOrder] Quantity is less than or equal to 0, setting to 1")
 		req.Quantity = 1
 	}
 
 	// find subscribe plan
-	sub, err := store.Subscribe().FindOne(l.ctx, req.SubscribeId)
+	sub, err := s.deps.Plans.FindOne(ctx, req.SubscribeId)
 	if err != nil {
-		l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.SubscribeId))
+		log.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.SubscribeId))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())
 	}
 
@@ -60,12 +41,12 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *dto.PurchaseOrderRequest) (res
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "invalid user subscribe id")
 	}
 	if req.UserSubscribeId > 0 {
-		userSubscribe, err := store.UserSubscription().FindOneSubscribe(l.ctx, req.UserSubscribeId)
+		userSubscribe, err := s.deps.UserSubs.FindOneSubscribe(ctx, req.UserSubscribeId)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidParams), "user subscribe not found")
 			}
-			l.Errorw("[PreCreateOrder] Database query error",
+			log.Errorw("[PreCreateOrder] Database query error",
 				logger.Field("error", err.Error()),
 				logger.Field("user_subscribe_id", req.UserSubscribeId))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find user subscribe error: %v", err.Error())
@@ -82,9 +63,9 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *dto.PurchaseOrderRequest) (res
 	}
 
 	if sub.Quota > 0 && req.UserSubscribeId == 0 {
-		count, err := store.UserSubscription().CountQuotaConsumingSubscriptions(l.ctx, u.Id, req.SubscribeId)
+		count, err := s.deps.UserSubs.CountQuotaConsumingSubscriptions(ctx, u.Id, req.SubscribeId)
 		if err != nil {
-			l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("subscribe_id", req.SubscribeId))
+			log.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("subscribe_id", req.SubscribeId))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "count user subscribe error: %v", err.Error())
 		}
 		if count >= sub.Quota {
@@ -104,7 +85,7 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *dto.PurchaseOrderRequest) (res
 	discountAmount := price - amount
 	var couponAmount int64
 	if req.Coupon != "" {
-		couponInfo, err := store.Coupon().FindOneByCode(l.ctx, req.Coupon)
+		couponInfo, err := s.deps.Coupons.FindOneByCode(ctx, req.Coupon)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponNotExist), "coupon not found")
@@ -117,9 +98,9 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *dto.PurchaseOrderRequest) (res
 		if couponInfo.Count > 0 && couponInfo.Count <= couponInfo.UsedCount {
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.CouponAlreadyUsed), "coupon used")
 		}
-		count, err := store.Order().CountUserCouponUsage(l.ctx, u.Id, req.Coupon)
+		count, err := s.deps.Orders.CountUserCouponUsage(ctx, u.Id, req.Coupon)
 		if err != nil {
-			l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("coupon", req.Coupon))
+			log.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("user_id", u.Id), logger.Field("coupon", req.Coupon))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find coupon error: %v", err.Error())
 		}
 
@@ -137,9 +118,9 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *dto.PurchaseOrderRequest) (res
 
 	var feeAmount int64
 	if req.Payment != 0 {
-		payment, err := store.Payment().FindOne(l.ctx, req.Payment)
+		payment, err := s.deps.Payments.FindOne(ctx, req.Payment)
 		if err != nil {
-			l.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
+			log.Errorw("[PreCreateOrder] Database query error", logger.Field("error", err.Error()), logger.Field("payment", req.Payment))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find payment method error: %v", err.Error())
 		}
 		if err := ensurePaymentAvailable(payment); err != nil {
@@ -164,7 +145,7 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *dto.PurchaseOrderRequest) (res
 		}
 	}
 
-	resp = &dto.PreOrderResponse{
+	return &dto.PreOrderResponse{
 		Price:          price,
 		Amount:         amount,
 		Discount:       discountAmount,
@@ -172,6 +153,5 @@ func (l *PreCreateOrderLogic) PreCreateOrder(req *dto.PurchaseOrderRequest) (res
 		Coupon:         req.Coupon,
 		CouponDiscount: couponAmount,
 		FeeAmount:      feeAmount,
-	}
-	return
+	}, nil
 }

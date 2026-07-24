@@ -10,6 +10,7 @@ import (
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/module/billing/internal/adminorder"
 	"github.com/perfect-panel/server/internal/module/billing/internal/adminpayment"
+	"github.com/perfect-panel/server/internal/module/billing/internal/checkout"
 	"github.com/perfect-panel/server/internal/module/billing/internal/coupon"
 	"github.com/perfect-panel/server/internal/module/billing/internal/userorder"
 	"github.com/perfect-panel/server/internal/repository"
@@ -40,7 +41,31 @@ type Service interface {
 	// context, enforce ownership and never expose referrer commission.
 	QueryOrderDetail(ctx context.Context, req *dto.QueryOrderDetailRequest) (*dto.OrderDetail, error)
 	QueryOrderList(ctx context.Context, req *dto.QueryOrderListRequest) (*dto.QueryOrderListResponse, error)
+
+	// The checkout flows resolve the current user from the request context.
+	Purchase(ctx context.Context, req *dto.PurchaseOrderRequest) (*dto.PurchaseOrderResponse, error)
+	Renewal(ctx context.Context, req *dto.RenewalOrderRequest) (*dto.RenewalOrderResponse, error)
+	ResetTraffic(ctx context.Context, req *dto.ResetTrafficOrderRequest) (*dto.ResetTrafficOrderResponse, error)
+	Recharge(ctx context.Context, req *dto.RechargeOrderRequest) (*dto.RechargeOrderResponse, error)
+	PreCreateOrder(ctx context.Context, req *dto.PurchaseOrderRequest) (*dto.PreOrderResponse, error)
+	// CloseOrder settles gateway-collected money instead of closing, releases
+	// coupon and gift reservations, and returns reserved plan inventory.
+	CloseOrder(ctx context.Context, req *dto.CloseOrderRequest) error
 }
+
+// Order lifecycle constants shared with the V2 orchestration layer.
+const (
+	CloseOrderTimeMinutes = checkout.CloseOrderTimeMinutes
+	MaxQuantity           = checkout.MaxQuantity
+)
+
+// PlanReader re-exports the checkout subdomain's port onto the subscription
+// domain's plan catalogue.
+type PlanReader = checkout.PlanReader
+
+// UserSubscriptionReader re-exports the checkout subdomain's port onto the
+// subscription domain's user subscriptions.
+type UserSubscriptionReader = checkout.UserSubscriptionReader
 
 // Transactor is the module's window onto billing-scoped transactions; the
 // repository store satisfies it structurally.
@@ -48,11 +73,13 @@ type Transactor interface {
 	InBillingTx(ctx context.Context, fn func(repository.BillingStore) error) error
 }
 
-// ActivationEnqueuer schedules order activation after a paid transition. The
-// composition root adapts the asynq client; a delivery that already exists
-// for the order is not an error (the Paid state is the durable outbox).
-type ActivationEnqueuer interface {
+// OrderQueue schedules the order lifecycle tasks. The composition root
+// adapts the asynq client; an activation delivery that already exists for
+// the order is not an error (the Paid state is the durable outbox), and a
+// deferred close fires after the pending order's payment window expires.
+type OrderQueue interface {
 	EnqueueActivation(ctx context.Context, orderNo string) error
+	EnqueueDeferredClose(ctx context.Context, orderNo string) error
 }
 
 // Deps declares everything the module needs; the composition root
@@ -63,8 +90,17 @@ type Deps struct {
 	Orders   repository.OrderRepo
 	Payments repository.PaymentRepo
 	Coupons  repository.CouponRepo
-	Tx       Transactor
-	Queue    ActivationEnqueuer
+	Plans    PlanReader
+	UserSubs UserSubscriptionReader
+	// Store is the checkout subdomain's transitional full-store dependency
+	// (documented inside internal/checkout).
+	Store repository.Store
+	Tx    Transactor
+	Queue OrderQueue
+	// SingleModel forbids holding more than one blocking subscription.
+	SingleModel bool
+	// CurrencyUnit is the site currency used for gateway verification.
+	CurrencyUnit string
 	// Host is the site host used to derive default payment notify URLs.
 	Host string
 	// IsGatewayMode reports whether notify URLs must use the gateway prefix.
@@ -77,6 +113,17 @@ func New(deps Deps) Service {
 		payments:   adminpayment.NewService(deps.Payments, deps.Orders, deps.Tx, deps.Host, deps.IsGatewayMode),
 		coupons:    coupon.NewService(deps.Coupons),
 		userOrders: userorder.NewService(deps.Orders),
+		checkout: checkout.NewService(checkout.Deps{
+			Orders:       deps.Orders,
+			Coupons:      deps.Coupons,
+			Payments:     deps.Payments,
+			Plans:        deps.Plans,
+			UserSubs:     deps.UserSubs,
+			Store:        deps.Store,
+			Queue:        deps.Queue,
+			SingleModel:  deps.SingleModel,
+			CurrencyUnit: deps.CurrencyUnit,
+		}),
 	}
 }
 
@@ -85,6 +132,7 @@ type service struct {
 	payments   *adminpayment.Service
 	coupons    *coupon.Service
 	userOrders *userorder.Service
+	checkout   *checkout.Service
 }
 
 func (s *service) CreateOrder(ctx context.Context, req *dto.CreateOrderRequest) error {
@@ -145,4 +193,28 @@ func (s *service) QueryOrderDetail(ctx context.Context, req *dto.QueryOrderDetai
 
 func (s *service) QueryOrderList(ctx context.Context, req *dto.QueryOrderListRequest) (*dto.QueryOrderListResponse, error) {
 	return s.userOrders.QueryList(ctx, req)
+}
+
+func (s *service) Purchase(ctx context.Context, req *dto.PurchaseOrderRequest) (*dto.PurchaseOrderResponse, error) {
+	return s.checkout.Purchase(ctx, req)
+}
+
+func (s *service) Renewal(ctx context.Context, req *dto.RenewalOrderRequest) (*dto.RenewalOrderResponse, error) {
+	return s.checkout.Renewal(ctx, req)
+}
+
+func (s *service) ResetTraffic(ctx context.Context, req *dto.ResetTrafficOrderRequest) (*dto.ResetTrafficOrderResponse, error) {
+	return s.checkout.ResetTraffic(ctx, req)
+}
+
+func (s *service) Recharge(ctx context.Context, req *dto.RechargeOrderRequest) (*dto.RechargeOrderResponse, error) {
+	return s.checkout.Recharge(ctx, req)
+}
+
+func (s *service) PreCreateOrder(ctx context.Context, req *dto.PurchaseOrderRequest) (*dto.PreOrderResponse, error) {
+	return s.checkout.PreCreateOrder(ctx, req)
+}
+
+func (s *service) CloseOrder(ctx context.Context, req *dto.CloseOrderRequest) error {
+	return s.checkout.Close(ctx, req)
 }

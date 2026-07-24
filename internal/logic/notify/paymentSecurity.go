@@ -147,10 +147,3 @@ func markOrderPaidAndEnqueue(ctx context.Context, svcCtx *svc.ServiceContext, or
 	}
 	return err
 }
-
-// SettleVerifiedPayment is shared by callback handlers and expiry-time
-// gateway checks.  Callers must authenticate the gateway response and verify
-// the order amount before invoking it.
-func SettleVerifiedPayment(ctx context.Context, svcCtx *svc.ServiceContext, orderInfo *order.Order, tradeNo string) error {
-	return markOrderPaidAndEnqueue(ctx, svcCtx, orderInfo, tradeNo)
-}

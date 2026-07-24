@@ -25,8 +25,13 @@ func newBillingModule(c config.Config, store repository.Store, queue *asynq.Clie
 		Orders:        store.Order(),
 		Payments:      store.Payment(),
 		Coupons:       store.Coupon(),
+		Plans:         store.Subscribe(),
+		UserSubs:      store.UserSubscription(),
+		Store:         store,
 		Tx:            store,
 		Queue:         activationQueue{client: queue},
+		SingleModel:   c.Subscribe.SingleModel,
+		CurrencyUnit:  c.Currency.Unit,
 		Host:          c.Host,
 		IsGatewayMode: report.IsGatewayMode,
 	})
@@ -49,6 +54,18 @@ func (q activationQueue) EnqueueActivation(ctx context.Context, orderNo string) 
 	if errors.Is(err, asynq.ErrTaskIDConflict) {
 		return nil
 	}
+	return err
+}
+
+// EnqueueDeferredClose schedules the pending order's expiry close after the
+// payment window elapses.
+func (q activationQueue) EnqueueDeferredClose(ctx context.Context, orderNo string) error {
+	payload, err := json.Marshal(queuetypes.DeferCloseOrderPayload{OrderNo: orderNo})
+	if err != nil {
+		return err
+	}
+	task := asynq.NewTask(queuetypes.DeferCloseOrder, payload, asynq.MaxRetry(3))
+	_, err = q.client.EnqueueContext(ctx, task, asynq.ProcessIn(billing.CloseOrderTimeMinutes*time.Minute))
 	return err
 }
 
