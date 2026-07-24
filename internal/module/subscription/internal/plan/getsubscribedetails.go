@@ -1,4 +1,4 @@
-package subscribe
+package plan
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -15,21 +14,21 @@ import (
 
 type GetSubscribeDetailsLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Get subscribe details
-func NewGetSubscribeDetailsLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetSubscribeDetailsLogic {
+func newGetSubscribeDetailsLogic(ctx context.Context, deps Deps) *GetSubscribeDetailsLogic {
 	return &GetSubscribeDetailsLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
 func (l *GetSubscribeDetailsLogic) GetSubscribeDetails(req *dto.GetSubscribeDetailsRequest) (resp *dto.Subscribe, err error) {
-	sub, err := l.svcCtx.Store.Subscribe().FindOne(l.ctx, req.Id)
+	sub, err := l.deps.Plans.FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Logger.Error("[GetSubscribeDetailsLogic] get subscribe details failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get subscribe details failed: %v", err.Error())

@@ -1,4 +1,4 @@
-package subscribe
+package storefront
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/node"
 	"github.com/perfect-panel/server/internal/model/entity/user"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/constant"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/timeutil"
@@ -18,16 +17,16 @@ import (
 
 type QueryUserSubscribeNodeListLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Get user subscribe node info
-func NewQueryUserSubscribeNodeListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *QueryUserSubscribeNodeListLogic {
+func newQueryUserSubscribeNodeListLogic(ctx context.Context, deps Deps) *QueryUserSubscribeNodeListLogic {
 	return &QueryUserSubscribeNodeListLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -38,7 +37,7 @@ func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *dt
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.InvalidAccess), "Invalid Access")
 	}
 
-	userSubscribes, err := l.svcCtx.Store.UserSubscription().QueryUserSubscribe(l.ctx, u.Id, 1, 2)
+	userSubscribes, err := l.deps.UserSubs.QueryUserSubscribe(l.ctx, u.Id, 1, 2)
 	if err != nil {
 		logger.Errorw("failed to query user subscribe", logger.Field("error", err.Error()), logger.Field("user_id", u.Id))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "DB_ERROR")
@@ -76,7 +75,7 @@ func (l *QueryUserSubscribeNodeListLogic) QueryUserSubscribeNodeList() (resp *dt
 			userSubscribeInfo.FinishedAt = userSubscribe.FinishedAt.Unix()
 		}
 
-		if l.svcCtx.Config.Register.EnableTrial && l.svcCtx.Config.Register.TrialSubscribe == userSubscribe.SubscribeId {
+		if l.deps.isTrialPlan(userSubscribe.SubscribeId) {
 			userSubscribeInfo.IsTryOut = true
 		}
 
@@ -92,7 +91,7 @@ func (l *QueryUserSubscribeNodeListLogic) getServers(userSub *user.Subscribe) (u
 		return l.createExpiredServers(), nil
 	}
 
-	subDetails, err := l.svcCtx.Store.Subscribe().FindOne(l.ctx, userSub.SubscribeId)
+	subDetails, err := l.deps.Plans.FindOne(l.ctx, userSub.SubscribeId)
 	if err != nil {
 		l.Errorw("[Generate Subscribe]find subscribe details error: %v", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe details error: %v", err.Error())
@@ -128,7 +127,7 @@ func (l *QueryUserSubscribeNodeListLogic) getServers(userSub *user.Subscribe) (u
 			serverIds = append(serverIds, k)
 		}
 
-		servers, err := l.svcCtx.Store.Node().QueryServerList(l.ctx, serverIds)
+		servers, err := l.deps.Nodes.QueryServerList(l.ctx, serverIds)
 		if err != nil {
 			l.Errorw("[Generate Subscribe]find server details error: %v", logger.Field("error", err.Error()))
 			return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find server details error: %v", err.Error())
@@ -180,7 +179,7 @@ func (l *QueryUserSubscribeNodeListLogic) filterSubscribeNodes(nodeIds []int64, 
 	}
 
 	if len(nodeIds) == 0 && len(tags) == 0 {
-		_, nodes, err := l.svcCtx.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
+		_, nodes, err := l.deps.Nodes.FilterNodeList(l.ctx, &node.FilterNodeParams{
 			Page:    0,
 			Size:    1000,
 			Enabled: &enable,
@@ -191,7 +190,7 @@ func (l *QueryUserSubscribeNodeListLogic) filterSubscribeNodes(nodeIds []int64, 
 	seen := make(map[int64]struct{})
 	nodes := make([]*node.Node, 0)
 	if len(nodeIds) > 0 {
-		_, directNodes, err := l.svcCtx.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
+		_, directNodes, err := l.deps.Nodes.FilterNodeList(l.ctx, &node.FilterNodeParams{
 			Page:    0,
 			Size:    1000,
 			NodeId:  nodeIds,
@@ -203,7 +202,7 @@ func (l *QueryUserSubscribeNodeListLogic) filterSubscribeNodes(nodeIds []int64, 
 		nodes = addNodes(nodes, seen, directNodes)
 	}
 	if len(tags) > 0 {
-		_, tagNodes, err := l.svcCtx.Store.Node().FilterNodeList(l.ctx, &node.FilterNodeParams{
+		_, tagNodes, err := l.deps.Nodes.FilterNodeList(l.ctx, &node.FilterNodeParams{
 			Page:    0,
 			Size:    1000,
 			Tag:     tags,
@@ -232,7 +231,7 @@ func (l *QueryUserSubscribeNodeListLogic) createExpiredServers() []*dto.UserSubs
 }
 
 func (l *QueryUserSubscribeNodeListLogic) getFirstHostLine() string {
-	host := l.svcCtx.Config.Host
+	host := l.deps.Host
 	lines := strings.Split(host, "\n")
 	if len(lines) > 0 {
 		return lines[0]
@@ -240,7 +239,7 @@ func (l *QueryUserSubscribeNodeListLogic) getFirstHostLine() string {
 	return host
 }
 func (l *QueryUserSubscribeNodeListLogic) getUserSubscribe(token string) (*user.Subscribe, error) {
-	userSub, err := l.svcCtx.Store.UserSubscription().FindOneSubscribeByToken(l.ctx, token)
+	userSub, err := l.deps.UserSubs.FindOneSubscribeByToken(l.ctx, token)
 	if err != nil {
 		l.Infow("[Generate Subscribe]find subscribe error: %v", logger.Field("error", err.Error()), logger.Field("token", token))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "find subscribe error: %v", err.Error())

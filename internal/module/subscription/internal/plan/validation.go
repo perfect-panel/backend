@@ -1,4 +1,4 @@
-package subscribe
+package plan
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package subscribe
+package plan
 
 import (
 	"context"
@@ -8,29 +8,28 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
 type BatchDeleteSubscribeLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Batch delete subscribe
-func NewBatchDeleteSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *BatchDeleteSubscribeLogic {
+func newBatchDeleteSubscribeLogic(ctx context.Context, deps Deps) *BatchDeleteSubscribeLogic {
 	return &BatchDeleteSubscribeLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
 var errorIsExistActiveUser = errors.New("subscription ID belongs to an active user subscription")
 
 func (l *BatchDeleteSubscribeLogic) BatchDeleteSubscribe(req *dto.BatchDeleteSubscribeRequest) error {
-	err := l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+	err := l.deps.Store.InSubscriptionTx(l.ctx, func(store repository.SubscriptionStore) error {
 		for _, id := range req.Ids {
 			// Validate whether the subscription ID belongs to an active user subscription.
 			count, err := store.UserSubscription().CountUserSubscribesBySubscribeIdAndStatus(l.ctx, id, 1)

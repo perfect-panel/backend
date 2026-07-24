@@ -1,11 +1,10 @@
-package subscribe
+package plan
 
 import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/subscribe"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/xerr"
 	"github.com/pkg/errors"
@@ -13,21 +12,21 @@ import (
 
 type CreateSubscribeGroupLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Create subscribe group
-func NewCreateSubscribeGroupLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CreateSubscribeGroupLogic {
+func newCreateSubscribeGroupLogic(ctx context.Context, deps Deps) *CreateSubscribeGroupLogic {
 	return &CreateSubscribeGroupLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
 func (l *CreateSubscribeGroupLogic) CreateSubscribeGroup(req *dto.CreateSubscribeGroupRequest) error {
-	err := l.svcCtx.Store.Subscribe().CreateGroup(l.ctx, &subscribe.Group{
+	err := l.deps.Plans.CreateGroup(l.ctx, &subscribe.Group{
 		Name:        req.Name,
 		Description: req.Description,
 	})

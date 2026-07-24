@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/admin/subscribe"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func GetSubscribeDetailsHandler(svcCtx *svc.ServiceContext) app.HandlerFunc {
 			return
 		}
 
-		l := subscribe.NewGetSubscribeDetailsLogic(c, svcCtx)
-		resp, err := l.GetSubscribeDetails(&req)
+		resp, err := svcCtx.Subscription.GetSubscribeDetails(c, &req)
 		result.HttpResult(ctx, resp, err)
 	}
 }

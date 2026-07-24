@@ -1,14 +1,11 @@
-package subscribe
+package plan
 
 import (
 	"context"
 	"encoding/json"
 
-	"github.com/perfect-panel/server/pkg/device"
-
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/subscribe"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -17,16 +14,16 @@ import (
 
 type UpdateSubscribeLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Update subscribe
-func NewUpdateSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UpdateSubscribeLogic {
+func newUpdateSubscribeLogic(ctx context.Context, deps Deps) *UpdateSubscribeLogic {
 	return &UpdateSubscribeLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -35,7 +32,7 @@ func (l *UpdateSubscribeLogic) UpdateSubscribe(req *dto.UpdateSubscribeRequest) 
 		return err
 	}
 	// Query the database to get the subscribe information
-	_, err := l.svcCtx.Store.Subscribe().FindOne(l.ctx, req.Id)
+	_, err := l.deps.Plans.FindOne(l.ctx, req.Id)
 	if err != nil {
 		l.Logger.Error("[UpdateSubscribe] Database query error", logger.Field("error", err.Error()), logger.Field("subscribe_id", req.Id))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get subscribe error: %v", err.Error())
@@ -75,11 +72,11 @@ func (l *UpdateSubscribeLogic) UpdateSubscribe(req *dto.UpdateSubscribeRequest) 
 		RenewalReset:      req.RenewalReset,
 		ShowOriginalPrice: req.ShowOriginalPrice,
 	}
-	err = l.svcCtx.Store.Subscribe().Update(l.ctx, sub)
+	err = l.deps.Plans.Update(l.ctx, sub)
 	if err != nil {
 		l.Logger.Error("[UpdateSubscribe] update subscribe failed", logger.Field("error", err.Error()), logger.Field("subscribe", sub))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseUpdateError), "update subscribe error: %v", err.Error())
 	}
-	l.svcCtx.DeviceManager.Broadcast(device.SubscribeUpdate)
+	l.deps.notifyPlanChanged()
 	return nil
 }

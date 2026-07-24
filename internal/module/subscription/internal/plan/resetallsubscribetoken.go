@@ -1,4 +1,4 @@
-package subscribe
+package plan
 
 import (
 	"context"
@@ -11,27 +11,26 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
 type ResetAllSubscribeTokenLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Reset all subscribe tokens
-func NewResetAllSubscribeTokenLogic(ctx context.Context, svcCtx *svc.ServiceContext) *ResetAllSubscribeTokenLogic {
+func newResetAllSubscribeTokenLogic(ctx context.Context, deps Deps) *ResetAllSubscribeTokenLogic {
 	return &ResetAllSubscribeTokenLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
 func (l *ResetAllSubscribeTokenLogic) ResetAllSubscribeToken() (resp *dto.ResetAllSubscribeTokenResponse, err error) {
-	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+	err = l.deps.Store.InSubscriptionTx(l.ctx, func(store repository.SubscriptionStore) error {
 		// select all active and Finished subscriptions
 		list, err := store.UserSubscription().FindUserSubscribesByStatus(l.ctx, 1, 2)
 		if err != nil {

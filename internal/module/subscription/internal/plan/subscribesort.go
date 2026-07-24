@@ -1,4 +1,4 @@
-package subscribe
+package plan
 
 import (
 	"context"
@@ -9,22 +9,21 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 )
 
 type SubscribeSortLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // NewSubscribeSortLogic Subscribe sort
-func NewSubscribeSortLogic(ctx context.Context, svcCtx *svc.ServiceContext) *SubscribeSortLogic {
+func newSubscribeSortLogic(ctx context.Context, deps Deps) *SubscribeSortLogic {
 	return &SubscribeSortLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -36,12 +35,12 @@ func (l *SubscribeSortLogic) SubscribeSort(req *dto.SubscribeSortRequest) error 
 		ids = append(ids, v.Id)
 	}
 	// query min sort by ids
-	minSort, err := l.svcCtx.Store.Subscribe().QuerySubscribeMinSortByIds(l.ctx, ids)
+	minSort, err := l.deps.Plans.QuerySubscribeMinSortByIds(l.ctx, ids)
 	if err != nil {
 		l.Logger.Error("[SubscribeSortLogic] query subscribe list by ids error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "query subscribe list by ids error: %v", err.Error())
 	}
-	_, subs, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
+	_, subs, err := l.deps.Plans.FilterList(l.ctx, &subscribe.FilterParams{
 		Page: 1,
 		Size: 9999,
 		Ids:  ids,
@@ -57,7 +56,7 @@ func (l *SubscribeSortLogic) SubscribeSort(req *dto.SubscribeSortRequest) error 
 		}
 	}
 	// update sort
-	err = l.svcCtx.Store.InTx(l.ctx, func(store repository.Store) error {
+	err = l.deps.Store.InSubscriptionTx(l.ctx, func(store repository.SubscriptionStore) error {
 		return store.Subscribe().UpdateSort(l.ctx, subs)
 	})
 	if err != nil {

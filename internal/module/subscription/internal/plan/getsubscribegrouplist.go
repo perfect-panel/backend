@@ -1,10 +1,9 @@
-package subscribe
+package plan
 
 import (
 	"context"
 
 	"github.com/perfect-panel/server/internal/model/dto"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -13,21 +12,21 @@ import (
 
 type GetSubscribeGroupListLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Get subscribe group list
-func NewGetSubscribeGroupListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetSubscribeGroupListLogic {
+func newGetSubscribeGroupListLogic(ctx context.Context, deps Deps) *GetSubscribeGroupListLogic {
 	return &GetSubscribeGroupListLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
 func (l *GetSubscribeGroupListLogic) GetSubscribeGroupList() (resp *dto.GetSubscribeGroupListResponse, err error) {
-	total, list, err := l.svcCtx.Store.Subscribe().QueryGroupList(l.ctx)
+	total, list, err := l.deps.Plans.QueryGroupList(l.ctx)
 	if err != nil {
 		l.Logger.Error("[GetSubscribeGroupListLogic] get subscribe group list failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get subscribe group list failed: %v", err.Error())

@@ -1,4 +1,4 @@
-package subscribe
+package storefront
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/subscribe"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -15,22 +14,22 @@ import (
 
 type QuerySubscribeListLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Get subscribe list
-func NewQuerySubscribeListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *QuerySubscribeListLogic {
+func newQuerySubscribeListLogic(ctx context.Context, deps Deps) *QuerySubscribeListLogic {
 	return &QuerySubscribeListLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
 func (l *QuerySubscribeListLogic) QuerySubscribeList(req *dto.QuerySubscribeListRequest) (resp *dto.QuerySubscribeListResponse, err error) {
 
-	total, data, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
+	total, data, err := l.deps.Plans.FilterList(l.ctx, &subscribe.FilterParams{
 		Page:            1,
 		Size:            9999,
 		Language:        req.Language,

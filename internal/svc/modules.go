@@ -12,10 +12,12 @@ import (
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/module/billing"
 	"github.com/perfect-panel/server/internal/module/platform"
+	"github.com/perfect-panel/server/internal/module/subscription"
 	"github.com/perfect-panel/server/internal/module/support"
 	"github.com/perfect-panel/server/internal/report"
 	"github.com/perfect-panel/server/internal/repository"
 	emailworker "github.com/perfect-panel/server/internal/worker/email"
+	"github.com/perfect-panel/server/pkg/device"
 	"github.com/perfect-panel/server/pkg/exchangeRate"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
@@ -127,6 +129,27 @@ func newPlatformModule(store repository.Store, srv *ServiceContext) platform.Ser
 		},
 		Multiplier: func(at time.Time) float32 {
 			return srv.NodeMultiplierManager.GetMultiplier(at)
+		},
+	})
+}
+
+// newSubscriptionModule wires the subscription module against the legacy
+// store; device broadcast and the runtime-mutable trial plan are closures
+// over the service context.
+func newSubscriptionModule(store repository.Store, srv *ServiceContext) subscription.Service {
+	return subscription.New(subscription.Deps{
+		Plans:    store.Subscribe(),
+		UserSubs: store.UserSubscription(),
+		Nodes:    store.Node(),
+		Store:    store,
+		NotifyPlanChanged: func() {
+			if srv.DeviceManager != nil {
+				srv.DeviceManager.Broadcast(device.SubscribeUpdate)
+			}
+		},
+		Host: srv.Config.Host,
+		IsTrialPlan: func(planID int64) bool {
+			return srv.Config.Register.EnableTrial && srv.Config.Register.TrialSubscribe == planID
 		},
 	})
 }

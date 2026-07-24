@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/logic/admin/subscribe"
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/httpx"
@@ -34,8 +33,7 @@ func BatchDeleteSubscribeGroupHandler(svcCtx *svc.ServiceContext) app.HandlerFun
 			return
 		}
 
-		l := subscribe.NewBatchDeleteSubscribeGroupLogic(c, svcCtx)
-		err := l.BatchDeleteSubscribeGroup(&req)
+		err := svcCtx.Subscription.BatchDeleteSubscribeGroup(c, &req)
 		result.HttpResult(ctx, nil, err)
 	}
 }

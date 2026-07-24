@@ -1,4 +1,4 @@
-package subscribe
+package plan
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/subscribe"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -16,21 +15,21 @@ import (
 
 type GetSubscribeListLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // Get subscribe list
-func NewGetSubscribeListLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetSubscribeListLogic {
+func newGetSubscribeListLogic(ctx context.Context, deps Deps) *GetSubscribeListLogic {
 	return &GetSubscribeListLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
 func (l *GetSubscribeListLogic) GetSubscribeList(req *dto.GetSubscribeListRequest) (resp *dto.GetSubscribeListResponse, err error) {
-	total, list, err := l.svcCtx.Store.Subscribe().FilterList(l.ctx, &subscribe.FilterParams{
+	total, list, err := l.deps.Plans.FilterList(l.ctx, &subscribe.FilterParams{
 		Page:     int(req.Page),
 		Size:     int(req.Size),
 		Language: req.Language,
@@ -59,7 +58,7 @@ func (l *GetSubscribeListLogic) GetSubscribeList(req *dto.GetSubscribeListReques
 		resultList = append(resultList, sub)
 	}
 
-	subscribeMaps, err := l.svcCtx.Store.UserSubscription().QueryActiveSubscriptions(l.ctx, subscribeIdList...)
+	subscribeMaps, err := l.deps.UserSubs.QueryActiveSubscriptions(l.ctx, subscribeIdList...)
 	if err != nil {
 		l.Logger.Error("[GetSubscribeListLogic] get user subscribe failed: ", logger.Field("error", err.Error()))
 		return nil, errors.Wrapf(xerr.NewErrCode(xerr.DatabaseQueryError), "get user subscribe failed: %v", err.Error())

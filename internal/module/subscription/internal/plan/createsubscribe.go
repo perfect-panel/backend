@@ -1,4 +1,4 @@
-package subscribe
+package plan
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/perfect-panel/server/internal/model/dto"
 	"github.com/perfect-panel/server/internal/model/entity/subscribe"
-	"github.com/perfect-panel/server/internal/svc"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/tool"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -15,16 +14,16 @@ import (
 
 type CreateSubscribeLogic struct {
 	logger.Logger
-	ctx    context.Context
-	svcCtx *svc.ServiceContext
+	ctx  context.Context
+	deps Deps
 }
 
 // NewCreateSubscribeLogic Create subscribe
-func NewCreateSubscribeLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CreateSubscribeLogic {
+func newCreateSubscribeLogic(ctx context.Context, deps Deps) *CreateSubscribeLogic {
 	return &CreateSubscribeLogic{
 		Logger: logger.WithContext(ctx),
 		ctx:    ctx,
-		svcCtx: svcCtx,
+		deps:   deps,
 	}
 }
 
@@ -62,7 +61,7 @@ func (l *CreateSubscribeLogic) CreateSubscribe(req *dto.CreateSubscribeRequest) 
 		RenewalReset:      req.RenewalReset,
 		ShowOriginalPrice: req.ShowOriginalPrice,
 	}
-	err := l.svcCtx.Store.Subscribe().Insert(l.ctx, sub)
+	err := l.deps.Plans.Insert(l.ctx, sub)
 	if err != nil {
 		l.Logger.Error("[CreateSubscribeLogic] create subscribe error: ", logger.Field("error", err.Error()))
 		return errors.Wrapf(xerr.NewErrCode(xerr.DatabaseInsertError), "create subscribe error: %v", err.Error())
