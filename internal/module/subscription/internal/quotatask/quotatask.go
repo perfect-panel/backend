@@ -13,8 +13,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
 	"time"
 
+	"github.com/perfect-panel/server/internal/module/identity/entity/user"
 	"github.com/perfect-panel/server/internal/module/platform/entity/log"
 	"github.com/perfect-panel/server/internal/module/platform/entity/task"
 	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
@@ -86,7 +89,8 @@ func (l *QuotaTaskLogic) process(ctx context.Context, taskID int64) error {
 		return err
 	}
 
-	if taskInfo.Status != 0 {
+	if taskInfo.Status == task.StatusCompleted || taskInfo.Status == task.StatusCancelled || taskInfo.Status == task.StatusEnqueueFailed ||
+		(taskInfo.Status == task.StatusFailed && taskInfo.Current >= taskInfo.Total) {
 		logger.WithContext(ctx).Info("[QuotaTaskLogic.ProcessTask] task already processed",
 			logger.Field("taskID", taskID),
 			logger.Field("status", taskInfo.Status),
@@ -96,11 +100,24 @@ func (l *QuotaTaskLogic) process(ctx context.Context, taskID int64) error {
 
 	scope, content, err := l.parseTaskData(ctx, taskInfo)
 	if err != nil {
-		return err
+		return l.failTask(ctx, taskInfo, err)
+	}
+	if err := validateContent(content); err != nil {
+		return l.failTask(ctx, taskInfo, err)
+	}
+	if len(scope.Objects) == 0 {
+		return l.failTask(ctx, taskInfo, fmt.Errorf("quota task has no targets"))
 	}
 
 	subscribes, err := l.getSubscribes(ctx, scope.Objects)
 	if err != nil {
+		return err
+	}
+	if len(subscribes) != len(scope.Objects) {
+		return l.failTask(ctx, taskInfo, fmt.Errorf("quota task target set changed: expected %d subscriptions, found %d", len(scope.Objects), len(subscribes)))
+	}
+	taskInfo.Status = task.StatusInProgress
+	if err := l.updateTask(ctx, taskInfo); err != nil {
 		return err
 	}
 	if err = l.processSubscribes(ctx, subscribes, content, taskInfo); err != nil {
@@ -117,13 +134,13 @@ func (l *QuotaTaskLogic) process(ctx context.Context, taskID int64) error {
 		if err != nil {
 			logger.WithContext(ctx).Error("[QuotaTaskLogic.ProcessTask] find users error",
 				logger.Field("error", err.Error()),
-				logger.Field("userIDs", userIds))
+				logger.Field("user_count", len(userIds)))
 		}
 		err = l.deps.Store.UserCache().ClearUserCache(ctx, users...)
 		if err != nil {
 			logger.WithContext(ctx).Error("[QuotaTaskLogic.ProcessTask] clear user cache error",
 				logger.Field("error", err.Error()),
-				logger.Field("userIDs", userIds))
+				logger.Field("user_count", len(userIds)))
 		}
 	}
 
@@ -138,13 +155,13 @@ func (l *QuotaTaskLogic) process(ctx context.Context, taskID int64) error {
 }
 
 func (l *QuotaTaskLogic) getTaskInfo(ctx context.Context, taskID int64) (*task.Task, error) {
-	taskInfo, err := l.deps.Store.Task().FindOne(ctx, taskID)
+	taskInfo, err := l.deps.Store.Task().FindOneByType(ctx, taskID, task.TypeQuota)
 	if err != nil {
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.getTaskInfo] find task error",
 			logger.Field("error", err.Error()),
 			logger.Field("taskID", taskID),
 		)
-		return nil, ErrUnretryable
+		return nil, err
 	}
 	return taskInfo, nil
 }
@@ -155,7 +172,7 @@ func (l *QuotaTaskLogic) parseTaskData(ctx context.Context, taskInfo *task.Task)
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.parseTaskData] unmarshal scope error",
 			logger.Field("error", err.Error()),
 		)
-		return scope, task.QuotaContent{}, ErrUnretryable
+		return scope, task.QuotaContent{}, fmt.Errorf("%w: parse quota scope: %v", ErrUnretryable, err)
 	}
 
 	var content task.QuotaContent
@@ -163,7 +180,7 @@ func (l *QuotaTaskLogic) parseTaskData(ctx context.Context, taskInfo *task.Task)
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.parseTaskData] unmarshal content error",
 			logger.Field("error", err.Error()),
 		)
-		return scope, content, ErrUnretryable
+		return scope, content, fmt.Errorf("%w: parse quota content: %v", ErrUnretryable, err)
 	}
 	return scope, content, nil
 }
@@ -173,9 +190,9 @@ func (l *QuotaTaskLogic) getSubscribes(ctx context.Context, subscriberIDs []int6
 	if err != nil {
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.getSubscribes] find subscribes error",
 			logger.Field("error", err.Error()),
-			logger.Field("subscribers", subscriberIDs),
+			logger.Field("subscriber_count", len(subscriberIDs)),
 		)
-		return nil, ErrUnretryable
+		return nil, err
 	}
 	return subscribes, nil
 }
@@ -196,7 +213,7 @@ func (l *QuotaTaskLogic) processSubscribes(ctx context.Context, subscribes []*us
 	var errs []ErrorInfo
 	now := timeutil.Now()
 
-	for _, sub := range subscribes {
+	for index, sub := range subscribes {
 		// 验证订阅数据
 		if sub == nil {
 			errs = append(errs, ErrorInfo{
@@ -205,22 +222,40 @@ func (l *QuotaTaskLogic) processSubscribes(ctx context.Context, subscribes []*us
 			})
 			continue
 		}
-		if err := l.grantSubscription(ctx, taskInfo.Id, sub, content, now, &errs); err != nil {
+		if sub.Status == usersub.SubscribeStatusDeducted {
+			errs = append(errs, ErrorInfo{UserSubscribeId: sub.Id, Error: "deducted subscription is not eligible for quota grants"})
+			if err := l.advanceTaskProgress(ctx, taskInfo, uint64(index+1)); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := l.grantSubscription(ctx, taskInfo.Id, sub, content, now); err != nil {
 			return err
 		}
 		if content.GiftValue != 0 {
-			if err := l.grantGift(ctx, taskInfo.Id, sub, content, now, &errs); err != nil {
+			if err := l.grantGift(ctx, taskInfo.Id, sub, content, now); err != nil {
 				return err
 			}
+		}
+		if err := l.advanceTaskProgress(ctx, taskInfo, uint64(index+1)); err != nil {
+			return err
 		}
 	}
 
 	return l.finishTask(ctx, taskInfo, len(subscribes), errs)
 }
 
+func (l *QuotaTaskLogic) advanceTaskProgress(ctx context.Context, taskInfo *task.Task, current uint64) error {
+	if current <= taskInfo.Current {
+		return nil
+	}
+	taskInfo.Current = current
+	return l.updateTask(ctx, taskInfo)
+}
+
 // grantSubscription applies the time extension and traffic reset in a
 // subscription-domain transaction, exactly once per (task, subscription).
-func (l *QuotaTaskLogic) grantSubscription(ctx context.Context, taskID int64, sub *usersub.Subscribe, content task.QuotaContent, now time.Time, errs *[]ErrorInfo) error {
+func (l *QuotaTaskLogic) grantSubscription(ctx context.Context, taskID int64, sub *usersub.Subscribe, content task.QuotaContent, now time.Time) error {
 	return l.deps.Store.InSubscriptionTx(ctx, func(store repository.SubscriptionStore) error {
 		mark, err := store.Inbox().Find(ctx, inboxQuotaGrant, inboxKey(taskID, sub.Id))
 		if err != nil {
@@ -232,43 +267,50 @@ func (l *QuotaTaskLogic) grantSubscription(ctx context.Context, taskID int64, su
 
 		updated := false
 
-		// 处理时间延长 - 修复逻辑：只要Days不为0就处理，不管ExpireTime是否为0
+		// 处理有限期延长，同时保留 NoLimit 的 epoch 哨兵值。
 		if content.Days != 0 {
-			if sub.ExpireTime.Unix() == 0 || sub.ExpireTime.Before(now) {
-				// 如果没有过期时间或已过期，从现在开始计算
+			if sub.ExpireTime.Unix() == 0 {
+				// Unix epoch is the NoLimit sentinel. Adding finite days must
+				// never downgrade an unlimited subscription to a finite term.
+				if sub.Status != usersub.SubscribeStatusActive {
+					sub.Status = usersub.SubscribeStatusActive
+					sub.FinishedAt = nil
+					updated = true
+				}
+			} else if sub.ExpireTime.Before(now) {
+				// 已过期，从现在开始计算
 				sub.ExpireTime = now.AddDate(0, 0, int(content.Days))
+				updated = true
 			} else {
 				// 在原有过期时间基础上延长
 				sub.ExpireTime = sub.ExpireTime.AddDate(0, 0, int(content.Days))
+				updated = true
 			}
 			// 如果订阅延长到未来时间，设置为激活状态
-			if sub.ExpireTime.After(now) && sub.Status != 1 {
-				sub.Status = 1 // Active
+			if sub.ExpireTime.Unix() != 0 && sub.ExpireTime.After(now) && sub.Status != usersub.SubscribeStatusActive {
+				sub.Status = usersub.SubscribeStatusActive
+				sub.FinishedAt = nil
 			}
-			updated = true
 		}
 
 		// 处理流量重置
 		if content.ResetTraffic {
 			sub.Download = 0
 			sub.Upload = 0
+			if sub.Status == usersub.SubscribeStatusFinished {
+				sub.Status = usersub.SubscribeStatusActive
+				sub.FinishedAt = nil
+			}
 			updated = true
 			if err := l.createResetTrafficLog(ctx, store.Log(), sub.Id, sub.UserId, now); err != nil {
-				// 记录错误但不阻断整个任务,日志失败不影响主流程
-				*errs = append(*errs, ErrorInfo{
-					UserSubscribeId: sub.Id,
-					Error:           "create reset traffic log error: " + err.Error(),
-				})
+				return fmt.Errorf("create reset traffic log for subscription %d: %w", sub.Id, err)
 			}
 		}
 
 		// 只有在有更新时才保存订阅信息
 		if updated {
 			if err := store.UserSubscription().UpdateSubscribe(ctx, sub); err != nil {
-				*errs = append(*errs, ErrorInfo{
-					UserSubscribeId: sub.Id,
-					Error:           "update subscription error: " + err.Error(),
-				})
+				return fmt.Errorf("update subscription %d: %w", sub.Id, err)
 			}
 		}
 
@@ -282,13 +324,14 @@ func (l *QuotaTaskLogic) grantSubscription(ctx context.Context, taskID int64, su
 // once per (task, subscription). The plan lookup for the percentage gift is
 // a cross-domain read done before the transaction — reference data, not
 // billing state.
-func (l *QuotaTaskLogic) grantGift(ctx context.Context, taskID int64, sub *usersub.Subscribe, content task.QuotaContent, now time.Time, errs *[]ErrorInfo) error {
-	// 验证赠送类型
-	if content.GiftType != 1 && content.GiftType != 2 {
-		*errs = append(*errs, ErrorInfo{
-			UserSubscribeId: sub.Id,
-			Error:           fmt.Sprintf("invalid gift type: %d", content.GiftType),
-		})
+func (l *QuotaTaskLogic) grantGift(ctx context.Context, taskID int64, sub *usersub.Subscribe, content task.QuotaContent, now time.Time) error {
+	key := inboxKey(taskID, sub.Id)
+	mark, err := l.deps.Store.Inbox().Find(ctx, inboxQuotaGift, key)
+	if err != nil {
+		return err
+	}
+	if mark != nil {
+		l.clearGiftUserCache(ctx, sub.UserId)
 		return nil
 	}
 
@@ -300,19 +343,20 @@ func (l *QuotaTaskLogic) grantGift(ctx context.Context, taskID int64, sub *users
 		// 获取订阅对应的套餐信息
 		subscribeInfo, err := l.deps.Store.Subscribe().FindOne(ctx, sub.SubscribeId)
 		if err != nil {
-			*errs = append(*errs, ErrorInfo{
-				UserSubscribeId: sub.Id,
-				Error:           "find subscribe error: " + err.Error(),
-			})
-			return nil
+			return fmt.Errorf("find plan for subscription %d: %w", sub.Id, err)
 		}
 		if subscribeInfo.UnitPrice > 0 {
-			giftAmount = int64(float64(subscribeInfo.UnitPrice) * (float64(content.GiftValue) / 100))
+			amount := new(big.Int).Mul(big.NewInt(subscribeInfo.UnitPrice), new(big.Int).SetUint64(content.GiftValue))
+			amount.Div(amount, big.NewInt(100))
+			if !amount.IsInt64() {
+				return fmt.Errorf("calculated gift amount overflows int64 for subscription %d", sub.Id)
+			}
+			giftAmount = amount.Int64()
 		}
 	}
 
-	return l.deps.Store.InBillingTx(ctx, func(store repository.BillingStore) error {
-		mark, err := store.Inbox().Find(ctx, inboxQuotaGift, inboxKey(taskID, sub.Id))
+	err = l.deps.Store.InBillingTx(ctx, func(store repository.BillingStore) error {
+		mark, err := store.Inbox().Find(ctx, inboxQuotaGift, key)
 		if err != nil {
 			return err
 		}
@@ -323,11 +367,10 @@ func (l *QuotaTaskLogic) grantGift(ctx context.Context, taskID int64, sub *users
 		if giftAmount > 0 {
 			wallet, err := store.Wallet().FindOneForUpdate(ctx, sub.UserId)
 			if err != nil {
-				*errs = append(*errs, ErrorInfo{
-					UserSubscribeId: sub.Id,
-					Error:           "find user error: " + err.Error(),
-				})
-				return nil
+				return fmt.Errorf("find wallet for user %d: %w", sub.UserId, err)
+			}
+			if giftAmount > 0 && wallet.GiftAmount > math.MaxInt64-giftAmount {
+				return fmt.Errorf("gift balance overflows for user %d", sub.UserId)
 			}
 			wallet.GiftAmount += giftAmount
 			if err := store.Wallet().UpdateBalanceFields(ctx, wallet); err != nil {
@@ -338,24 +381,46 @@ func (l *QuotaTaskLogic) grantGift(ctx context.Context, taskID int64, sub *users
 			}
 		}
 
-		return store.Inbox().Insert(ctx, inboxQuotaGift, inboxKey(taskID, sub.Id), "")
+		return store.Inbox().Insert(ctx, inboxQuotaGift, key, "")
 	})
+	if err != nil {
+		return err
+	}
+	if giftAmount > 0 {
+		// The gift transaction may commit before a later subscription fails.
+		// Clear this user's balance projection immediately so a partial task
+		// never leaves committed money hidden behind stale cache state.
+		l.clearGiftUserCache(ctx, sub.UserId)
+	}
+	return nil
+}
+
+func (l *QuotaTaskLogic) clearGiftUserCache(ctx context.Context, userID int64) {
+	if err := l.deps.Store.UserCache().ClearUserCache(ctx, &user.User{Id: userID}); err != nil {
+		logger.WithContext(ctx).Error("[QuotaTaskLogic.grantGift] clear user cache error",
+			logger.Field("error", err.Error()))
+	}
 }
 
 // finishTask records the outcome on the task row in a platform-domain
-// transaction. The task stays pending (status 0) if an earlier stage
-// hard-failed, so the retry path is the status check in process().
+// transaction. The task stays in progress if an earlier stage hard-failed,
+// so the queue retry resumes through the inbox markers.
 func (l *QuotaTaskLogic) finishTask(ctx context.Context, taskInfo *task.Task, total int, errs []ErrorInfo) error {
 	// 根据错误情况决定任务状态
-	status := int8(2) // Completed
+	status := task.StatusCompleted
+	taskInfo.Errors = ""
 	if len(errs) > 0 {
 		logger.WithContext(ctx).Error("[QuotaTaskLogic.processSubscribes] some subscriptions failed",
 			logger.Field("total", total),
 			logger.Field("failed", len(errs)),
 		)
 		// 如果所有订阅都失败，标记为失败状态
-		if len(errs) == total {
-			status = 3 // Failed
+		failedSubscriptions := make(map[int64]struct{}, len(errs))
+		for _, item := range errs {
+			failedSubscriptions[item.UserSubscribeId] = struct{}{}
+		}
+		if len(failedSubscriptions) >= total {
+			status = task.StatusFailed
 		}
 		marshaled, err := json.Marshal(errs)
 		if err != nil {
@@ -369,6 +434,10 @@ func (l *QuotaTaskLogic) finishTask(ctx context.Context, taskInfo *task.Task, to
 
 	taskInfo.Current = uint64(total)
 	taskInfo.Status = status
+	return l.updateTask(ctx, taskInfo)
+}
+
+func (l *QuotaTaskLogic) updateTask(ctx context.Context, taskInfo *task.Task) error {
 	return l.deps.Store.InPlatformTx(ctx, func(store repository.PlatformStore) error {
 		if err := store.Task().Update(ctx, taskInfo); err != nil {
 			logger.WithContext(ctx).Error("[QuotaTaskLogic.processSubscribes] update task status error",
@@ -379,6 +448,34 @@ func (l *QuotaTaskLogic) finishTask(ctx context.Context, taskInfo *task.Task, to
 		}
 		return nil
 	})
+}
+
+func (l *QuotaTaskLogic) failTask(ctx context.Context, taskInfo *task.Task, cause error) error {
+	taskInfo.Status = task.StatusFailed
+	taskInfo.Errors = cause.Error()
+	return l.updateTask(ctx, taskInfo)
+}
+
+func validateContent(content task.QuotaContent) error {
+	if !content.ResetTraffic && content.Days == 0 && content.GiftValue == 0 {
+		return fmt.Errorf("quota task has no action")
+	}
+	if content.Days > uint64(^uint(0)>>1) {
+		return fmt.Errorf("quota task days overflow")
+	}
+	if content.GiftValue == 0 {
+		if content.GiftType != 0 {
+			return fmt.Errorf("quota task gift type has no value")
+		}
+		return nil
+	}
+	if content.GiftType != 1 && content.GiftType != 2 {
+		return fmt.Errorf("invalid quota task gift type: %d", content.GiftType)
+	}
+	if content.GiftValue > math.MaxInt64 {
+		return fmt.Errorf("quota task gift value overflow")
+	}
+	return nil
 }
 
 func (l *QuotaTaskLogic) getStartTime(sub *usersub.Subscribe, now time.Time) time.Time {

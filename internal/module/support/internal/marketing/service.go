@@ -5,6 +5,9 @@ package marketing
 
 import (
 	"context"
+	"fmt"
+	"math"
+	"net/mail"
 	"strings"
 	"time"
 
@@ -61,6 +64,9 @@ func NewService(tasks repository.TaskRepo, recipients EmailRecipientReader, sele
 }
 
 func (s *Service) CreateBatchSendEmailTask(ctx context.Context, req *dto.CreateBatchSendEmailTaskRequest) error {
+	if err := validateBatchEmailRequest(req); err != nil {
+		return err
+	}
 	log := logger.WithContext(ctx)
 	scope := task.ParseScopeType(req.Scope)
 	emails, err := s.recipients.QueryEmailRecipients(ctx, &user.EmailRecipientFilter{
@@ -73,23 +79,20 @@ func (s *Service) CreateBatchSendEmailTask(ctx context.Context, req *dto.CreateB
 		return xerr.NewErrCode(xerr.DatabaseQueryError)
 	}
 
-	// 邮箱列表为空，返回错误
-	if len(emails) == 0 && scope != task.ScopeSkip {
-		log.Errorf("[CreateBatchSendEmailTask] No email addresses found for the specified scope")
-		return xerr.NewErrMsg("No email addresses found for the specified scope")
-	}
-
 	// 邮箱地址去重
 	emails = tool.RemoveDuplicateElements(emails...)
 
 	var additionalEmails []string
 	// 追加额外的邮箱地址（不覆盖）
 	if req.Additional != "" {
-		additionalEmails = tool.RemoveDuplicateElements(strings.Split(req.Additional, "\n")...)
+		additionalEmails, err = normalizeAdditionalEmails(req.Additional)
+		if err != nil {
+			return xerr.NewErrMsg(err.Error())
+		}
 	}
-	if len(additionalEmails) == 0 && scope == task.ScopeSkip {
-		log.Errorf("[CreateBatchSendEmailTask] No additional email addresses provided for skip scope")
-		return xerr.NewErrMsg("No additional email addresses provided for skip scope")
+	if len(tool.RemoveDuplicateElements(append(emails, additionalEmails...)...)) == 0 {
+		log.Errorf("[CreateBatchSendEmailTask] No email addresses provided for campaign")
+		return xerr.NewErrMsg("No email addresses found for the campaign")
 	}
 
 	scheduledAt := timeutil.Now().Add(10 * time.Second) // 默认延迟10秒执行,防止任务创建和执行时间过于接近
@@ -106,17 +109,23 @@ func (s *Service) CreateBatchSendEmailTask(ctx context.Context, req *dto.CreateB
 		RegisterEndTime:   req.RegisterEndTime,
 		Recipients:        emails,
 		Additional:        additionalEmails,
-		Scheduled:         req.Scheduled,
+		Scheduled:         scheduledAt.Unix(),
 		Interval:          req.Interval,
 		Limit:             req.Limit,
 	}
-	scopeBytes, _ := scopeInfo.Marshal()
+	scopeBytes, err := scopeInfo.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "marshal email task scope")
+	}
 
 	taskContent := task.EmailContent{
 		Subject: req.Subject,
 		Content: req.Content,
 	}
-	contentBytes, _ := taskContent.Marshal()
+	contentBytes, err := taskContent.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "marshal email task content")
+	}
 
 	var total uint64
 	if additionalEmails != nil {
@@ -130,7 +139,7 @@ func (s *Service) CreateBatchSendEmailTask(ctx context.Context, req *dto.CreateB
 		Type:    task.TypeEmail,
 		Scope:   string(scopeBytes),
 		Content: string(contentBytes),
-		Status:  0,
+		Status:  task.StatusPending,
 		Errors:  "",
 		Total:   total,
 		Current: 0,
@@ -145,6 +154,7 @@ func (s *Service) CreateBatchSendEmailTask(ctx context.Context, req *dto.CreateB
 	queueTaskID, err := s.queue.EnqueueBatchEmail(ctx, taskInfo.Id, scheduledAt)
 	if err != nil {
 		log.Errorf("[CreateBatchSendEmailTask] Failed to enqueue email task: %v", err.Error())
+		s.markTaskEnqueueFailed(ctx, taskInfo, fmt.Sprintf("enqueue email task: %v", err))
 		return xerr.NewErrCode(xerr.QueueEnqueueError)
 	}
 	log.Infof("[CreateBatchSendEmailTask] Successfully enqueued email task with ID: %s, scheduled at: %s", queueTaskID, scheduledAt.Format(time.DateTime))
@@ -153,8 +163,17 @@ func (s *Service) CreateBatchSendEmailTask(ctx context.Context, req *dto.CreateB
 }
 
 func (s *Service) GetPreSendEmailCount(ctx context.Context, req *dto.GetPreSendEmailCountRequest) (*dto.GetPreSendEmailCountResponse, error) {
+	if req == nil || req.Scope < task.ScopeAll.Int8() || req.Scope > task.ScopeSkip.Int8() {
+		return nil, xerr.NewErrMsg("invalid email scope")
+	}
+	if req.RegisterStartTime != 0 && req.RegisterEndTime != 0 && req.RegisterStartTime > req.RegisterEndTime {
+		return nil, xerr.NewErrMsg("register_start_time must not be after register_end_time")
+	}
+	if req.RegisterStartTime < 0 || req.RegisterEndTime < 0 {
+		return nil, xerr.NewErrMsg("registration timestamps must not be negative")
+	}
 	scope := task.ParseScopeType(req.Scope)
-	count, err := s.recipients.CountEmailRecipients(ctx, &user.EmailRecipientFilter{
+	emails, err := s.recipients.QueryEmailRecipients(ctx, &user.EmailRecipientFilter{
 		Scope:             scope.Int8(),
 		RegisterStartTime: req.RegisterStartTime,
 		RegisterEndTime:   req.RegisterEndTime,
@@ -163,11 +182,19 @@ func (s *Service) GetPreSendEmailCount(ctx context.Context, req *dto.GetPreSendE
 		logger.WithContext(ctx).Errorf("[GetPreSendEmailCount] Count error: %v", err)
 		return nil, xerr.NewErrMsg("Failed to count emails")
 	}
-	return &dto.GetPreSendEmailCountResponse{Count: count}, nil
+	additional, err := normalizeAdditionalEmails(req.Additional)
+	if err != nil {
+		return nil, xerr.NewErrMsg(err.Error())
+	}
+	count := len(tool.RemoveDuplicateElements(append(emails, additional...)...))
+	return &dto.GetPreSendEmailCountResponse{Count: int64(count)}, nil
 }
 
 func (s *Service) GetBatchSendEmailTaskList(ctx context.Context, req *dto.GetBatchSendEmailTaskListRequest) (*dto.GetBatchSendEmailTaskListResponse, error) {
 	log := logger.WithContext(ctx)
+	if req == nil {
+		req = &dto.GetBatchSendEmailTaskListRequest{}
+	}
 	if req.Page == 0 {
 		req.Page = 1
 	}
@@ -191,12 +218,12 @@ func (s *Service) GetBatchSendEmailTaskList(ctx context.Context, req *dto.GetBat
 		var scopeInfo task.EmailScope
 		if err = scopeInfo.Unmarshal([]byte(t.Scope)); err != nil {
 			log.Errorf("[GetBatchSendEmailTaskList] failed to unmarshal email task scope: %v", err.Error())
-			continue
+			return nil, xerr.NewErrCode(xerr.DatabaseQueryError)
 		}
 		var contentInfo task.EmailContent
 		if err = contentInfo.Unmarshal([]byte(t.Content)); err != nil {
 			log.Errorf("[GetBatchSendEmailTaskList] failed to unmarshal email task content: %v", err.Error())
-			continue
+			return nil, xerr.NewErrCode(xerr.DatabaseQueryError)
 		}
 
 		list = append(list, dto.BatchSendEmailTask{
@@ -224,7 +251,10 @@ func (s *Service) GetBatchSendEmailTaskList(ctx context.Context, req *dto.GetBat
 }
 
 func (s *Service) GetBatchSendEmailTaskStatus(ctx context.Context, req *dto.GetBatchSendEmailTaskStatusRequest) (*dto.GetBatchSendEmailTaskStatusResponse, error) {
-	taskInfo, err := s.tasks.FindOne(ctx, req.Id)
+	if req == nil || req.Id <= 0 {
+		return nil, xerr.NewErrMsg("invalid task id")
+	}
+	taskInfo, err := s.tasks.FindOneByType(ctx, req.Id, task.TypeEmail)
 	if err != nil {
 		logger.WithContext(ctx).Errorf("failed to get email task status, error: %v", err)
 		return nil, xerr.NewErrCode(xerr.DatabaseQueryError)
@@ -238,19 +268,29 @@ func (s *Service) GetBatchSendEmailTaskStatus(ctx context.Context, req *dto.GetB
 }
 
 func (s *Service) StopBatchSendEmailTask(ctx context.Context, req *dto.StopBatchSendEmailTaskRequest) error {
+	if req == nil || req.Id <= 0 {
+		return xerr.NewErrMsg("invalid task id")
+	}
+	updated, err := s.tasks.UpdateStatusFrom(ctx, req.Id, task.TypeEmail, []int8{task.StatusPending, task.StatusInProgress}, task.StatusCancelled)
+	if err != nil {
+		logger.WithContext(ctx).Errorf("failed to stop email task, error: %v", err)
+		return xerr.NewErrCode(xerr.DatabaseUpdateError)
+	}
+	if !updated {
+		return xerr.NewErrMsg("email task is not stoppable")
+	}
 	if s.stopper != nil {
 		s.stopper.StopBatchEmail(req.Id)
 	} else {
 		logger.Error("[StopBatchSendEmailTaskLogic] email worker manager is nil, cannot stop task")
 	}
-	if err := s.tasks.UpdateStatus(ctx, req.Id, 2); err != nil {
-		logger.WithContext(ctx).Errorf("failed to stop email task, error: %v", err)
-		return xerr.NewErrCode(xerr.DatabaseUpdateError)
-	}
 	return nil
 }
 
 func (s *Service) CreateQuotaTask(ctx context.Context, req *dto.CreateQuotaTaskRequest) error {
+	if err := validateQuotaRequest(req); err != nil {
+		return err
+	}
 	log := logger.WithContext(ctx)
 	subIds, err := s.selector.QuerySubscribeIdsByFilter(ctx, &usersub.SubscribeFilter{
 		Subscribers: req.Subscribers,
@@ -273,18 +313,24 @@ func (s *Service) CreateQuotaTask(ctx context.Context, req *dto.CreateQuotaTaskR
 		EndTime:     req.EndTime,
 		Objects:     subIds,
 	}
-	scopeBytes, _ := scopeInfo.Marshal()
+	scopeBytes, err := scopeInfo.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "marshal quota task scope")
+	}
 	contentInfo := task.QuotaContent{
 		ResetTraffic: req.ResetTraffic,
 		Days:         req.Days,
 		GiftType:     req.GiftType,
 		GiftValue:    req.GiftValue,
 	}
-	contentBytes, _ := contentInfo.Marshal()
+	contentBytes, err := contentInfo.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "marshal quota task content")
+	}
 
 	newTask := &task.Task{
 		Type:    task.TypeQuota,
-		Status:  0,
+		Status:  task.StatusPending,
 		Scope:   string(scopeBytes),
 		Content: string(contentBytes),
 		Total:   uint64(len(subIds)),
@@ -299,6 +345,7 @@ func (s *Service) CreateQuotaTask(ctx context.Context, req *dto.CreateQuotaTaskR
 
 	if err := s.queue.EnqueueQuota(ctx, newTask.Id); err != nil {
 		log.Errorf("[CreateQuotaTask] enqueue task error: %v", err.Error())
+		s.markTaskEnqueueFailed(ctx, newTask, fmt.Sprintf("enqueue quota task: %v", err))
 		return errors.Wrapf(xerr.NewErrCode(xerr.QueueEnqueueError), "enqueue task error")
 	}
 	logger.Infof("[CreateQuotaTask] Successfully created task with ID: %d", newTask.Id)
@@ -307,6 +354,9 @@ func (s *Service) CreateQuotaTask(ctx context.Context, req *dto.CreateQuotaTaskR
 
 func (s *Service) QueryQuotaTaskList(ctx context.Context, req *dto.QueryQuotaTaskListRequest) (*dto.QueryQuotaTaskListResponse, error) {
 	log := logger.WithContext(ctx)
+	if req == nil {
+		req = &dto.QueryQuotaTaskListRequest{}
+	}
 	if req.Page == 0 {
 		req.Page = 1
 	}
@@ -322,7 +372,7 @@ func (s *Service) QueryQuotaTaskList(ctx context.Context, req *dto.QueryQuotaTas
 	})
 	if err != nil {
 		log.Errorf("[QueryQuotaTaskList] failed to get quota tasks: %v", err)
-		return nil, err
+		return nil, xerr.NewErrCode(xerr.DatabaseQueryError)
 	}
 
 	var list []dto.QuotaTask
@@ -330,12 +380,12 @@ func (s *Service) QueryQuotaTaskList(ctx context.Context, req *dto.QueryQuotaTas
 		var scopeInfo task.QuotaScope
 		if err = scopeInfo.Unmarshal([]byte(item.Scope)); err != nil {
 			log.Errorf("[QueryQuotaTaskList] failed to unmarshal quota task scope: %v", err.Error())
-			continue
+			return nil, xerr.NewErrCode(xerr.DatabaseQueryError)
 		}
 		var contentInfo task.QuotaContent
 		if err = contentInfo.Unmarshal([]byte(item.Content)); err != nil {
 			log.Errorf("[QueryQuotaTaskList] failed to unmarshal quota task content: %v", err.Error())
-			continue
+			return nil, xerr.NewErrCode(xerr.DatabaseQueryError)
 		}
 		list = append(list, dto.QuotaTask{
 			Id:           item.Id,
@@ -361,6 +411,15 @@ func (s *Service) QueryQuotaTaskList(ctx context.Context, req *dto.QueryQuotaTas
 }
 
 func (s *Service) QueryQuotaTaskPreCount(ctx context.Context, req *dto.QueryQuotaTaskPreCountRequest) (*dto.QueryQuotaTaskPreCountResponse, error) {
+	if req == nil {
+		return nil, xerr.NewErrMsg("request is required")
+	}
+	if req.StartTime != 0 && req.EndTime != 0 && req.StartTime > req.EndTime {
+		return nil, xerr.NewErrMsg("start_time must not be after end_time")
+	}
+	if req.StartTime < 0 || req.EndTime < 0 || !validPositiveIDs(req.Subscribers) {
+		return nil, xerr.NewErrMsg("invalid quota task filter")
+	}
 	count, err := s.selector.CountSubscribesByFilter(ctx, &usersub.SubscribeFilter{
 		Subscribers: req.Subscribers,
 		IsActive:    req.IsActive,
@@ -369,12 +428,15 @@ func (s *Service) QueryQuotaTaskPreCount(ctx context.Context, req *dto.QueryQuot
 	})
 	if err != nil {
 		logger.WithContext(ctx).Errorf("[QueryQuotaTaskPreCount] count error: %v", err.Error())
-		return nil, err
+		return nil, xerr.NewErrCode(xerr.DatabaseQueryError)
 	}
 	return &dto.QueryQuotaTaskPreCountResponse{Count: count}, nil
 }
 
 func (s *Service) QueryQuotaTaskStatus(ctx context.Context, req *dto.QueryQuotaTaskStatusRequest) (*dto.QueryQuotaTaskStatusResponse, error) {
+	if req == nil || req.Id <= 0 {
+		return nil, xerr.NewErrMsg("invalid task id")
+	}
 	data, err := s.tasks.FindOneByType(ctx, req.Id, task.TypeQuota)
 	if err != nil {
 		logger.WithContext(ctx).Errorf("[QueryQuotaTaskStatus] failed to get quota task: %v", err.Error())
@@ -386,4 +448,101 @@ func (s *Service) QueryQuotaTaskStatus(ctx context.Context, req *dto.QueryQuotaT
 		Total:   int64(data.Total),
 		Errors:  data.Errors,
 	}, nil
+}
+
+func (s *Service) markTaskEnqueueFailed(ctx context.Context, data *task.Task, reason string) {
+	updateCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	updated, err := s.tasks.UpdateStatusAndErrorFrom(updateCtx, data.Id, task.Type(data.Type), []int8{task.StatusPending}, task.StatusEnqueueFailed, reason)
+	if err != nil {
+		logger.WithContext(updateCtx).Errorf("failed to record marketing task enqueue failure: %v", err)
+		return
+	}
+	if !updated {
+		logger.WithContext(updateCtx).Errorw("marketing task enqueue failed after task execution had already started",
+			logger.Field("task_id", data.Id))
+		return
+	}
+	data.Status = task.StatusEnqueueFailed
+	data.Errors = reason
+}
+
+func validateBatchEmailRequest(req *dto.CreateBatchSendEmailTaskRequest) error {
+	if req == nil {
+		return xerr.NewErrMsg("request is required")
+	}
+	if strings.TrimSpace(req.Subject) == "" || strings.TrimSpace(req.Content) == "" {
+		return xerr.NewErrMsg("email subject and content are required")
+	}
+	if req.Scope < task.ScopeAll.Int8() || req.Scope > task.ScopeSkip.Int8() {
+		return xerr.NewErrMsg("invalid email scope")
+	}
+	if req.RegisterStartTime != 0 && req.RegisterEndTime != 0 && req.RegisterStartTime > req.RegisterEndTime {
+		return xerr.NewErrMsg("register_start_time must not be after register_end_time")
+	}
+	if req.RegisterStartTime < 0 || req.RegisterEndTime < 0 {
+		return xerr.NewErrMsg("registration timestamps must not be negative")
+	}
+	if req.Scheduled < 0 {
+		return xerr.NewErrMsg("scheduled must not be negative")
+	}
+	return nil
+}
+
+func validateQuotaRequest(req *dto.CreateQuotaTaskRequest) error {
+	if req == nil {
+		return xerr.NewErrMsg("request is required")
+	}
+	if req.StartTime != 0 && req.EndTime != 0 && req.StartTime > req.EndTime {
+		return xerr.NewErrMsg("start_time must not be after end_time")
+	}
+	if req.StartTime < 0 || req.EndTime < 0 || !validPositiveIDs(req.Subscribers) {
+		return xerr.NewErrMsg("invalid quota task filter")
+	}
+	if !req.ResetTraffic && req.Days == 0 && req.GiftValue == 0 {
+		return xerr.NewErrMsg("at least one quota action is required")
+	}
+	maxInt := uint64(^uint(0) >> 1)
+	if req.Days > maxInt {
+		return xerr.NewErrMsg("days is too large")
+	}
+	if req.GiftValue == 0 {
+		if req.GiftType != 0 {
+			return xerr.NewErrMsg("gift_type requires a positive gift_value")
+		}
+		return nil
+	}
+	if req.GiftType != 1 && req.GiftType != 2 {
+		return xerr.NewErrMsg("gift_type must be fixed or ratio when gift_value is set")
+	}
+	if req.GiftValue > math.MaxInt64 {
+		return xerr.NewErrMsg("gift_value is too large")
+	}
+	return nil
+}
+
+func normalizeAdditionalEmails(raw string) ([]string, error) {
+	lines := strings.Split(strings.ReplaceAll(raw, "\r\n", "\n"), "\n")
+	emails := make([]string, 0, len(lines))
+	for _, line := range lines {
+		address := strings.TrimSpace(line)
+		if address == "" {
+			continue
+		}
+		parsed, err := mail.ParseAddress(address)
+		if err != nil || !strings.EqualFold(parsed.Address, address) {
+			return nil, fmt.Errorf("invalid additional email address: %s", address)
+		}
+		emails = append(emails, strings.ToLower(parsed.Address))
+	}
+	return tool.RemoveDuplicateElements(emails...), nil
+}
+
+func validPositiveIDs(ids []int64) bool {
+	for _, id := range ids {
+		if id <= 0 {
+			return false
+		}
+	}
+	return true
 }

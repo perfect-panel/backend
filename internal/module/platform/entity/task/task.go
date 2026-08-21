@@ -13,12 +13,21 @@ const (
 	TypeQuota
 )
 
+const (
+	StatusPending int8 = iota
+	StatusInProgress
+	StatusCompleted
+	StatusFailed
+	StatusCancelled
+	StatusEnqueueFailed
+)
+
 type Task struct {
 	Id        int64     `gorm:"primaryKey;autoIncrement;comment:ID"`
 	Type      int8      `gorm:"not null;comment:Task Type"`
 	Scope     string    `gorm:"type:text;comment:Task Scope"`
 	Content   string    `gorm:"type:text;comment:Task Content"`
-	Status    int8      `gorm:"not null;default:0;comment:Task Status: 0: Pending, 1: In Progress, 2: Completed, 3: Failed"`
+	Status    int8      `gorm:"not null;default:0;comment:Task Status: 0: Pending, 1: In Progress, 2: Completed, 3: Failed, 4: Cancelled, 5: Enqueue Failed"`
 	Errors    string    `gorm:"type:text;comment:Task Errors"`
 	Total     uint64    `gorm:"column:total;not null;default:0;comment:Total Number"`
 	Current   uint64    `gorm:"column:current;not null;default:0;comment:Current Number"`
@@ -62,6 +71,8 @@ type EmailScope struct {
 	Scheduled         int64    `json:"scheduled"`  // scheduled time (unix timestamp)
 	Interval          uint8    `json:"interval"`   // interval in seconds
 	Limit             uint64   `json:"limit"`      // daily send limit
+	DailySent         uint64   `json:"daily_sent,omitempty"`
+	DailyDate         string   `json:"daily_date,omitempty"`
 }
 
 func (s *EmailScope) Marshal() ([]byte, error) {

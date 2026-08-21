@@ -21,33 +21,33 @@ type BatchSendEmailTask struct {
 }
 
 type CreateBatchSendEmailTaskRequest struct {
-	Subject           string `json:"subject"`
-	Content           string `json:"content"`
-	Scope             int8   `json:"scope"`
-	RegisterStartTime int64  `json:"register_start_time,omitempty"`
-	RegisterEndTime   int64  `json:"register_end_time,omitempty"`
+	Subject           string `json:"subject" validate:"required"`
+	Content           string `json:"content" validate:"required"`
+	Scope             int8   `json:"scope" validate:"required,oneof=1 2 3 4 5"`
+	RegisterStartTime int64  `json:"register_start_time,omitempty" validate:"gte=0"`
+	RegisterEndTime   int64  `json:"register_end_time,omitempty" validate:"gte=0"`
 	Additional        string `json:"additional,omitempty"`
-	Scheduled         int64  `json:"scheduled,omitempty"`
+	Scheduled         int64  `json:"scheduled,omitempty" validate:"gte=0"`
 	Interval          uint8  `json:"interval,omitempty"`
 	Limit             uint64 `json:"limit,omitempty"`
 }
 
 type CreateQuotaTaskRequest struct {
-	Subscribers  []int64 `json:"subscribers"`
+	Subscribers  []int64 `json:"subscribers" validate:"dive,gt=0"`
 	IsActive     *bool   `json:"is_active"`
-	StartTime    int64   `json:"start_time"`
-	EndTime      int64   `json:"end_time"`
+	StartTime    int64   `json:"start_time" validate:"gte=0"`
+	EndTime      int64   `json:"end_time" validate:"gte=0"`
 	ResetTraffic bool    `json:"reset_traffic"`
 	Days         uint64  `json:"days"`
-	GiftType     uint8   `json:"gift_type"`
+	GiftType     uint8   `json:"gift_type" validate:"oneof=0 1 2"`
 	GiftValue    uint64  `json:"gift_value"`
 }
 
 type GetBatchSendEmailTaskListRequest struct {
-	Page   int    `form:"page" validate:"required,gt=0"`
-	Size   int    `form:"size" validate:"required,gt=0,lte=100"`
-	Scope  *int8  `form:"scope,omitempty"`
-	Status *uint8 `form:"status,omitempty"`
+	Page   int    `form:"page" validate:"omitempty,gt=0"`
+	Size   int    `form:"size" validate:"omitempty,gt=0,lte=100"`
+	Scope  *int8  `form:"scope,omitempty" validate:"omitempty,oneof=1 2 3 4 5"`
+	Status *uint8 `form:"status,omitempty" validate:"omitempty,oneof=0 1 2 3 4 5"`
 }
 
 type GetBatchSendEmailTaskListResponse struct {
@@ -56,7 +56,7 @@ type GetBatchSendEmailTaskListResponse struct {
 }
 
 type GetBatchSendEmailTaskStatusRequest struct {
-	Id int64 `json:"id"`
+	Id int64 `json:"id" validate:"required,gt=0"`
 }
 
 type GetBatchSendEmailTaskStatusResponse struct {
@@ -67,9 +67,10 @@ type GetBatchSendEmailTaskStatusResponse struct {
 }
 
 type GetPreSendEmailCountRequest struct {
-	Scope             int8  `json:"scope"`
-	RegisterStartTime int64 `json:"register_start_time,omitempty"`
-	RegisterEndTime   int64 `json:"register_end_time,omitempty"`
+	Scope             int8   `json:"scope" validate:"required,oneof=1 2 3 4 5"`
+	RegisterStartTime int64  `json:"register_start_time,omitempty"`
+	RegisterEndTime   int64  `json:"register_end_time,omitempty"`
+	Additional        string `json:"additional,omitempty"`
 }
 
 type GetPreSendEmailCountResponse struct {
@@ -77,9 +78,9 @@ type GetPreSendEmailCountResponse struct {
 }
 
 type QueryQuotaTaskListRequest struct {
-	Page   int    `form:"page" validate:"required,gt=0"`
-	Size   int    `form:"size" validate:"required,gt=0,lte=100"`
-	Status *uint8 `form:"status,omitempty"`
+	Page   int    `form:"page" validate:"omitempty,gt=0"`
+	Size   int    `form:"size" validate:"omitempty,gt=0,lte=100"`
+	Status *uint8 `form:"status,omitempty" validate:"omitempty,oneof=0 1 2 3 4 5"`
 }
 
 type QueryQuotaTaskListResponse struct {
@@ -90,8 +91,8 @@ type QueryQuotaTaskListResponse struct {
 type QueryQuotaTaskPreCountRequest struct {
 	Subscribers []int64 `json:"subscribers"`
 	IsActive    *bool   `json:"is_active"`
-	StartTime   int64   `json:"start_time"`
-	EndTime     int64   `json:"end_time"`
+	StartTime   int64   `json:"start_time" validate:"gte=0"`
+	EndTime     int64   `json:"end_time" validate:"gte=0"`
 }
 
 type QueryQuotaTaskPreCountResponse struct {
@@ -99,7 +100,7 @@ type QueryQuotaTaskPreCountResponse struct {
 }
 
 type QueryQuotaTaskStatusRequest struct {
-	Id int64 `json:"id"`
+	Id int64 `json:"id" validate:"required,gt=0"`
 }
 
 type QueryQuotaTaskStatusResponse struct {
@@ -129,5 +130,5 @@ type QuotaTask struct {
 }
 
 type StopBatchSendEmailTaskRequest struct {
-	Id int64 `json:"id"`
+	Id int64 `json:"id" validate:"required,gt=0"`
 }

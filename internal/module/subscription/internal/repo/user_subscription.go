@@ -691,8 +691,23 @@ func subscribeFilterQuery(conn *gorm.DB, filter *usersub.SubscribeFilter) *gorm.
 	if len(filter.Subscribers) > 0 {
 		query = query.Where("subscribe_id IN ?", filter.Subscribers)
 	}
-	if filter.IsActive != nil && *filter.IsActive {
-		query = query.Where("status IN ?", []int64{0, 1, 2})
+	if filter.IsActive != nil {
+		if *filter.IsActive {
+			query = query.Where("status IN ?", []int64{
+				int64(usersub.SubscribeStatusPending),
+				int64(usersub.SubscribeStatusActive),
+				int64(usersub.SubscribeStatusFinished),
+			})
+		} else {
+			query = query.Where("status IN ?", []int64{
+				int64(usersub.SubscribeStatusExpired),
+				int64(usersub.SubscribeStatusStopped),
+			})
+		}
+	} else {
+		// Deducted subscriptions were refunded/cancelled and must never receive
+		// marketing quota grants, even when no activity filter was supplied.
+		query = query.Where("status <> ?", usersub.SubscribeStatusDeducted)
 	}
 	if filter.StartTime != 0 {
 		query = query.Where("start_time <= ?", time.UnixMilli(filter.StartTime))

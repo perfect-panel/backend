@@ -57,7 +57,10 @@ type TaskRepo interface {
 	FindOneByType(ctx context.Context, id int64, typ task.Type) (*task.Task, error)
 	QueryTaskList(ctx context.Context, filter *task.Filter) (int64, []*task.Task, error)
 	Update(ctx context.Context, data *task.Task) error
+	UpdateActive(ctx context.Context, data *task.Task) (bool, error)
 	UpdateStatus(ctx context.Context, id int64, status int8) error
+	UpdateStatusFrom(ctx context.Context, id int64, typ task.Type, from []int8, status int8) (bool, error)
+	UpdateStatusAndErrorFrom(ctx context.Context, id int64, typ task.Type, from []int8, status int8, taskError string) (bool, error)
 }
 
 // ClientRepo subscribe application 数据访问接口

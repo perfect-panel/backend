@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"github.com/perfect-panel/server/internal/repository"
 
 	"github.com/perfect-panel/server/internal/module/platform/entity/task"
@@ -67,7 +68,7 @@ func (m *taskRepo) QueryTaskList(ctx context.Context, filter *task.Filter) (int6
 		for _, item := range all {
 			var scope task.EmailScope
 			if err := scope.Unmarshal([]byte(item.Scope)); err != nil {
-				continue
+				return 0, nil, fmt.Errorf("decode task %d scope: %w", item.Id, err)
 			}
 			if scope.Type == *filter.Scope {
 				filtered = append(filtered, item)
@@ -98,6 +99,30 @@ func (m *taskRepo) Update(ctx context.Context, data *task.Task) error {
 	return m.db.WithContext(ctx).Where("id = ?", data.Id).Save(data).Error
 }
 
+func (m *taskRepo) UpdateActive(ctx context.Context, data *task.Task) (bool, error) {
+	result := m.db.WithContext(ctx).Model(&task.Task{}).
+		Where("id = ? AND type = ? AND status IN ?", data.Id, data.Type, []int8{task.StatusPending, task.StatusInProgress}).
+		Updates(map[string]interface{}{
+			"scope": data.Scope, "content": data.Content, "status": data.Status,
+			"errors": data.Errors, "total": data.Total, "current": data.Current,
+		})
+	return result.RowsAffected == 1, result.Error
+}
+
 func (m *taskRepo) UpdateStatus(ctx context.Context, id int64, status int8) error {
 	return m.db.WithContext(ctx).Model(&task.Task{}).Where("id = ?", id).Update("status", status).Error
+}
+
+func (m *taskRepo) UpdateStatusFrom(ctx context.Context, id int64, typ task.Type, from []int8, status int8) (bool, error) {
+	result := m.db.WithContext(ctx).Model(&task.Task{}).
+		Where("id = ? AND type = ? AND status IN ?", id, typ, from).
+		Update("status", status)
+	return result.RowsAffected == 1, result.Error
+}
+
+func (m *taskRepo) UpdateStatusAndErrorFrom(ctx context.Context, id int64, typ task.Type, from []int8, status int8, taskError string) (bool, error) {
+	result := m.db.WithContext(ctx).Model(&task.Task{}).
+		Where("id = ? AND type = ? AND status IN ?", id, typ, from).
+		Updates(map[string]interface{}{"status": status, "errors": taskError})
+	return result.RowsAffected == 1, result.Error
 }

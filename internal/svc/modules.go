@@ -573,18 +573,37 @@ type marketingQueue struct {
 }
 
 func (q marketingQueue) EnqueueBatchEmail(ctx context.Context, taskID int64, processAt time.Time) (string, error) {
+	queueTaskID := fmt.Sprintf("marketing-email-%d-initial", taskID)
 	t := asynq.NewTask(queuetypes.ScheduledBatchSendEmail, []byte(strconv.FormatInt(taskID, 10)))
-	info, err := q.client.EnqueueContext(ctx, t, asynq.ProcessAt(processAt))
-	if err != nil {
+	if err := q.enqueueIdempotent(ctx, t, queueTaskID, asynq.ProcessAt(processAt)); err != nil {
 		return "", err
 	}
-	return info.ID, nil
+	return queueTaskID, nil
 }
 
 func (q marketingQueue) EnqueueQuota(ctx context.Context, taskID int64) error {
 	t := asynq.NewTask(queuetypes.ForthwithQuotaTask, []byte(strconv.FormatInt(taskID, 10)))
-	_, err := q.client.EnqueueContext(ctx, t)
-	return err
+	return q.enqueueIdempotent(ctx, t, fmt.Sprintf("marketing-quota-%d", taskID))
+}
+
+// enqueueIdempotent retries once with the same task ID on a detached bounded
+// context. This resolves the common "Redis accepted the write but the client
+// lost the response" case as an ID conflict instead of falsely abandoning a
+// durable database task.
+func (q marketingQueue) enqueueIdempotent(ctx context.Context, t *asynq.Task, taskID string, opts ...asynq.Option) error {
+	options := append(append([]asynq.Option{}, opts...), asynq.TaskID(taskID))
+	_, err := q.client.EnqueueContext(ctx, t, options...)
+	if err == nil || errors.Is(err, asynq.ErrTaskIDConflict) {
+		return nil
+	}
+
+	retryCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	_, retryErr := q.client.EnqueueContext(retryCtx, t, options...)
+	if retryErr == nil || errors.Is(retryErr, asynq.ErrTaskIDConflict) {
+		return nil
+	}
+	return errors.Join(err, retryErr)
 }
 
 // emailWorkerStopper adapts the global batch-email worker manager to the
