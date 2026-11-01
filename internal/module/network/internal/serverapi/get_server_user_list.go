@@ -178,6 +178,18 @@ func (s *Service) servedUsers(ctx context.Context, server *node.Server, protocol
 // read from that endpoint's cache. A miss rebuilds and caches the list as the
 // endpoint does, so checking a traffic report costs no per-entry lookups.
 func (s *Service) servedSubscriptionIDs(ctx context.Context, serverID int64, protocol string) (map[int64]struct{}, error) {
+	users, err := s.servedServerUsers(ctx, serverID, protocol)
+	if err != nil {
+		return nil, err
+	}
+	ids := make(map[int64]struct{}, len(users))
+	for _, user := range users {
+		ids[user.Id] = struct{}{}
+	}
+	return ids, nil
+}
+
+func (s *Service) servedServerUsers(ctx context.Context, serverID int64, protocol string) ([]dto.ServerUser, error) {
 	var users []dto.ServerUser
 	cached, err := s.deps.Redis.Get(ctx, serverUserListCacheKey(serverID, protocol)).Result()
 	switch {
@@ -200,11 +212,7 @@ func (s *Service) servedSubscriptionIDs(ctx context.Context, serverID int64, pro
 			return nil, err
 		}
 	}
-	ids := make(map[int64]struct{}, len(users))
-	for _, user := range users {
-		ids[user.Id] = struct{}{}
-	}
-	return ids, nil
+	return users, nil
 }
 
 // withoutPlaceholder drops the stand-in user of a cached empty list. Its id

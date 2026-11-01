@@ -54,6 +54,21 @@ type GetServerUserListResponse struct {
 	Users []ServerUser `json:"users"`
 }
 
+type GetServerAliveListResponse struct {
+	Alive map[int64]int64 `json:"alive"`
+}
+
+type ClaimServerDeviceRequest struct {
+	ServerCommon
+	SID int64  `json:"uid" validate:"required,gt=0"`
+	IP  string `json:"ip" validate:"required"`
+}
+
+type ClaimServerDeviceResponse struct {
+	Allowed    bool  `json:"allowed"`
+	TTLSeconds int64 `json:"ttl_seconds"`
+}
+
 type ServerNodeConfigValues struct {
 	IPStrategy string         `json:"ip_strategy"`
 	DNS        []NodeDNS      `json:"dns"`

@@ -12,6 +12,8 @@ func registerServerRoutes(router *server.Hertz, deps Dependencies) {
 	serverGroup.POST("/push", serverHandler.ServerPushUserTrafficHandler(deps.Network))
 	serverGroup.POST("/status", serverHandler.ServerPushStatusHandler(deps.Network))
 	serverGroup.GET("/user", serverHandler.GetServerUserListHandler(deps.Network))
+	serverGroup.GET("/alivelist", serverHandler.GetServerAliveListHandler(deps.Network))
+	serverGroup.POST("/device", serverHandler.ClaimServerDeviceHandler(deps.Network))
 
 	router.GET("/v2/server/:server_id", serverHandler.QueryServerProtocolConfigHandler(deps.Network, deps.nodeSecret))
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 
 	dto "github.com/perfect-panel/server/internal/module/network/contract"
 	"github.com/perfect-panel/server/internal/module/network/entity/node"
@@ -15,9 +16,6 @@ import (
 const (
 	// maxOnlineUsersPerReport bounds the entries of one report.
 	maxOnlineUsersPerReport = 10000
-	// maxOnlineIPsPerSubscription bounds the addresses one report records
-	// for one subscription.
-	maxOnlineIPsPerSubscription = 64
 	// maxIPTextLength is the longest textual IP address, an IPv4-mapped
 	// IPv6 address written out.
 	maxIPTextLength = 45
@@ -75,10 +73,11 @@ func (s *Service) PushOnlineUsers(ctx context.Context, req *dto.OnlineUsersReque
 			}
 			continue
 		}
-		if len(onlineUsers[user.SID]) >= maxOnlineIPsPerSubscription {
+		address := addresses[i].String()
+		if slices.Contains(onlineUsers[user.SID], address) {
 			continue
 		}
-		onlineUsers[user.SID] = append(onlineUsers[user.SID], addresses[i].String())
+		onlineUsers[user.SID] = append(onlineUsers[user.SID], address)
 	}
 	if unserved > 0 {
 		// A few are expected around a user-list refresh; many point at a
@@ -98,5 +97,5 @@ func (s *Service) PushOnlineUsers(ctx context.Context, req *dto.OnlineUsersReque
 		log.Errorw("[PushOnlineUsers] cache operation error", logger.Field("error", err))
 		return err
 	}
-	return nil
+	return s.renewOnlineDevices(ctx, onlineUsers)
 }

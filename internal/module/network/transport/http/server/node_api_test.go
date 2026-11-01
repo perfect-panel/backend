@@ -40,6 +40,8 @@ type nodeService struct {
 	config    *dto.GetServerConfigResponse
 	users     *dto.GetServerUserListResponse
 	protocols *dto.QueryServerConfigResponse
+	alive     *dto.GetServerAliveListResponse
+	claim     *dto.ClaimServerDeviceResponse
 	// headers is the response metadata the pulls return, with or without an
 	// error, as the facade does.
 	headers map[string]string
@@ -86,6 +88,16 @@ func (s *nodeService) PushOnlineUsers(_ context.Context, req *dto.OnlineUsersReq
 	return s.err
 }
 
+func (s *nodeService) GetServerAliveList(_ context.Context, req *dto.GetServerUserListRequest) (*dto.GetServerAliveListResponse, error) {
+	s.record(req)
+	return s.alive, s.err
+}
+
+func (s *nodeService) ClaimServerDevice(_ context.Context, req *dto.ClaimServerDeviceRequest) (*dto.ClaimServerDeviceResponse, error) {
+	s.record(req)
+	return s.claim, s.err
+}
+
 func (s *nodeService) ServerPushStatus(_ context.Context, req *dto.ServerPushStatusRequest) error {
 	s.record(req)
 	return s.err
@@ -109,6 +121,8 @@ func nodeAPI(svc *nodeService, secret string) *route.Engine {
 	group.POST("/push", ServerPushUserTrafficHandler(svc))
 	group.POST("/status", ServerPushStatusHandler(svc))
 	group.GET("/user", GetServerUserListHandler(svc))
+	group.GET("/alivelist", GetServerAliveListHandler(svc))
+	group.POST("/device", ClaimServerDeviceHandler(svc))
 	h.GET("/v2/server/:server_id", QueryServerProtocolConfigHandler(svc, nodeSecret))
 	return h.Engine
 }
@@ -240,6 +254,8 @@ func TestServerMiddleware_forbidsRequestsWithoutTheNodeSecret(t *testing.T) {
 	routes := []struct{ method, path string }{
 		{http.MethodGet, "/v1/server/config"},
 		{http.MethodGet, "/v1/server/user"},
+		{http.MethodGet, "/v1/server/alivelist"},
+		{http.MethodPost, "/v1/server/device"},
 		{http.MethodPost, "/v1/server/online"},
 		{http.MethodPost, "/v1/server/push"},
 		{http.MethodPost, "/v1/server/status"},

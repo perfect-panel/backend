@@ -1,0 +1,42 @@
+package server
+
+import (
+	"net/http"
+	"testing"
+
+	"github.com/cloudwego/hertz/pkg/common/ut"
+
+	serverv1 "github.com/perfect-panel/server/api/server/v1"
+	dto "github.com/perfect-panel/server/internal/module/network/contract"
+	"google.golang.org/protobuf/proto"
+)
+
+func TestDeviceEndpointsJSONAndProtobuf(t *testing.T) {
+	svc := &nodeService{alive: &dto.GetServerAliveListResponse{Alive: map[int64]int64{21: 2}}, claim: &dto.ClaimServerDeviceResponse{Allowed: true, TTLSeconds: 300}}
+	h := nodeAPI(svc, testNodeSecret)
+	resp := send(h, http.MethodGet, "/v1/server/alivelist"+reportQuery, nil)
+	assertStatus(t, resp, 200)
+	assertJSON(t, resp.Body(), `{"alive":{"21":2}}`)
+	resp = send(h, http.MethodGet, "/v1/server/alivelist"+reportQuery, nil, acceptProtobuf)
+	var alive serverv1.GetServerAliveListResponse
+	if err := proto.Unmarshal(resp.Body(), &alive); err != nil || alive.Code != 200 || alive.GetData().GetAlive()[21] != 2 {
+		t.Fatalf("protobuf counts: %+v, %v", &alive, err)
+	}
+	for _, binary := range []bool{false, true} {
+		svc.calls = 0
+		body := []byte(`{"uid":21,"ip":"127.0.0.1","server_id":999}`)
+		if binary {
+			body, _ = proto.Marshal(&serverv1.ClaimServerDeviceRequest{UserId: 21, Ip: "127.0.0.1"})
+			resp = send(h, http.MethodPost, "/v1/server/device"+reportQuery, body, ut.Header{Key: "Content-Type", Value: protobufContentType}, acceptProtobuf)
+			var claim serverv1.ClaimServerDeviceResponse
+			if err := proto.Unmarshal(resp.Body(), &claim); err != nil || claim.Code != 200 || !claim.GetData().GetAllowed() || claim.GetData().GetTtlSeconds() != 300 {
+				t.Fatalf("protobuf claim: %+v, %v", &claim, err)
+			}
+		} else {
+			resp = send(h, http.MethodPost, "/v1/server/device"+reportQuery, body, jsonContent)
+			assertJSON(t, resp.Body(), `{"allowed":true,"ttl_seconds":300}`)
+		}
+		want := &dto.ClaimServerDeviceRequest{ServerCommon: dto.ServerCommon{ServerId: 7, Protocol: "vless", SecretKey: testNodeSecret}, SID: 21, IP: "127.0.0.1"}
+		assertFacadeRequest(t, svc, want)
+	}
+}

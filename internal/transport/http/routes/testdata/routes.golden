@@ -1,6 +1,7 @@
 GET /v1/subscribe/config github.com/perfect-panel/server/internal/module/subscription/transport/http.SubscribeHandler
 GET /v1/server/config github.com/perfect-panel/server/internal/module/network/transport/http/server.GetServerConfigHandler
 GET /v1/server/user github.com/perfect-panel/server/internal/module/network/transport/http/server.GetServerUserListHandler
+GET /v1/server/alivelist github.com/perfect-panel/server/internal/module/network/transport/http/server.GetServerAliveListHandler
 GET /v1/app/ws/:userid/:identifier github.com/perfect-panel/server/internal/transport/devicesocket.Handler
 GET /v1/admin/ads/detail github.com/perfect-panel/server/internal/module/support/transport/http/admin/ads.GetAdsDetailHandler
 GET /v1/admin/ads/list github.com/perfect-panel/server/internal/module/support/transport/http/admin/ads.GetAdsListHandler
@@ -118,6 +119,7 @@ GET /v2/public/orders/:orderNo/events github.com/perfect-panel/server/internal/m
 POST /v1/server/online github.com/perfect-panel/server/internal/module/network/transport/http/server.PushOnlineUsersHandler
 POST /v1/server/push github.com/perfect-panel/server/internal/module/network/transport/http/server.ServerPushUserTrafficHandler
 POST /v1/server/status github.com/perfect-panel/server/internal/module/network/transport/http/server.ServerPushStatusHandler
+POST /v1/server/device github.com/perfect-panel/server/internal/module/network/transport/http/server.ClaimServerDeviceHandler
 POST /v1/admin/ads/ github.com/perfect-panel/server/internal/module/support/transport/http/admin/ads.CreateAdsHandler
 POST /v1/admin/announcement/ github.com/perfect-panel/server/internal/module/support/transport/http/admin/announcement.CreateAnnouncementHandler
 POST /v1/admin/application/ github.com/perfect-panel/server/internal/module/subscription/transport/http/admin/application.CreateSubscribeApplicationHandler

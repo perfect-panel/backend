@@ -100,20 +100,20 @@ func oversizedOnlineRequest() *dto.OnlineUsersRequest {
 	return onlineRequest(users...)
 }
 
-// One subscription keeps at most maxOnlineIPsPerSubscription addresses per
-// report.
-func TestPushOnlineUsersBoundsTheAddressesPerSubscription(t *testing.T) {
+// The request-wide bound remains, but legitimate device limits above 64
+// must not silently lose heartbeat renewals for the remaining addresses.
+func TestPushOnlineUsersKeepsAllUniqueAddressesWithinReportBound(t *testing.T) {
 	deps, _, _ := newScopeDeps(t)
 	recorder := &onlineRecorder{}
 	deps.Online = recorder
-	users := make([]dto.OnlineUser, 0, maxOnlineIPsPerSubscription+10)
-	for i := range maxOnlineIPsPerSubscription + 10 {
+	users := make([]dto.OnlineUser, 0, 74)
+	for i := range 74 {
 		users = append(users, dto.OnlineUser{SID: 21, IP: fmt.Sprintf("10.0.%d.%d", i/256, i%256)})
 	}
 	if err := NewService(deps).PushOnlineUsers(context.Background(), onlineRequest(users...)); err != nil {
 		t.Fatalf("PushOnlineUsers: %v", err)
 	}
-	if got := len(recorder.server[21]); got != maxOnlineIPsPerSubscription {
-		t.Fatalf("recorded %d addresses for one subscription, want %d", got, maxOnlineIPsPerSubscription)
+	if got := len(recorder.server[21]); got != 74 {
+		t.Fatalf("recorded %d addresses for one subscription, want 74", got)
 	}
 }

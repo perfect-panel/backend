@@ -11106,6 +11106,48 @@
                 }
             }
         },
+        "/v1/server/alivelist": {
+            "get": {
+                "security": [
+                    {
+                        "NodeSecret": []
+                    }
+                ],
+                "produces": [
+                    "application/json",
+                    "application/protobuf"
+                ],
+                "tags": [
+                    "node"
+                ],
+                "summary": "Get online device counts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "protocol",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "secret_key",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "server_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.GetServerAliveListResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/server/config": {
             "get": {
                 "security": [
@@ -11146,6 +11188,46 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.GetServerConfigResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/server/device": {
+            "post": {
+                "security": [
+                    {
+                        "NodeSecret": []
+                    }
+                ],
+                "consumes": [
+                    "application/json",
+                    "application/protobuf"
+                ],
+                "produces": [
+                    "application/json",
+                    "application/protobuf"
+                ],
+                "tags": [
+                    "node"
+                ],
+                "summary": "Claim an online device slot",
+                "parameters": [
+                    {
+                        "description": "Device claim",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ClaimServerDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ClaimServerDeviceResponse"
                         }
                     }
                 }
@@ -12249,6 +12331,41 @@
                         "balance"
                     ],
                     "example": "url"
+                }
+            }
+        },
+        "dto.ClaimServerDeviceRequest": {
+            "type": "object",
+            "required": [
+                "ip",
+                "uid"
+            ],
+            "properties": {
+                "ip": {
+                    "type": "string"
+                },
+                "protocol": {
+                    "type": "string"
+                },
+                "secret_key": {
+                    "type": "string"
+                },
+                "server_id": {
+                    "type": "integer"
+                },
+                "uid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.ClaimServerDeviceResponse": {
+            "type": "object",
+            "properties": {
+                "allowed": {
+                    "type": "boolean"
+                },
+                "ttl_seconds": {
+                    "type": "integer"
                 }
             }
         },
@@ -14001,6 +14118,18 @@
             "properties": {
                 "count": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.GetServerAliveListResponse": {
+            "type": "object",
+            "properties": {
+                "alive": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
                 }
             }
         },

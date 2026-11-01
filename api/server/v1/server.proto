@@ -226,3 +226,26 @@ message QueryServerProtocolConfigResponse {
   string message = 2;
   QueryServerProtocolConfigData data = 3;
 }
+
+// Global device counts are keyed by subscription ID, as in ServerUser.id.
+message ServerAliveListData {
+  map<int64, int64> alive = 1;
+}
+message GetServerAliveListResponse {
+  uint32 code = 1;
+  string message = 2;
+  ServerAliveListData data = 3;
+}
+message ClaimServerDeviceRequest {
+  int64 user_id = 1;
+  string ip = 2;
+}
+message ServerDeviceClaimData {
+  bool allowed = 1;
+  int64 ttl_seconds = 2;
+}
+message ClaimServerDeviceResponse {
+  uint32 code = 1;
+  string message = 2;
+  ServerDeviceClaimData data = 3;
+}

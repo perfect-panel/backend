@@ -49,6 +49,8 @@ type Service interface {
 	GetServerUserList(ctx context.Context, req *dto.GetServerUserListRequest, meta RequestMeta) (*dto.GetServerUserListResponse, ResponseMeta, error)
 	QueryServerProtocolConfig(ctx context.Context, req *dto.QueryServerConfigRequest) (*dto.QueryServerConfigResponse, error)
 	PushOnlineUsers(ctx context.Context, req *dto.OnlineUsersRequest) error
+	GetServerAliveList(ctx context.Context, req *dto.GetServerUserListRequest) (*dto.GetServerAliveListResponse, error)
+	ClaimServerDevice(ctx context.Context, req *dto.ClaimServerDeviceRequest) (*dto.ClaimServerDeviceResponse, error)
 	ServerPushStatus(ctx context.Context, req *dto.ServerPushStatusRequest) error
 	ServerPushUserTraffic(ctx context.Context, req *dto.ServerPushUserTrafficRequest) error
 
@@ -247,6 +249,14 @@ func (s *service) QueryServerProtocolConfig(ctx context.Context, req *dto.QueryS
 
 func (s *service) PushOnlineUsers(ctx context.Context, req *dto.OnlineUsersRequest) error {
 	return s.api.PushOnlineUsers(ctx, req)
+}
+
+func (s *service) GetServerAliveList(ctx context.Context, req *dto.GetServerUserListRequest) (*dto.GetServerAliveListResponse, error) {
+	return s.api.GetServerAliveList(ctx, req)
+}
+
+func (s *service) ClaimServerDevice(ctx context.Context, req *dto.ClaimServerDeviceRequest) (*dto.ClaimServerDeviceResponse, error) {
+	return s.api.ClaimServerDevice(ctx, req)
 }
 
 func (s *service) ServerPushStatus(ctx context.Context, req *dto.ServerPushStatusRequest) error {

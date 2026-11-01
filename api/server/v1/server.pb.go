@@ -1855,6 +1855,275 @@ func (x *QueryServerProtocolConfigResponse) GetData() *QueryServerProtocolConfig
 	return nil
 }
 
+// Global device counts are keyed by subscription ID, as in ServerUser.id.
+type ServerAliveListData struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Alive         map[int64]int64        `protobuf:"bytes,1,rep,name=alive,proto3" json:"alive,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServerAliveListData) Reset() {
+	*x = ServerAliveListData{}
+	mi := &file_api_server_v1_server_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerAliveListData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerAliveListData) ProtoMessage() {}
+
+func (x *ServerAliveListData) ProtoReflect() protoreflect.Message {
+	mi := &file_api_server_v1_server_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerAliveListData.ProtoReflect.Descriptor instead.
+func (*ServerAliveListData) Descriptor() ([]byte, []int) {
+	return file_api_server_v1_server_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ServerAliveListData) GetAlive() map[int64]int64 {
+	if x != nil {
+		return x.Alive
+	}
+	return nil
+}
+
+type GetServerAliveListResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          uint32                 `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Data          *ServerAliveListData   `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetServerAliveListResponse) Reset() {
+	*x = GetServerAliveListResponse{}
+	mi := &file_api_server_v1_server_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetServerAliveListResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetServerAliveListResponse) ProtoMessage() {}
+
+func (x *GetServerAliveListResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_server_v1_server_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetServerAliveListResponse.ProtoReflect.Descriptor instead.
+func (*GetServerAliveListResponse) Descriptor() ([]byte, []int) {
+	return file_api_server_v1_server_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GetServerAliveListResponse) GetCode() uint32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *GetServerAliveListResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *GetServerAliveListResponse) GetData() *ServerAliveListData {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+type ClaimServerDeviceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int64                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Ip            string                 `protobuf:"bytes,2,opt,name=ip,proto3" json:"ip,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClaimServerDeviceRequest) Reset() {
+	*x = ClaimServerDeviceRequest{}
+	mi := &file_api_server_v1_server_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimServerDeviceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimServerDeviceRequest) ProtoMessage() {}
+
+func (x *ClaimServerDeviceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_server_v1_server_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimServerDeviceRequest.ProtoReflect.Descriptor instead.
+func (*ClaimServerDeviceRequest) Descriptor() ([]byte, []int) {
+	return file_api_server_v1_server_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ClaimServerDeviceRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *ClaimServerDeviceRequest) GetIp() string {
+	if x != nil {
+		return x.Ip
+	}
+	return ""
+}
+
+type ServerDeviceClaimData struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Allowed       bool                   `protobuf:"varint,1,opt,name=allowed,proto3" json:"allowed,omitempty"`
+	TtlSeconds    int64                  `protobuf:"varint,2,opt,name=ttl_seconds,json=ttlSeconds,proto3" json:"ttl_seconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ServerDeviceClaimData) Reset() {
+	*x = ServerDeviceClaimData{}
+	mi := &file_api_server_v1_server_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ServerDeviceClaimData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ServerDeviceClaimData) ProtoMessage() {}
+
+func (x *ServerDeviceClaimData) ProtoReflect() protoreflect.Message {
+	mi := &file_api_server_v1_server_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ServerDeviceClaimData.ProtoReflect.Descriptor instead.
+func (*ServerDeviceClaimData) Descriptor() ([]byte, []int) {
+	return file_api_server_v1_server_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ServerDeviceClaimData) GetAllowed() bool {
+	if x != nil {
+		return x.Allowed
+	}
+	return false
+}
+
+func (x *ServerDeviceClaimData) GetTtlSeconds() int64 {
+	if x != nil {
+		return x.TtlSeconds
+	}
+	return 0
+}
+
+type ClaimServerDeviceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          uint32                 `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Data          *ServerDeviceClaimData `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClaimServerDeviceResponse) Reset() {
+	*x = ClaimServerDeviceResponse{}
+	mi := &file_api_server_v1_server_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimServerDeviceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimServerDeviceResponse) ProtoMessage() {}
+
+func (x *ClaimServerDeviceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_server_v1_server_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimServerDeviceResponse.ProtoReflect.Descriptor instead.
+func (*ClaimServerDeviceResponse) Descriptor() ([]byte, []int) {
+	return file_api_server_v1_server_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *ClaimServerDeviceResponse) GetCode() uint32 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *ClaimServerDeviceResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ClaimServerDeviceResponse) GetData() *ServerDeviceClaimData {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
 var File_api_server_v1_server_proto protoreflect.FileDescriptor
 
 const file_api_server_v1_server_proto_rawDesc = "" +
@@ -2054,7 +2323,28 @@ const file_api_server_v1_server_proto_rawDesc = "" +
 	"!QueryServerProtocolConfigResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\rR\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12C\n" +
-	"\x04data\x18\x03 \x01(\v2/.ppanel.server.v1.QueryServerProtocolConfigDataR\x04dataB8Z6github.com/perfect-panel/server/api/server/v1;serverv1b\x06proto3"
+	"\x04data\x18\x03 \x01(\v2/.ppanel.server.v1.QueryServerProtocolConfigDataR\x04data\"\x97\x01\n" +
+	"\x13ServerAliveListData\x12F\n" +
+	"\x05alive\x18\x01 \x03(\v20.ppanel.server.v1.ServerAliveListData.AliveEntryR\x05alive\x1a8\n" +
+	"\n" +
+	"AliveEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x03R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\x85\x01\n" +
+	"\x1aGetServerAliveListResponse\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\rR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x129\n" +
+	"\x04data\x18\x03 \x01(\v2%.ppanel.server.v1.ServerAliveListDataR\x04data\"C\n" +
+	"\x18ClaimServerDeviceRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x03R\x06userId\x12\x0e\n" +
+	"\x02ip\x18\x02 \x01(\tR\x02ip\"R\n" +
+	"\x15ServerDeviceClaimData\x12\x18\n" +
+	"\aallowed\x18\x01 \x01(\bR\aallowed\x12\x1f\n" +
+	"\vttl_seconds\x18\x02 \x01(\x03R\n" +
+	"ttlSeconds\"\x86\x01\n" +
+	"\x19ClaimServerDeviceResponse\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\rR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12;\n" +
+	"\x04data\x18\x03 \x01(\v2'.ppanel.server.v1.ServerDeviceClaimDataR\x04dataB8Z6github.com/perfect-panel/server/api/server/v1;serverv1b\x06proto3"
 
 var (
 	file_api_server_v1_server_proto_rawDescOnce sync.Once
@@ -2068,7 +2358,7 @@ func file_api_server_v1_server_proto_rawDescGZIP() []byte {
 	return file_api_server_v1_server_proto_rawDescData
 }
 
-var file_api_server_v1_server_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_api_server_v1_server_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_api_server_v1_server_proto_goTypes = []any{
 	(*OnlineUser)(nil),                        // 0: ppanel.server.v1.OnlineUser
 	(*PushOnlineUsersRequest)(nil),            // 1: ppanel.server.v1.PushOnlineUsersRequest
@@ -2087,28 +2377,37 @@ var file_api_server_v1_server_proto_goTypes = []any{
 	(*ServerProtocol)(nil),                    // 14: ppanel.server.v1.ServerProtocol
 	(*QueryServerProtocolConfigData)(nil),     // 15: ppanel.server.v1.QueryServerProtocolConfigData
 	(*QueryServerProtocolConfigResponse)(nil), // 16: ppanel.server.v1.QueryServerProtocolConfigResponse
-	(*structpb.Struct)(nil),                   // 17: google.protobuf.Struct
-	(*structpb.Value)(nil),                    // 18: google.protobuf.Value
+	(*ServerAliveListData)(nil),               // 17: ppanel.server.v1.ServerAliveListData
+	(*GetServerAliveListResponse)(nil),        // 18: ppanel.server.v1.GetServerAliveListResponse
+	(*ClaimServerDeviceRequest)(nil),          // 19: ppanel.server.v1.ClaimServerDeviceRequest
+	(*ServerDeviceClaimData)(nil),             // 20: ppanel.server.v1.ServerDeviceClaimData
+	(*ClaimServerDeviceResponse)(nil),         // 21: ppanel.server.v1.ClaimServerDeviceResponse
+	nil,                                       // 22: ppanel.server.v1.ServerAliveListData.AliveEntry
+	(*structpb.Struct)(nil),                   // 23: google.protobuf.Struct
+	(*structpb.Value)(nil),                    // 24: google.protobuf.Value
 }
 var file_api_server_v1_server_proto_depIdxs = []int32{
 	0,  // 0: ppanel.server.v1.PushOnlineUsersRequest.users:type_name -> ppanel.server.v1.OnlineUser
 	2,  // 1: ppanel.server.v1.PushUserTrafficRequest.traffic:type_name -> ppanel.server.v1.UserTraffic
 	6,  // 2: ppanel.server.v1.ServerConfigData.basic:type_name -> ppanel.server.v1.ServerBasic
-	17, // 3: ppanel.server.v1.ServerConfigData.config:type_name -> google.protobuf.Struct
+	23, // 3: ppanel.server.v1.ServerConfigData.config:type_name -> google.protobuf.Struct
 	7,  // 4: ppanel.server.v1.GetServerConfigResponse.data:type_name -> ppanel.server.v1.ServerConfigData
 	9,  // 5: ppanel.server.v1.ServerUserListData.users:type_name -> ppanel.server.v1.ServerUser
 	10, // 6: ppanel.server.v1.GetServerUserListResponse.data:type_name -> ppanel.server.v1.ServerUserListData
-	18, // 7: ppanel.server.v1.Outbound.plugin_options:type_name -> google.protobuf.Value
-	18, // 8: ppanel.server.v1.ServerProtocol.plugin_options:type_name -> google.protobuf.Value
+	24, // 7: ppanel.server.v1.Outbound.plugin_options:type_name -> google.protobuf.Value
+	24, // 8: ppanel.server.v1.ServerProtocol.plugin_options:type_name -> google.protobuf.Value
 	12, // 9: ppanel.server.v1.QueryServerProtocolConfigData.dns:type_name -> ppanel.server.v1.DNSResolver
 	13, // 10: ppanel.server.v1.QueryServerProtocolConfigData.outbound:type_name -> ppanel.server.v1.Outbound
 	14, // 11: ppanel.server.v1.QueryServerProtocolConfigData.protocols:type_name -> ppanel.server.v1.ServerProtocol
 	15, // 12: ppanel.server.v1.QueryServerProtocolConfigResponse.data:type_name -> ppanel.server.v1.QueryServerProtocolConfigData
-	13, // [13:13] is the sub-list for method output_type
-	13, // [13:13] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	22, // 13: ppanel.server.v1.ServerAliveListData.alive:type_name -> ppanel.server.v1.ServerAliveListData.AliveEntry
+	17, // 14: ppanel.server.v1.GetServerAliveListResponse.data:type_name -> ppanel.server.v1.ServerAliveListData
+	20, // 15: ppanel.server.v1.ClaimServerDeviceResponse.data:type_name -> ppanel.server.v1.ServerDeviceClaimData
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_api_server_v1_server_proto_init() }
@@ -2122,7 +2421,7 @@ func file_api_server_v1_server_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_server_v1_server_proto_rawDesc), len(file_api_server_v1_server_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

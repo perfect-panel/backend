@@ -16,6 +16,7 @@ import (
 	"github.com/perfect-panel/server/internal/repository"
 
 	"github.com/perfect-panel/server/internal/module/network/entity/node"
+	"github.com/perfect-panel/server/internal/module/network/internal/onlinecache"
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/perfect-panel/server/pkg/timeutil"
 	"github.com/redis/go-redis/v9"
@@ -290,6 +291,30 @@ func (m *nodeRepo) StatusCache(ctx context.Context, serverId int64) (node.Status
 // the protocol, with their IPs.
 func (m *nodeRepo) OnlineUserSubscribe(ctx context.Context, serverId int64, protocol string) (node.OnlineUserSubscribe, error) {
 	key := fmt.Sprintf(node.OnlineUserCacheKeyWithSubscribe, serverId, protocol)
+	now, err := m.Cache.Time(ctx).Result()
+	if err != nil {
+		return nil, err
+	}
+	// ZRANGE BYSCORE requires Redis 6.2; preserve the supported Redis 6.0 baseline.
+	devices, err := m.Cache.Do(ctx, "ZRANGEBYSCORE", key+":devices", "("+strconv.FormatInt(now.Unix(), 10), "+inf").StringSlice()
+	if err != nil {
+		return nil, err
+	}
+	if exists, err := m.Cache.Exists(ctx, key+":devices").Result(); err != nil {
+		return nil, err
+	} else if exists != 0 {
+		result := make(node.OnlineUserSubscribe)
+		for _, device := range devices {
+			id, ip, ok := strings.Cut(device, ":")
+			sid, err := strconv.ParseInt(id, 10, 64)
+			if !ok || err != nil {
+				return nil, fmt.Errorf("invalid online device record")
+			}
+			result[sid] = append(result[sid], ip)
+		}
+		return result, nil
+	}
+	// Retain reads of pre-upgrade reports during a rolling deployment.
 	result, err := m.Cache.Get(ctx, key).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
@@ -313,7 +338,18 @@ func (m *nodeRepo) UpdateOnlineUserSubscribe(ctx context.Context, serverId int64
 	if err != nil {
 		return err
 	}
-	return m.Cache.Set(ctx, key, data, node.Expiry).Err()
+	pipe := m.Cache.Pipeline()
+	pipe.Set(ctx, key, data, node.Expiry)
+	deviceKey := key + ":devices"
+	args := []any{int64(node.Expiry.Seconds())}
+	for sid, ips := range subscribe {
+		for _, ip := range ips {
+			args = append(args, fmt.Sprintf("%d:%s", sid, ip))
+		}
+	}
+	onlinecache.RenewScript.Eval(ctx, pipe, []string{deviceKey}, args...)
+	_, err = pipe.Exec(ctx)
+	return err
 }
 
 // OnlineUserSubscribeGlobal counts the subscriptions online on any server,
