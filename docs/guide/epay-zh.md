@@ -13,7 +13,7 @@ EPay 支付方式支持 V1（共享 KEY / MD5）和 V2（RSA-SHA256），使用�
 | 字段 | 说明 |
 | --- | --- |
 | `pid` | 数字商户 ID，字符串 |
-| `url` | 网关地址；V1 API 下单要求 HTTPS 根地址，V2 要求 HTTPS（可带部署路径） |
+| `url` | 网关地址；V2 和 V1 API 下单要求 HTTPS（可带部署路径） |
 | `version` | `v1`（默认）或 `v2` |
 | `checkout_mode` | `page`（默认）或 `api` |
 | `type` | 支付类型；页面支付可留空进入收银台，API 下单必填 |
@@ -30,10 +30,10 @@ V2 支持 `alipay`、`wxpay`、`qqpay`。V1 另支持 `bank`、`jdpay`、`paypal
 也支持 `/pay` 这类站内路径：浏览器保持当前域名，服务端查单使用支付方式的 `Domain`
 作为前缀，因此必须填写 `Domain`。`//pay.example` 形式保持浏览器协议相对跳转，服务端
 查单固定使用 HTTPS。相对地址不会被改写保存为绝对地址。
-V2（页面支付和 API 下单）同样支持 `/pay` 这类站内路径和 `//pay.example` 协议相对地址，规则与上面
+V2（页面支付和 API 下单）和 V1 API 下单同样支持 `/pay` 这类站内路径和 `//pay.example` 协议相对地址，规则与上面
 相同：页面支付的跳转链接保持相对，下单、查单等服务端请求使用 `Domain`（必须是 HTTPS）作为前缀。
-V2 也接受带部署路径的 HTTPS 地址，如 `https://pay.example/pay`；路径必须规范，不能含 `..`、
-重复斜杠或转义字符。V1 API 下单仍使用严格的 HTTPS 根地址。
+二者也接受带部署路径的 HTTPS 地址，如 `https://pay.example/pay`；路径必须规范，不能含 `..`、
+重复斜杠、转义字符或 `submit.php` 这类脚本名。
 密钥仅保存在后端管理员配置中，不能放进客户端请求或源码。
 
 ## 现有收款流程

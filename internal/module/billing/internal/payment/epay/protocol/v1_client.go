@@ -15,7 +15,7 @@ import (
 )
 
 type V1Config struct {
-	BaseURL    string // Required HTTPS origin of the target EPay deployment.
+	BaseURL    string // Required HTTPS origin of the target EPay deployment, optionally with a deployment path.
 	MerchantID string
 	Key        string // V1 shared merchant KEY, not a V2 RSA key.
 	HTTPClient *http.Client
@@ -37,8 +37,8 @@ func NewV1Client(config V1Config) (*V1Client, error) {
 		return nil, errors.New("epay v1: BaseURL is required")
 	}
 	u, err := url.Parse(config.BaseURL)
-	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
-		return nil, errors.New("epay v1: BaseURL must be an HTTPS origin without credentials, path, query or fragment")
+	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || !validBasePath(u) || strings.HasSuffix(strings.ToLower(strings.TrimSuffix(u.Path, "/")), ".php") {
+		return nil, errors.New("epay v1: BaseURL must be an HTTPS origin or deployment path without credentials, script name, query or fragment")
 	}
 	if strings.TrimSpace(config.Key) == "" {
 		return nil, errors.New("epay v1: merchant Key is required")
@@ -52,7 +52,7 @@ func NewV1Client(config V1Config) (*V1Client, error) {
 	}
 	httpClient.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
 	return &V1Client{
-		baseURL: strings.TrimSuffix(config.BaseURL, "/"), merchantID: config.MerchantID,
+		baseURL: u.Scheme + "://" + u.Host + strings.TrimSuffix(u.Path, "/"), merchantID: config.MerchantID,
 		key: config.Key, http: &httpClient,
 	}, nil
 }

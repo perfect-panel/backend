@@ -398,3 +398,26 @@ func TestV1PaymentEntryVariants(t *testing.T) {
 		}
 	}
 }
+
+func TestV1ClientAcceptsDeploymentPath(t *testing.T) {
+	for base, want := range map[string]string{
+		"https://pay.example.com":        "https://pay.example.com",
+		"https://pay.example.com/":       "https://pay.example.com",
+		"https://pay.example.com/pay":    "https://pay.example.com/pay",
+		"https://pay.example.com/a/pay/": "https://pay.example.com/a/pay",
+	} {
+		c, err := NewV1Client(V1Config{BaseURL: base, MerchantID: "1001", Key: v1TestKey})
+		if err != nil || c.baseURL != want {
+			t.Fatalf("%s: base=%v err=%v", base, c, err)
+		}
+	}
+	for _, base := range []string{
+		"http://pay.example.com/pay", "https://pay.example.com/pay?x=1", "https://pay.example.com/pay#f",
+		"https://user@pay.example.com/pay", "https://pay.example.com/a/../pay", "https://pay.example.com/a//pay",
+		"https://pay.example.com/p%2Fay", "https://pay.example.com/submit.php", "https://pay.example.com/pay/API.PHP/",
+	} {
+		if _, err := NewV1Client(V1Config{BaseURL: base, MerchantID: "1001", Key: v1TestKey}); err == nil {
+			t.Fatalf("invalid base URL accepted: %q", base)
+		}
+	}
+}
