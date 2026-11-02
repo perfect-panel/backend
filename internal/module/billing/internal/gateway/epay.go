@@ -38,15 +38,12 @@ func openEPay(r *Registry, method *paymentEntity.Payment) (Gateway, error) {
 	config.Version = strings.ToLower(strings.TrimSpace(config.Version))
 	config.CheckoutMode = strings.ToLower(strings.TrimSpace(config.CheckoutMode))
 	config.Url = strings.TrimSpace(config.Url)
-	var siteRelative, schemeRelative bool
-	if config.Version == "v2" || (config.Version == "" || config.Version == "v1") && (config.CheckoutMode == "" || config.CheckoutMode == "page") {
-		schemeRelative = strings.HasPrefix(config.Url, "//")
-		endpoint, relative, err := epayEndpoint(config.Url, method.Domain)
-		if err != nil {
-			return nil, err
-		}
-		config.Url, siteRelative = endpoint, relative
+	schemeRelative := strings.HasPrefix(config.Url, "//")
+	endpoint, siteRelative, err := epayEndpoint(config.Url, method.Domain)
+	if err != nil {
+		return nil, err
 	}
+	config.Url = endpoint
 	gw, err := newEPayGateway(config, r.httpClient)
 	if err != nil {
 		return nil, err
@@ -78,7 +75,8 @@ func normalizeEPay(raw []byte) (string, error) {
 		return "", err
 	}
 	configured := strings.TrimSpace(config.Url)
-	if strings.EqualFold(strings.TrimSpace(config.Version), "v2") && strings.HasPrefix(configured, "/") {
+	strict := strings.EqualFold(strings.TrimSpace(config.Version), "v2") || strings.EqualFold(strings.TrimSpace(config.CheckoutMode), "api")
+	if strict && strings.HasPrefix(configured, "/") {
 		resolved, _, err := epayEndpoint(configured, "https://relative.invalid")
 		if err != nil {
 			return "", err

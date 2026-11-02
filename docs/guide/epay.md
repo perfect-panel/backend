@@ -15,7 +15,7 @@ platform remains `EPay`.
 | Field | Meaning |
 | --- | --- |
 | `pid` | Numeric merchant ID, as a string |
-| `url` | Gateway address; V1 API checkout requires an HTTPS origin, V2 requires HTTPS and may include a deployment path |
+| `url` | Gateway address; V2 and V1 API checkout require HTTPS and may include a deployment path |
 | `version` | `v1` (default) or `v2` |
 | `checkout_mode` | `page` (default) or `api` |
 | `type` | Payment type; optional for the page cashier, required for API checkout |
@@ -30,16 +30,16 @@ calling the gateway. The existing pending-order guard prevents changing credenti
 or versions while orders await payment; create another method to switch protocols.
 
 Legacy V1 page checkout continues to accept HTTP, deployment subpaths, and addresses
-ending in `submit.php` or `api.php`. V1 API checkout requires an HTTPS origin without
-a path. V2 requires HTTPS and accepts a clean deployment path such as
-`https://pay.example/pay` (no `..`, repeated slashes or escapes). Keys belong in backend administrator configuration, never clients
+ending in `submit.php` or `api.php`. V2 and V1 API checkout require HTTPS and accept a
+clean deployment path such as `https://pay.example/pay` (no `..`, repeated slashes,
+escapes or script names such as `submit.php`). Keys belong in backend administrator configuration, never clients
 or source control.
 
 V1 page checkout also accepts site-relative paths such as `/pay`: the browser stays
 on its current host, while server queries resolve against the payment method's
 required `Domain`. Scheme-relative addresses such as `//pay.example` stay relative
 in browser redirects and use HTTPS for server queries. Normalization preserves
-these configured relative addresses. V2 page and API checkout accept the same
+these configured relative addresses. V2 page checkout, and V2 and V1 API checkout, accept the same
 site-relative and scheme-relative forms: page links stay relative, while create,
 query and other server requests resolve against the method's `Domain`, which must
 be HTTPS.
