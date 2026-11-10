@@ -82,7 +82,11 @@ func normalizeProtocolNoopFields(protocol *Protocol) {
 	protocol.Security = normalizeNone(protocol.Security)
 	protocol.CertMode = normalizeNone(protocol.CertMode)
 	protocol.Flow = normalizeNone(protocol.Flow)
-	protocol.Obfs = normalizeNone(protocol.Obfs)
+	if protocol.Type == "nowhere" {
+		protocol.Obfs = strings.ToLower(strings.TrimSpace(protocol.Obfs))
+	} else {
+		protocol.Obfs = normalizeNone(protocol.Obfs)
+	}
 	protocol.Multiplex = normalizeMultiplex(protocol.Type, protocol.Multiplex)
 	protocol.Encryption = normalizeNone(protocol.Encryption)
 	if protocol.Security != "tls" {
@@ -207,7 +211,7 @@ func sanitizeRuntimeProtocol(protocol *Protocol) bool {
 		clearTLSClient(protocol)
 		clearReality(protocol)
 		clearNowhereUnsupported(protocol)
-		return protocol.Port > 0 && protocol.Version == 1 && hasTLSCertificate(*protocol) && len(protocol.ALPN) == 1
+		return protocol.Port > 0 && protocol.Version == 3 && hasTLSCertificate(*protocol) && len(protocol.ALPN) == 1 && protocol.ALPN[0] == "nw3"
 	case "hysteria":
 		protocol.Security = "tls"
 		// The node rejects a multiplex value on QUIC inbounds.
@@ -348,10 +352,10 @@ func validateNowhere(protocol *Protocol) error {
 		return fmt.Errorf("nowhere requires tls security")
 	}
 	if protocol.Version == 0 {
-		protocol.Version = 1
+		protocol.Version = 3
 	}
-	if protocol.Version != 1 {
-		return fmt.Errorf("nowhere requires version 1")
+	if protocol.Version != 3 {
+		return fmt.Errorf("nowhere requires version 3")
 	}
 	network, err := normalizeNowhereNetwork(protocol.Network)
 	if err != nil {
@@ -359,14 +363,21 @@ func validateNowhere(protocol *Protocol) error {
 	}
 	protocol.Network = network
 	if len(protocol.ALPN) == 0 {
-		protocol.ALPN = []string{"now/1"}
+		protocol.ALPN = []string{"nw3"}
 	}
 	if len(protocol.ALPN) != 1 {
 		return fmt.Errorf("nowhere requires exactly one alpn value")
 	}
 	protocol.ALPN[0] = strings.TrimSpace(protocol.ALPN[0])
-	if len(protocol.ALPN[0]) == 0 || len(protocol.ALPN[0]) > 255 {
-		return fmt.Errorf("nowhere alpn must be between 1 and 255 bytes")
+	if protocol.ALPN[0] != "nw3" {
+		return fmt.Errorf("nowhere alpn must be nw3")
+	}
+	switch protocol.Obfs {
+	case "", "morph":
+		protocol.Obfs = "morph"
+	case "none":
+	default:
+		return fmt.Errorf("nowhere obfs must be morph or none")
 	}
 	protocol.SNI = strings.TrimSpace(protocol.SNI)
 	return validateNowhereUnsupportedOptions(*protocol)
@@ -495,7 +506,7 @@ func validateNowhereUnsupportedOptions(protocol Protocol) error {
 		protocol.Heartbeat != 0 || protocol.UDPRelayMode != "" || protocol.CongestionController != "" ||
 		protocol.QUICCongestionControl != "" || protocol.Multiplex != "" || protocol.PaddingScheme != "" ||
 		protocol.TrafficPattern != "" || protocol.UserHintIsMandatory || protocol.UpMbps != 0 || protocol.DownMbps != 0 ||
-		protocol.Obfs != "" || protocol.SSRProtocol != "" || protocol.ProtocolParam != "" || protocol.ObfsParam != "" ||
+		protocol.SSRProtocol != "" || protocol.ProtocolParam != "" || protocol.ObfsParam != "" ||
 		protocol.ObfsHost != "" || protocol.ObfsPath != "" || protocol.XhttpMode != "" || protocol.XhttpExtra != "" ||
 		protocol.Encryption != "" || protocol.EncryptionMode != "" || protocol.EncryptionRtt != "" ||
 		protocol.EncryptionTicket != "" || protocol.EncryptionServerPadding != "" ||
@@ -1056,7 +1067,9 @@ func clearNowhereUnsupported(protocol *Protocol) {
 	protocol.EchEnable = false
 	protocol.EchServerName = ""
 	clearStreamTransport(protocol)
-	clearLegacyObfs(protocol)
+	protocol.ObfsHost = ""
+	protocol.ObfsPath = ""
+	protocol.ObfsPassword = ""
 	clearQUICControls(protocol)
 	clearEncryption(protocol)
 }

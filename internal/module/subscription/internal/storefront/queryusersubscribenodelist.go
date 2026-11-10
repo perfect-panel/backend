@@ -123,10 +123,18 @@ func (s *Service) subscriptionNodes(ctx context.Context, userSub *usersub.Subscr
 		if n.Server == nil {
 			continue
 		}
+		credential := userSub.UUID
+		if strings.EqualFold(strings.TrimSpace(n.Protocol), "nowhere") {
+			var err error
+			credential, err = node.NowhereSharedKey(credential)
+			if err != nil {
+				return nil, xerr.Wrapf(err, xerr.ERROR, "invalid Nowhere credential for subscription %d", userSub.Id)
+			}
+		}
 		infos = append(infos, &dto.UserSubscribeNodeInfo{
 			Id:        n.Id,
 			Name:      n.Name,
-			Uuid:      userSub.UUID,
+			Uuid:      credential,
 			Protocol:  n.Protocol,
 			Port:      n.Port,
 			Address:   n.Address,

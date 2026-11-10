@@ -168,8 +168,8 @@ func TestResponseConversions(t *testing.T) {
 				PluginOptions: map[string]string{"host": "example.com"},
 			},
 			{
-				Type: "nowhere", Port: 8443, Version: 1, Enable: true, Security: "tls", Network: "mix",
-				SNI: "nowhere.example", ALPN: []string{"now/1"}, CertMode: "self",
+				Type: "nowhere", Port: 8443, Version: 3, Enable: true, Security: "tls", Network: "mix", Obfs: "none",
+				SNI: "nowhere.example", ALPN: []string{"nw3"}, CertMode: "self",
 			},
 		},
 		Total: 2,
@@ -190,9 +190,9 @@ func TestResponseConversions(t *testing.T) {
 		t.Fatalf("protocols = %+v, want strongly typed protocol configuration", protocols.Data.Protocols)
 	}
 	nowhere := protocols.Data.Protocols[1]
-	if nowhere.Type != "nowhere" || nowhere.Port != 8443 || nowhere.Version != 1 ||
-		nowhere.Security != "tls" || nowhere.Network != "mix" || nowhere.Sni != "nowhere.example" ||
-		len(nowhere.Alpn) != 1 || nowhere.Alpn[0] != "now/1" || nowhere.CertMode != "self" {
+	if nowhere.Type != "nowhere" || nowhere.Port != 8443 || nowhere.Version != 3 ||
+		nowhere.Obfs != "none" || nowhere.Security != "tls" || nowhere.Network != "mix" || nowhere.Sni != "nowhere.example" ||
+		len(nowhere.Alpn) != 1 || nowhere.Alpn[0] != "nw3" || nowhere.CertMode != "self" {
 		t.Fatalf("Nowhere protobuf protocol = %+v, want complete server contract", nowhere)
 	}
 }

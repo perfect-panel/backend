@@ -129,3 +129,22 @@ func TestQuerySubscribeListShowsSellablePlans(t *testing.T) {
 		t.Fatalf("storefront plans = %+v", resp)
 	}
 }
+
+func TestNowhereNodeCredentialsMatchNW3WithoutChangingOtherProtocols(t *testing.T) {
+	const credential = "550e8400-e29b-41d4-a716-446655440000"
+	const key = "550e8400e29b41d4a716446655440000"
+	f := subtest.New(t)
+	f.Plan(t, subscribe.Subscribe{Id: 1, Nodes: "5,6"})
+	f.Subscription(t, usersub.Subscribe{UserId: 7, SubscribeId: 1, ExpireTime: time.Now().Add(time.Hour), Status: usersub.SubscribeStatusActive, UUID: credential})
+	nodes := &planNodes{nodes: []*node.Node{{Id: 5, Protocol: "nowhere", Server: &node.Server{}}, {Id: 6, Protocol: "vless", Server: &node.Server{}}}}
+	resp, err := newStorefront(f, nodes, 0).QueryUserSubscribeNodeList(ownerContext(7))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.List) != 1 || len(resp.List[0].Nodes) != 2 {
+		t.Fatalf("nodes=%+v", resp)
+	}
+	if resp.List[0].Nodes[0].Uuid != key || resp.List[0].Nodes[1].Uuid != credential {
+		t.Fatalf("credentials=%+v", resp.List[0].Nodes)
+	}
+}

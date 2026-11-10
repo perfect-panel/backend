@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/perfect-panel/server/internal/module/network/entity/node"
 )
 
 type Proxy struct {
@@ -108,6 +109,12 @@ type User struct {
 	Traffic      int64
 	SubscribeURL string
 }
+
+// NowhereKey is the protocol-specific NW3 shared key. Password retains the
+// original subscription UUID for all other protocols and mixed subscriptions.
+// Templates access this method as .UserInfo.NowhereKey; invalid input fails
+// template execution rather than producing an unusable credential.
+func (u User) NowhereKey() (string, error) { return node.NowhereSharedKey(u.Password) }
 
 type Client struct {
 	SiteName       string            // Name of the site

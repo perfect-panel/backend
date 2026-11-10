@@ -33,8 +33,8 @@ func TestServerProtocolRoundTripPreservesExtendedNodeFields(t *testing.T) {
 		{Type: "hysteria", Port: 449, Enable: true, QUICCongestionControl: "bbr", Heartbeat: 10},
 		{Type: "tuic", Port: 450, Enable: true, QUICCongestionControl: "bbr"},
 		{
-			Type: "nowhere", Port: 451, Version: 1, Enable: true, Security: "tls", Network: "mix",
-			SNI: "nowhere.example", ALPN: []string{"now/1"}, CertMode: "self", CertPinSHA256: testCertPin,
+			Type: "nowhere", Port: 451, Version: 3, Enable: true, Security: "tls", Network: "mix",
+			SNI: "nowhere.example", ALPN: []string{"nw3"}, CertMode: "self", CertPinSHA256: testCertPin,
 		},
 	}
 	server := new(Server)

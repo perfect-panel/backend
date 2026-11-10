@@ -105,7 +105,7 @@ type Protocol struct {
 	Type string `json:"type"`
 	// Common: the inbound listening port.
 	Port uint16 `json:"port"`
-	// Version: Snell accepts 5 or 6, TUIC 5 and Nowhere 1; 0 means the protocol's default.
+	// Version: Snell accepts 5 or 6, TUIC 5 and Nowhere 3; 0 means the protocol's default.
 	Version int `json:"version,omitempty"`
 	// Snell only: the Snell v6 mode; other protocols leave it unset.
 	Mode string `json:"mode,omitempty"`
@@ -117,7 +117,7 @@ type Protocol struct {
 	Network string `json:"network,omitempty"`
 	// TLS protocols: the certificate domain and the TLS server name; REALITY also uses it as the server name.
 	SNI string `json:"sni,omitempty"`
-	// TLS/HTTP/QUIC protocols: the TLS ALPN list; Nowhere takes exactly one value, now/1 by default.
+	// TLS/HTTP/QUIC protocols: the TLS ALPN list; Nowhere requires exactly nw3.
 	ALPN []string `json:"alpn,omitempty"`
 	// TLS client compatibility: allows skipping certificate verification; inbound configurations usually ignore it, and it is not a server certificate setting.
 	AllowInsecure bool `json:"allow_insecure,omitempty"`
@@ -187,7 +187,7 @@ type Protocol struct {
 	UpMbps int `json:"up_mbps,omitempty"`
 	// Hysteria2 only: the server's download bandwidth in Mbps.
 	DownMbps int `json:"down_mbps,omitempty"`
-	// Obfuscating protocols: Hysteria2's Salamander, Snell v5's obfs or SSR's obfs method.
+	// Obfuscating protocols: Hysteria2's Salamander, Snell v5's obfs, SSR's obfs method, or Nowhere's morph (default) / none.
 	Obfs string `json:"obfs,omitempty"`
 	// SSR only: the SSR protocol method, under the JSON name protocol, which is not the top-level type.
 	SSRProtocol string `json:"protocol,omitempty"`

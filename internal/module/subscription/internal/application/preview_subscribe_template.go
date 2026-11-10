@@ -44,7 +44,7 @@ func (s *Service) PreviewSubscribeTemplate(ctx context.Context, req *dto.Preview
 		render.WithOutputFormat(data.OutputFormat),
 		render.WithUserInfo(render.User{
 			ID:           10000,
-			Password:     "test-password",
+			Password:     "00000000-0000-4000-8000-000000000001",
 			ExpiredAt:    timeutil.Now().AddDate(1, 0, 0),
 			Download:     0,
 			Upload:       0,

@@ -193,17 +193,18 @@ func TestAdapterProxyCertPinForcesCertVerification(t *testing.T) {
 func TestAdapterPreservesNowhereContractAndUserSharedKey(t *testing.T) {
 	const pin = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
 	const sharedKey = "550e8400-e29b-41d4-a716-446655440000"
+	const nw3Key = "550e8400e29b41d4a716446655440000"
 	srv := &node.Server{Id: 1, Name: "NowhereServer", Address: "example.com"}
 	if err := srv.MarshalProtocols([]node.Protocol{{
-		Type: "nowhere", Port: 443, Version: 1, Enable: true, Security: "tls", Network: "mix",
-		SNI: "nowhere.example", ALPN: []string{"now/1"}, CertMode: "self", CertPinSHA256: pin,
+		Type: "nowhere", Port: 443, Version: 3, Enable: true, Security: "tls", Network: "mix",
+		SNI: "nowhere.example", ALPN: []string{"nw3"}, CertMode: "self", CertPinSHA256: pin,
 	}}); err != nil {
 		t.Fatalf("marshal protocols: %v", err)
 	}
 
 	enabled := true
 	client, err := NewAdapter(
-		`{{ (index .Proxies 0).Type }}|{{ (index .Proxies 0).Network }}|{{ .UserInfo.Password }}`,
+		`{{ (index .Proxies 0).Type }}|{{ (index .Proxies 0).Network }}|{{ .UserInfo.NowhereKey }}`,
 		WithServers([]*node.Node{{
 			Id: 1, Name: "Nowhere", Port: 443, Address: "nowhere.example", ServerId: srv.Id,
 			Server: srv, Protocol: "nowhere", Enabled: &enabled,
@@ -218,8 +219,8 @@ func TestAdapterPreservesNowhereContractAndUserSharedKey(t *testing.T) {
 		t.Fatalf("len(Proxies) = %d, want 1", len(client.Proxies))
 	}
 	proxy := client.Proxies[0]
-	if proxy.Type != "nowhere" || proxy.Version != 1 || proxy.Network != "mix" || proxy.Security != "tls" ||
-		proxy.SNI != "nowhere.example" || len(proxy.ALPN) != 1 || proxy.ALPN[0] != "now/1" ||
+	if proxy.Type != "nowhere" || proxy.Version != 3 || proxy.Network != "mix" || proxy.Security != "tls" ||
+		proxy.SNI != "nowhere.example" || len(proxy.ALPN) != 1 || proxy.ALPN[0] != "nw3" ||
 		proxy.CertMode != "self" || proxy.CertPinSHA256 != pin {
 		t.Fatalf("Nowhere proxy fields were not preserved: %#v", proxy)
 	}
@@ -227,7 +228,34 @@ func TestAdapterPreservesNowhereContractAndUserSharedKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
-	if got, want := string(built), "nowhere|mix|"+sharedKey; got != want {
+	if got, want := string(built), "nowhere|mix|"+nw3Key; got != want {
 		t.Fatalf("Build() = %q, want %q", got, want)
+	}
+}
+
+func TestNowhereTemplateKeyDoesNotChangeOtherProtocolPassword(t *testing.T) {
+	const credential = "550e8400-e29b-41d4-a716-446655440000"
+	client := &Client{ClientTemplate: `{{ .UserInfo.NowhereKey }}|{{ .UserInfo.Password }}`, OutputFormat: "text", UserInfo: User{Password: credential}}
+	result, err := client.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(result) != "550e8400e29b41d4a716446655440000|"+credential {
+		t.Fatalf("template=%q", result)
+	}
+	client.UserInfo.Password = "invalid-key"
+	if _, err = client.Build(); err == nil {
+		t.Fatal("invalid NW3 key rendered")
+	}
+}
+func TestStoredNowhereSubscriptionUpgradesAndPreservesMorphNone(t *testing.T) {
+	server := &node.Server{Protocols: `[{"type":"nowhere","version":1,"port":443,"enable":true,"security":"tls","sni":"nw.example","cert_mode":"self","alpn":["now/1"],"obfs":" NONE "}]`}
+	client, err := NewAdapter(`{{ (index .Proxies 0).Version }}|{{ (index .Proxies 0).Obfs }}|{{ index (index .Proxies 0).ALPN 0 }}`, WithServers([]*node.Node{{Id: 1, Protocol: "nowhere", Server: server}}), WithOutputFormat("text")).Client()
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.Build()
+	if err != nil || string(result) != "3|none|nw3" {
+		t.Fatalf("template=%q %v", result, err)
 	}
 }

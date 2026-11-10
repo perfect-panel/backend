@@ -147,7 +147,7 @@ func (s *Service) loadServedUserIndex(ctx context.Context, serverID int64, proto
 				return nil, err
 			}
 		}
-		users, err := s.withoutPlaceholder(ctx, data.resp.Users)
+		users, err := s.withoutPlaceholder(ctx, protocol, data.resp.Users)
 		if err != nil {
 			return nil, err
 		}

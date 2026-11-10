@@ -36,9 +36,39 @@ IPv4-mapped IPv6 归一化为 IPv4。设备限制为 0 时不限名额，其他�
 SIP003 字符串两种插件参数形式。
 
 Nowhere 节点使用 `GET /v2/server/{server_id}` 获取扁平协议配置，并复用现有的
-用户、状态和流量接口。服务端配置固定为 TLS，版本为 1；`network` 为 `mix`、
-`tcp` 或 `udp`，ALPN 默认且只能包含一个 `now/1`。用户列表中的 UUID 直接作为
-Nowhere shared key。旧版 `GET /v1/server/config` 不定义 Nowhere 配置结构。
+用户、状态和流量接口。当前对齐 Nowhere 3.3.0 / NW3：TLS 1.3，`version=3`，
+ALPN 固定为 `nw3`；`network` 为 `mix`、`tcp` 或 `udp`。`obfs` 留空或设为
+`morph` 时启用 Morph，`none` 时关闭，客户端需使用相同开关。Morph TCP 要求
+认证 Prelude。旧版 `GET /v1/server/config` 不定义 Nowhere 配置结构。
+
+数据库中已有的 Nowhere v0/v1 配置在读取时投影为 `version=3`、`alpn=["nw3"]`，
+下次保存后持久化；新提交的配置拒绝旧版本或其他 ALPN。升级节点和客户端后再
+部署这份后端，旧 `now/1` 客户端不能连接 NW3。
+
+NW3 shared key 是 32 位小写十六进制文本。后端对 Nowhere 用户列表的 `uuid`
+字段和用户节点列表使用同一转换：标准订阅 UUID 去掉连字符并转小写，已有
+32 位十六进制密钥也转小写。数据库订阅 UUID、其他协议密码、UID、限速与设备
+限制保持原语义。Nowhere 的用户缓存使用独立的 NW3 后缀，旧 UUID 列表和 ETag
+不会阻止新密钥下发。
+
+Nowhere 自定义订阅模板应把认证密码引用改为 `{{ .UserInfo.NowhereKey }}`；
+混合协议模板中，其他协议继续用 `{{ .UserInfo.Password }}`。两者不能全局互换。
+例如，模板循环中按协议选择密钥：
+
+```gotemplate
+{{ $user := .UserInfo }}
+{{ range .Proxies }}
+  {{ if eq .Type "nowhere" }}
+    {{ $user.NowhereKey }}
+    {{/* .Version=3, .ALPN=[nw3]; .Obfs=morph 对应 morph=1，none 对应 morph=0 */}}
+  {{ else }}
+    {{ $user.Password }}
+  {{ end }}
+{{ end }}
+```
+
+模板由管理员维护，已有模板不会自动改写；必须升级 Nowhere 客户端格式和上述
+密钥引用。无效密钥会使模板生成或节点列表构建报错，不会生成替代密码。
 
 修改 schema 后，在仓库根目录运行 `make proto` 重新生成 Go 绑定。它要求
 protoc 版本与 CI 一致（`make -s print-PROTOC_VERSION`，即 libprotoc 3.21.12），

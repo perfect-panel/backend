@@ -13,9 +13,9 @@ func TestNormalizeProtocolForStorageDefaultsNowhere(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NormalizeProtocolForStorage() error = %v", err)
 	}
-	if protocol.Type != "nowhere" || protocol.Version != 1 || protocol.Network != "mix" ||
-		protocol.Security != "tls" || protocol.SNI != "node.example" || protocol.CertMode != "self" ||
-		len(protocol.ALPN) != 1 || protocol.ALPN[0] != "now/1" {
+	if protocol.Type != "nowhere" || protocol.Version != 3 || protocol.Network != "mix" ||
+		protocol.Security != "tls" || protocol.SNI != "node.example" || protocol.CertMode != "self" || protocol.Obfs != "morph" ||
+		len(protocol.ALPN) != 1 || protocol.ALPN[0] != "nw3" {
 		t.Fatalf("Nowhere defaults were not normalized: %#v", protocol)
 	}
 }
@@ -44,17 +44,22 @@ func TestNormalizeProtocolForStorageNormalizesNowhereNetwork(t *testing.T) {
 
 func TestNormalizeProtocolForStorageRejectsInvalidNowhere(t *testing.T) {
 	base := Protocol{
-		Type: "nowhere", Port: 443, Version: 1, Enable: true, Security: "tls",
-		Network: "mix", SNI: "node.example", ALPN: []string{"now/1"}, CertMode: "self",
+		Type: "nowhere", Port: 443, Version: 3, Enable: true, Security: "tls",
+		Network: "mix", SNI: "node.example", ALPN: []string{"nw3"}, CertMode: "self",
 	}
 	tests := map[string]func(*Protocol){
 		"zero port":          func(p *Protocol) { p.Port = 0 },
 		"version":            func(p *Protocol) { p.Version = 2 },
+		"old version":        func(p *Protocol) { p.Version = 1 },
+		"old alpn":           func(p *Protocol) { p.ALPN = []string{"now/1"} },
+		"wrong alpn":         func(p *Protocol) { p.ALPN = []string{"h2"} },
+		"unknown obfs":       func(p *Protocol) { p.Obfs = "other" },
+		"obfs password":      func(p *Protocol) { p.ObfsPassword = "shared" },
 		"security":           func(p *Protocol) { p.Security = "reality" },
 		"missing sni":        func(p *Protocol) { p.SNI = " " },
 		"missing cert mode":  func(p *Protocol) { p.CertMode = "none" },
 		"network":            func(p *Protocol) { p.Network = "ws" },
-		"multiple alpn":      func(p *Protocol) { p.ALPN = []string{"now/1", "h2"} },
+		"multiple alpn":      func(p *Protocol) { p.ALPN = []string{"nw3", "h2"} },
 		"empty alpn":         func(p *Protocol) { p.ALPN = []string{" "} },
 		"oversized alpn":     func(p *Protocol) { p.ALPN = []string{strings.Repeat("a", 256)} },
 		"transport":          func(p *Protocol) { p.Transport = "tcp" },
@@ -86,10 +91,10 @@ func TestSanitizeProtocolsForNodeDistributionKeepsNowhere(t *testing.T) {
 		t.Fatalf("SanitizeProtocolsForNodeDistribution() len = %d, want 1", len(protocols))
 	}
 	protocol := protocols[0]
-	if protocol.Type != "nowhere" || protocol.Version != 1 || protocol.Network != "mix" ||
-		protocol.Security != "tls" || protocol.SNI != "node.example" || protocol.CertMode != "self" ||
+	if protocol.Type != "nowhere" || protocol.Version != 3 || protocol.Network != "mix" ||
+		protocol.Security != "tls" || protocol.SNI != "node.example" || protocol.CertMode != "self" || protocol.Obfs != "morph" ||
 		protocol.CertPinSHA256 != testCertPin || protocol.Ratio != 1.5 ||
-		len(protocol.ALPN) != 1 || protocol.ALPN[0] != "now/1" {
+		len(protocol.ALPN) != 1 || protocol.ALPN[0] != "nw3" {
 		t.Fatalf("Nowhere node distribution fields were not preserved: %#v", protocol)
 	}
 }

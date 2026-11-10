@@ -4,6 +4,7 @@
 package render
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/perfect-panel/server/internal/module/network/entity/node"
@@ -116,6 +117,15 @@ func (adapter *Adapter) Proxies(servers []*node.Node) ([]Proxy, error) {
 		for _, protocol := range protocols {
 			if protocolType := canonicalProtocolType(protocol.Type); protocolType == itemProtocol {
 				protocol.Type = protocolType
+				if protocolType == "nowhere" {
+					protocol, err = node.NormalizeProtocolForStorage(protocol)
+					if err != nil {
+						return nil, fmt.Errorf("nowhere node %d configuration: %w", item.Id, err)
+					}
+					if !protocol.Enable {
+						continue
+					}
+				}
 				proxies = append(proxies, newProxy(item, protocol))
 			}
 		}

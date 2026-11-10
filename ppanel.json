@@ -15578,7 +15578,7 @@
                     "type": "boolean"
                 },
                 "alpn": {
-                    "description": "TLS/HTTP/QUIC protocols: the TLS ALPN list; Nowhere takes exactly one value, now/1 by default.",
+                    "description": "TLS/HTTP/QUIC protocols: the TLS ALPN list; Nowhere requires exactly nw3.",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -15693,7 +15693,7 @@
                     "type": "string"
                 },
                 "obfs": {
-                    "description": "Obfuscating protocols: Hysteria2's Salamander, Snell v5's obfs or SSR's obfs method.",
+                    "description": "Obfuscating protocols: Hysteria2's Salamander, Snell v5's obfs, SSR's obfs method, or Nowhere's morph (default) / none.",
                     "type": "string"
                 },
                 "obfs_host": {
@@ -15820,7 +15820,7 @@
                     "type": "boolean"
                 },
                 "version": {
-                    "description": "Version: Snell accepts 5 or 6, TUIC 5 and Nowhere 1; 0 means the protocol's default.",
+                    "description": "Version: Snell accepts 5 or 6, TUIC 5 and Nowhere 3; 0 means the protocol's default.",
                     "type": "integer"
                 },
                 "xhttp_extra": {

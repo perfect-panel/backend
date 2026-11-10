@@ -35,7 +35,7 @@ func TestCompatibleKeepsTheLegacyShapes(t *testing.T) {
 func TestCompatibleDoesNotInventLegacyNowhereContract(t *testing.T) {
 	if config := compatible(node.Protocol{
 		Type: Nowhere, Port: 443, Version: 1, Enable: true, Security: "tls",
-		Network: "mix", SNI: "node.example", ALPN: []string{"now/1"}, CertMode: "self",
+		Network: "mix", SNI: "node.example", ALPN: []string{"nw3"}, CertMode: "self",
 	}); config != nil {
 		t.Fatalf("compatible() = %#v, want nil so callers direct Nowhere nodes to /v2/server/{server_id}", config)
 	}

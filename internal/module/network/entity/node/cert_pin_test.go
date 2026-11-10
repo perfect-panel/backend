@@ -88,8 +88,8 @@ func TestApplyReportedCertPinMatchesProtocolTypeAliases(t *testing.T) {
 func TestApplyReportedCertPinUpdatesNowhere(t *testing.T) {
 	server := new(Server)
 	if err := server.MarshalProtocols([]Protocol{{
-		Type: "nowhere", Port: 443, Version: 1, Enable: true, Security: "tls",
-		Network: "mix", SNI: "nowhere.example", ALPN: []string{"now/1"}, CertMode: "self",
+		Type: "nowhere", Port: 443, Version: 3, Enable: true, Security: "tls",
+		Network: "mix", SNI: "nowhere.example", ALPN: []string{"nw3"}, CertMode: "self",
 	}}); err != nil {
 		t.Fatalf("MarshalProtocols() error = %v", err)
 	}

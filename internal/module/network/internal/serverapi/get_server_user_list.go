@@ -34,7 +34,11 @@ func placeholderServerUser() dto.ServerUser {
 }
 
 func serverUserListCacheKey(serverID int64, protocol string) string {
-	return fmt.Sprintf("%s%d:%s", node.ServerUserListCacheKey, serverID, protocol)
+	key := fmt.Sprintf("%s%d:%s", node.ServerUserListCacheKey, serverID, protocol)
+	if protocol == Nowhere {
+		return key + ":nw3"
+	}
+	return key
 }
 
 // GetServerUserList returns the users a server serves over a protocol, from
@@ -143,6 +147,15 @@ func (s *Service) buildUserList(ctx context.Context, serverID int64, protocol st
 	if len(users) == 0 {
 		users = []dto.ServerUser{placeholderServerUser()}
 	}
+	if protocol == Nowhere {
+		for index := range users {
+			key, err := node.NowhereSharedKey(users[index].UUID)
+			if err != nil {
+				return nil, fmt.Errorf("nowhere credential for subscription %d: %w", users[index].Id, err)
+			}
+			users[index].UUID = key
+		}
+	}
 	list.resp = &dto.GetServerUserListResponse{Users: users}
 	list.payload, _ = json.Marshal(list.resp)
 	if err := s.deps.Caches.SetServerCache(ctx, serverID, serverUserListCacheKey(serverID, protocol), string(list.payload), generation); err != nil {
@@ -250,7 +263,7 @@ func (s *Service) readCachedUserList(ctx context.Context, serverID int64, protoc
 // withoutPlaceholder drops the stand-in user of a cached empty list. Its id
 // is a valid subscription id, so a lone entry with that id is kept only when
 // its UUID is that subscription's UUID.
-func (s *Service) withoutPlaceholder(ctx context.Context, users []dto.ServerUser) ([]dto.ServerUser, error) {
+func (s *Service) withoutPlaceholder(ctx context.Context, protocol string, users []dto.ServerUser) ([]dto.ServerUser, error) {
 	if len(users) != 1 || users[0].Id != placeholderServerUserID {
 		return users, nil
 	}
@@ -261,7 +274,14 @@ func (s *Service) withoutPlaceholder(ctx context.Context, users []dto.ServerUser
 	if err != nil {
 		return nil, err
 	}
-	if sub.UUID != users[0].UUID {
+	expected := sub.UUID
+	if protocol == Nowhere {
+		expected, err = node.NowhereSharedKey(expected)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if expected != users[0].UUID {
 		return nil, nil
 	}
 	return users, nil
