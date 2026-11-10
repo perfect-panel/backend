@@ -28,6 +28,7 @@
 | [design/adr-001-modular-monolith.md](design/adr-001-modular-monolith.md) | 模块化单体架构决策；`internal/arch` 测试据此强制边界 |
 | [design/package-layout.md](design/package-layout.md) | 包结构与职责归属 |
 | [design/device-authentication.md](design/device-authentication.md) | 设备登录的签名信封协议 |
+| [design/node-device-admission.md](design/node-device-admission.md) | 节点设备准入、共享用户索引、过载行为与压测 |
 | [design/edge-subscribe.md](design/edge-subscribe.md) | 边缘节点订阅下发 |
 | [design/telegram-bot.md](design/telegram-bot.md) | Telegram Bot 集成 |
 | [design/v2-order-checkout-design.md](design/v2-order-checkout-design.md) | 订单 outbox 与对账设计 |

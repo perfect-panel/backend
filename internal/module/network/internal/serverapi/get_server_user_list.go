@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 	"uuid"
 
 	dto "github.com/perfect-panel/server/internal/module/network/contract"
@@ -82,16 +83,50 @@ func (s *Service) GetServerUserList(ctx context.Context, req *dto.GetServerUserL
 
 // userList is a rebuilt node user list with its cached serialization.
 type userList struct {
-	resp    *dto.GetServerUserListResponse
-	payload []byte
-	// served is false when no subscription is served and the list only
-	// carries the placeholder user.
-	served bool
+	resp       *dto.GetServerUserListResponse
+	payload    []byte
+	generation int64
+	expiresAt  time.Time
+	// A database rebuild already checked existence; a Redis list alone does not.
+	serverChecked bool
 }
 
 // rebuildUserList resolves the server protocol's user list from the database
-// and caches it for the next reader.
+// and caches it for the next reader. All endpoints share one fill per scope.
 func (s *Service) rebuildUserList(ctx context.Context, serverID int64, protocol string) (*userList, error) {
+	result := s.userListLoads.DoChan(serverUserListCacheKey(serverID, protocol), func() (any, error) {
+		// One disconnected node must not cancel a fill needed by other nodes.
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), userListLoadTimeout)
+		defer cancel()
+		select {
+		case s.userListBuilds <- struct{}{}:
+			defer func() { <-s.userListBuilds }()
+		default:
+			return nil, ErrServerBusy
+		}
+		generation, err := s.deps.Caches.ServerCacheGeneration(ctx, serverID)
+		if err != nil {
+			return nil, err
+		}
+		// Another caller may have filled Redis since the original miss.
+		cached, err := s.readCachedUserList(ctx, serverID, protocol, generation)
+		if err == nil && cached != nil {
+			return cached, nil
+		}
+		return s.buildUserList(ctx, serverID, protocol)
+	})
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case result := <-result:
+		if result.Err != nil {
+			return nil, result.Err
+		}
+		return result.Val.(*userList), nil
+	}
+}
+
+func (s *Service) buildUserList(ctx context.Context, serverID int64, protocol string) (*userList, error) {
 	generation, err := s.deps.Caches.ServerCacheGeneration(ctx, serverID)
 	if err != nil {
 		return nil, err
@@ -104,8 +139,8 @@ func (s *Service) rebuildUserList(ctx context.Context, serverID int64, protocol 
 	if err != nil {
 		return nil, err
 	}
-	list := &userList{served: len(users) > 0}
-	if !list.served {
+	list := &userList{generation: generation, expiresAt: time.Now().Add(node.ServerCacheTTL), serverChecked: true}
+	if len(users) == 0 {
 		users = []dto.ServerUser{placeholderServerUser()}
 	}
 	list.resp = &dto.GetServerUserListResponse{Users: users}
@@ -173,46 +208,43 @@ func (s *Service) servedUsers(ctx context.Context, server *node.Server, protocol
 	return users, nil
 }
 
-// servedSubscriptionIDs returns the ids of the subscriptions the server
-// serves over the protocol: the users GET /v1/server/user hands the node,
-// read from that endpoint's cache. A miss rebuilds and caches the list as the
-// endpoint does, so checking a traffic report costs no per-entry lookups.
+// servedSubscriptionIDs returns an immutable, shared set. Callers must not
+// mutate it: reports and device admission use the same generation of users.
 func (s *Service) servedSubscriptionIDs(ctx context.Context, serverID int64, protocol string) (map[int64]struct{}, error) {
-	users, err := s.servedServerUsers(ctx, serverID, protocol)
+	index, err := s.servedUserIndex(ctx, serverID, protocol)
 	if err != nil {
 		return nil, err
 	}
-	ids := make(map[int64]struct{}, len(users))
-	for _, user := range users {
-		ids[user.Id] = struct{}{}
-	}
-	return ids, nil
+	return index.ids, nil
 }
 
-func (s *Service) servedServerUsers(ctx context.Context, serverID int64, protocol string) ([]dto.ServerUser, error) {
-	var users []dto.ServerUser
-	cached, err := s.deps.Redis.Get(ctx, serverUserListCacheKey(serverID, protocol)).Result()
-	switch {
-	case err != nil && !errors.Is(err, redis.Nil):
+// readCachedUserList is used only during a shared fill. The local index must
+// expire no later than the source list, including lists filled by older servers.
+func (s *Service) readCachedUserList(ctx context.Context, serverID int64, protocol string, generation int64) (*userList, error) {
+	key := serverUserListCacheKey(serverID, protocol)
+	started := time.Now()
+	pipe := s.deps.Redis.TxPipeline()
+	data := pipe.Get(ctx, key)
+	ttl := pipe.PTTL(ctx, key)
+	_, err := pipe.Exec(ctx)
+	if err != nil && !errors.Is(err, redis.Nil) {
 		return nil, err
-	case cached == "":
-		list, err := s.rebuildUserList(ctx, serverID, protocol)
-		if err != nil {
-			return nil, err
-		}
-		if list.served {
-			users = list.resp.Users
-		}
-	default:
-		var resp dto.GetServerUserListResponse
-		if err := json.Unmarshal([]byte(cached), &resp); err != nil {
-			return nil, err
-		}
-		if users, err = s.withoutPlaceholder(ctx, resp.Users); err != nil {
-			return nil, err
-		}
 	}
-	return users, nil
+	if data.Val() == "" {
+		return nil, nil
+	}
+	lifetime := ttl.Val()
+	if lifetime < 0 || lifetime > node.ServerCacheTTL {
+		lifetime = node.ServerCacheTTL
+	}
+	list := &userList{
+		resp: &dto.GetServerUserListResponse{}, payload: []byte(data.Val()),
+		generation: generation, expiresAt: started.Add(lifetime),
+	}
+	if err := json.Unmarshal(list.payload, list.resp); err != nil {
+		return nil, err
+	}
+	return list, nil
 }
 
 // withoutPlaceholder drops the stand-in user of a cached empty list. Its id

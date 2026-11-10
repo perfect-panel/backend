@@ -3,6 +3,7 @@ package serverapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -42,7 +43,13 @@ func (s *scopeStore) FindOneServer(context.Context, int64) (*node.Server, error)
 	return &server, nil
 }
 
-func (s *scopeStore) ServerCacheGeneration(context.Context, int64) (int64, error) { return 0, nil }
+func (s *scopeStore) ServerCacheGeneration(ctx context.Context, serverID int64) (int64, error) {
+	generation, err := s.redis.Get(ctx, fmt.Sprintf(node.ServerCacheGenerationKey, serverID)).Int64()
+	if errors.Is(err, redis.Nil) {
+		return 0, nil
+	}
+	return generation, err
+}
 
 func (s *scopeStore) ListNodes(_ context.Context, params *node.FilterNodeParams) ([]*node.Node, error) {
 	s.lookups++
@@ -82,7 +89,7 @@ func (s *scopeStore) FindEnabledUserIDs(context.Context, []int64) ([]int64, erro
 	return []int64{100}, nil
 }
 
-func newScopeDeps(t *testing.T) (Deps, *scopeStore, *redis.Client) {
+func newScopeDeps(t testing.TB) (Deps, *scopeStore, *redis.Client) {
 	t.Helper()
 	redisServer := miniredis.RunT(t)
 	client := redis.NewClient(&redis.Options{Addr: redisServer.Addr()})

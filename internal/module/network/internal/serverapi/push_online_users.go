@@ -52,10 +52,6 @@ func (s *Service) PushOnlineUsers(ctx context.Context, req *dto.OnlineUsersReque
 	}
 
 	log := logger.WithContext(ctx)
-	if _, err := s.deps.Servers.FindOneServer(ctx, req.ServerId); err != nil {
-		log.Errorw("[PushOnlineUsers] FindOne error", logger.Field("error", err))
-		return fmt.Errorf("server not found: %w", err)
-	}
 	served, err := s.servedSubscriptionIDs(ctx, req.ServerId, req.Protocol)
 	if err != nil {
 		log.Errorw("[PushOnlineUsers] resolve the served subscriptions failed", logger.Field("error", err.Error()))

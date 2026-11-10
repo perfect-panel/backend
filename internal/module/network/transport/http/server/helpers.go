@@ -14,6 +14,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	serverv1 "github.com/perfect-panel/server/api/server/v1"
+	"github.com/perfect-panel/server/internal/module/network"
 	dto "github.com/perfect-panel/server/internal/module/network/contract"
 	"github.com/perfect-panel/server/pkg/httpx"
 	"github.com/perfect-panel/server/pkg/xerr"
@@ -87,6 +88,16 @@ func writeHTTPResult(ctx *app.RequestContext, resp any, err error) {
 }
 
 func writeServerReportResult(ctx *app.RequestContext, err error) {
+	if errors.Is(err, network.ErrServerBusy) {
+		ctx.Header("Retry-After", "1")
+		ctx.Header("Cache-Control", "no-store")
+		if acceptsProtobuf(ctx) {
+			writeServerProtobuf(ctx, consts.StatusServiceUnavailable, &serverv1.Result{Code: 503, Message: "Server busy"})
+		} else {
+			ctx.JSON(consts.StatusServiceUnavailable, map[string]any{"code": 503, "message": "Server busy"})
+		}
+		return
+	}
 	if acceptsProtobuf(ctx) {
 		writeServerProtobuf(ctx, consts.StatusOK, serverResult(err))
 		return
