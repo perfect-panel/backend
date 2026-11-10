@@ -140,6 +140,13 @@ func (s *Service) loadServedUserIndex(ctx context.Context, serverID int64, proto
 				return nil, err
 			}
 		}
+		// Validate existence once per shared fill, including Redis cache hits.
+		// Server deletion invalidates this index through the same generation.
+		if !data.serverChecked {
+			if _, err := s.deps.Servers.FindOneServer(ctx, serverID); err != nil {
+				return nil, err
+			}
+		}
 		users, err := s.withoutPlaceholder(ctx, data.resp.Users)
 		if err != nil {
 			return nil, err

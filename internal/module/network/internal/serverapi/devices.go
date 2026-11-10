@@ -37,9 +37,6 @@ func (s *Service) GetServerAliveList(ctx context.Context, req *dto.GetServerUser
 	if req.ServerId <= 0 || req.Protocol == "" {
 		return nil, errors.New("invalid server scope")
 	}
-	if _, err := s.deps.Servers.FindOneServer(ctx, req.ServerId); err != nil {
-		return nil, err
-	}
 	ids, err := s.servedSubscriptionIDs(ctx, req.ServerId, req.Protocol)
 	if err != nil {
 		return nil, err
@@ -80,9 +77,6 @@ func (s *Service) ClaimServerDevice(ctx context.Context, req *dto.ClaimServerDev
 	ip, err := netip.ParseAddr(req.IP)
 	if err != nil || ip.Zone() != "" || ip.IsUnspecified() || req.SID <= 0 || req.ServerId <= 0 || req.Protocol == "" {
 		return nil, errors.New("invalid device claim")
-	}
-	if _, err := s.deps.Servers.FindOneServer(ctx, req.ServerId); err != nil {
-		return nil, err
 	}
 	index, err := s.servedUserIndex(ctx, req.ServerId, req.Protocol)
 	if err != nil {

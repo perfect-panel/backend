@@ -87,6 +87,8 @@ type userList struct {
 	payload    []byte
 	generation int64
 	expiresAt  time.Time
+	// A database rebuild already checked existence; a Redis list alone does not.
+	serverChecked bool
 }
 
 // rebuildUserList resolves the server protocol's user list from the database
@@ -137,7 +139,7 @@ func (s *Service) buildUserList(ctx context.Context, serverID int64, protocol st
 	if err != nil {
 		return nil, err
 	}
-	list := &userList{generation: generation, expiresAt: time.Now().Add(node.ServerCacheTTL)}
+	list := &userList{generation: generation, expiresAt: time.Now().Add(node.ServerCacheTTL), serverChecked: true}
 	if len(users) == 0 {
 		users = []dto.ServerUser{placeholderServerUser()}
 	}

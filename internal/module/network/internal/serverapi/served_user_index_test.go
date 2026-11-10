@@ -14,6 +14,7 @@ import (
 	"github.com/perfect-panel/server/internal/module/network/entity/node"
 	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 type listReadCounter struct{ reads atomic.Int32 }
@@ -318,6 +319,15 @@ func (f serverReaderFunc) FindOneServer(ctx context.Context, id int64) (*node.Se
 	return f(ctx, id)
 }
 
+type generationReader struct {
+	ServerCache
+	read func(context.Context, int64) (int64, error)
+}
+
+func (r generationReader) ServerCacheGeneration(ctx context.Context, id int64) (int64, error) {
+	return r.read(ctx, id)
+}
+
 func TestDeviceClaimsShedLoadBeforeRepositoryWork(t *testing.T) {
 	entered := make(chan struct{}, 128)
 	release := make(chan struct{})
@@ -325,15 +335,15 @@ func TestDeviceClaimsShedLoadBeforeRepositoryWork(t *testing.T) {
 	unblock := func() { once.Do(func() { close(release) }) }
 	t.Cleanup(unblock)
 	unavailable := errors.New("repository unavailable")
-	svc := NewService(Deps{Servers: serverReaderFunc(func(ctx context.Context, _ int64) (*node.Server, error) {
+	svc := NewService(Deps{Caches: generationReader{read: func(ctx context.Context, _ int64) (int64, error) {
 		entered <- struct{}{}
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return 0, ctx.Err()
 		case <-release:
-			return nil, unavailable
+			return 0, unavailable
 		}
-	})})
+	}}})
 	var group sync.WaitGroup
 	for range cap(svc.deviceClaims) {
 		group.Go(func() {
@@ -358,13 +368,18 @@ func TestDeviceClaimsShedLoadBeforeRepositoryWork(t *testing.T) {
 
 func TestConcurrentIndexFillsAreBoundedAndFailuresCanRecover(t *testing.T) {
 	deps, _, client := newScopeDeps(t)
+	originalServers := deps.Servers
+	var recovered atomic.Bool
 	entered := make(chan struct{}, 4)
 	release := make(chan struct{})
 	var once sync.Once
 	unblock := func() { once.Do(func() { close(release) }) }
 	t.Cleanup(unblock)
 	unavailable := errors.New("repository unavailable")
-	deps.Servers = serverReaderFunc(func(ctx context.Context, _ int64) (*node.Server, error) {
+	deps.Servers = serverReaderFunc(func(ctx context.Context, id int64) (*node.Server, error) {
+		if id == 4 || recovered.Load() {
+			return originalServers.FindOneServer(ctx, id)
+		}
 		entered <- struct{}{}
 		select {
 		case <-ctx.Done():
@@ -398,10 +413,62 @@ func TestConcurrentIndexFillsAreBoundedAndFailuresCanRecover(t *testing.T) {
 	}
 	unblock()
 	group.Wait()
+	recovered.Store(true)
 	cacheIndexUsers(t, client, 10, "vless", time.Minute, dto.ServerUser{Id: 21, DeviceLimit: 3})
 	index, err := svc.servedUserIndex(t.Context(), 10, "vless")
 	if err != nil || index.limits[21] != 3 {
 		t.Fatalf("failed fill poisoned subsequent requests: %+v %v", index, err)
+	}
+}
+
+func TestDeviceIndexValidatesServerOnceAndRejectsDeletion(t *testing.T) {
+	for _, cached := range []bool{false, true} {
+		t.Run(fmt.Sprintf("cached=%v", cached), func(t *testing.T) {
+			deps, store, client := newScopeDeps(t)
+			var lookups atomic.Int32
+			var deleted atomic.Bool
+			deps.Servers = serverReaderFunc(func(ctx context.Context, id int64) (*node.Server, error) {
+				lookups.Add(1)
+				if deleted.Load() {
+					return nil, gorm.ErrRecordNotFound
+				}
+				return store.FindOneServer(ctx, id)
+			})
+			if cached {
+				cacheIndexUsers(t, client, 4, "vless", time.Minute, dto.ServerUser{Id: 21, DeviceLimit: 2})
+			}
+			svc := NewService(deps)
+			var group sync.WaitGroup
+			for range 32 {
+				group.Go(func() {
+					resp, err := svc.ClaimServerDevice(t.Context(), claimRequest(4, "10.0.0.1"))
+					if err != nil || !resp.Allowed {
+						t.Errorf("claim: %+v %v", resp, err)
+					}
+				})
+			}
+			group.Wait()
+			if _, err := svc.GetServerAliveList(t.Context(), &dto.GetServerUserListRequest{ServerCommon: dto.ServerCommon{ServerId: 4, Protocol: "vless"}}); err != nil {
+				t.Fatal(err)
+			}
+			deps.Online = &onlineRecorder{}
+			svc.deps.Online = deps.Online
+			if err := svc.PushOnlineUsers(t.Context(), onlineRequest(dto.OnlineUser{SID: 21, IP: "10.0.0.1"})); err != nil {
+				t.Fatal(err)
+			}
+			if got := lookups.Load(); got != 1 {
+				t.Fatalf("server queries = %d, want 1 per fill", got)
+			}
+			// Leave stale Redis list data present: existence cannot be inferred
+			// solely from a cached user list after deletion invalidates the index.
+			deleted.Store(true)
+			if err := client.Incr(t.Context(), fmt.Sprintf(node.ServerCacheGenerationKey, 4)).Err(); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := svc.ClaimServerDevice(t.Context(), claimRequest(4, "10.0.0.2")); !errors.Is(err, gorm.ErrRecordNotFound) {
+				t.Fatalf("deleted server admitted: %v", err)
+			}
+		})
 	}
 }
 

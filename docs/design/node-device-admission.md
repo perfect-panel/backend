@@ -11,6 +11,9 @@
 `(server_id, protocol)` 索引。索引只保留 SID、DeviceLimit 和只读 SID 集合，不保留
 用户 UUID 或完整 JSON。设备准入热路径只读取 Redis generation 并按 SID 查表，
 不会重新传输、解析整份用户列表，也不会为每次上报重新创建 SID 集合。
+服务器存在性在共享索引加载时校验一次，数据库重建已有的校验结果会直接复用；
+设备准入、在线人数和在线上报命中索引时不再单独查询服务器表。服务器删除后依靠
+generation 失效重新校验，即使 Redis 中仍有旧列表也不会授予权限。
 
 - 每次访问读取现有 `ServerCacheGeneration`；generation 改变就刷新索引。
 - 从 Redis 列表加载时读取其 PTTL，索引期限不超过源列表剩余期限，最长 5 分钟。
