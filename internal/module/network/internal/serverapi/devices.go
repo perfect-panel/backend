@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/netip"
 	"strconv"
+	"time"
 
 	dto "github.com/perfect-panel/server/internal/module/network/contract"
 	"github.com/perfect-panel/server/internal/module/network/entity/node"
@@ -68,6 +69,14 @@ func (s *Service) GetServerAliveList(ctx context.Context, req *dto.GetServerUser
 }
 
 func (s *Service) ClaimServerDevice(ctx context.Context, req *dto.ClaimServerDeviceRequest) (*dto.ClaimServerDeviceResponse, error) {
+	select {
+	case s.deviceClaims <- struct{}{}:
+		defer func() { <-s.deviceClaims }()
+	default:
+		return nil, ErrServerBusy
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	ip, err := netip.ParseAddr(req.IP)
 	if err != nil || ip.Zone() != "" || ip.IsUnspecified() || req.SID <= 0 || req.ServerId <= 0 || req.Protocol == "" {
 		return nil, errors.New("invalid device claim")
@@ -75,22 +84,20 @@ func (s *Service) ClaimServerDevice(ctx context.Context, req *dto.ClaimServerDev
 	if _, err := s.deps.Servers.FindOneServer(ctx, req.ServerId); err != nil {
 		return nil, err
 	}
-	users, err := s.servedServerUsers(ctx, req.ServerId, req.Protocol)
+	index, err := s.servedUserIndex(ctx, req.ServerId, req.Protocol)
 	if err != nil {
 		return nil, err
 	}
-	for _, user := range users {
-		if user.Id != req.SID {
-			continue
-		}
-		ttl := int64(node.Expiry.Seconds())
-		allowed, err := claimDeviceScript.Run(ctx, s.deps.Redis, []string{onlineDeviceKey(req.SID)}, ip.Unmap().String(), user.DeviceLimit, ttl).Int()
-		if err != nil {
-			return nil, err
-		}
-		return &dto.ClaimServerDeviceResponse{Allowed: allowed == 1, TTLSeconds: ttl}, nil
+	limit, served := index.limits[req.SID]
+	if !served {
+		return nil, errors.New("subscription is not served by this server protocol")
 	}
-	return nil, errors.New("subscription is not served by this server protocol")
+	ttl := int64(node.Expiry.Seconds())
+	allowed, err := claimDeviceScript.Run(ctx, s.deps.Redis, []string{onlineDeviceKey(req.SID)}, ip.Unmap().String(), limit, ttl).Int()
+	if err != nil {
+		return nil, err
+	}
+	return &dto.ClaimServerDeviceResponse{Allowed: allowed == 1, TTLSeconds: ttl}, nil
 }
 
 func (s *Service) renewOnlineDevices(ctx context.Context, online node.OnlineUserSubscribe) error {

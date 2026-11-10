@@ -7,9 +7,34 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/ut"
 
 	serverv1 "github.com/perfect-panel/server/api/server/v1"
+	"github.com/perfect-panel/server/internal/module/network"
 	dto "github.com/perfect-panel/server/internal/module/network/contract"
 	"google.golang.org/protobuf/proto"
 )
+
+func TestDeviceAdmissionOverloadReturns503(t *testing.T) {
+	for _, binary := range []bool{false, true} {
+		svc := &nodeService{err: network.ErrServerBusy}
+		h := nodeAPI(svc, testNodeSecret)
+		headers := []ut.Header{jsonContent}
+		if binary {
+			headers = append(headers, acceptProtobuf)
+		}
+		resp := send(h, http.MethodPost, "/v1/server/device"+reportQuery, []byte(`{"uid":21,"ip":"127.0.0.1"}`), headers...)
+		assertStatus(t, resp, http.StatusServiceUnavailable)
+		if string(resp.Header.Peek("Retry-After")) != "1" || string(resp.Header.Peek("Cache-Control")) != "no-store" {
+			t.Fatal("missing overload headers")
+		}
+		if binary {
+			var result serverv1.Result
+			if err := proto.Unmarshal(resp.Body(), &result); err != nil || result.Code != 503 {
+				t.Fatalf("overload protobuf: %+v %v", &result, err)
+			}
+		} else {
+			assertJSON(t, resp.Body(), `{"code":503,"message":"Server busy"}`)
+		}
+	}
+}
 
 func TestDeviceEndpointsJSONAndProtobuf(t *testing.T) {
 	svc := &nodeService{alive: &dto.GetServerAliveListResponse{Alive: map[int64]int64{21: 2}}, claim: &dto.ClaimServerDeviceResponse{Allowed: true, TTLSeconds: 300}}

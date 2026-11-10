@@ -13,6 +13,7 @@ import (
 	"github.com/perfect-panel/server/internal/module/subscription"
 	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/singleflight"
 )
 
 // Snapshot is the per-request view of the runtime-mutable settings the node
@@ -104,10 +105,21 @@ type AccountReader interface {
 
 // Service is the node-facing API entry point used by the network facade.
 type Service struct {
-	deps Deps
+	deps           Deps
+	userIndexes    servedIndexCache
+	indexLoads     singleflight.Group
+	userListLoads  singleflight.Group
+	indexBuilds    chan struct{}
+	userListBuilds chan struct{}
+	deviceClaims   chan struct{}
 }
 
 // NewService returns the node API's service over deps.
 func NewService(deps Deps) *Service {
-	return &Service{deps: deps}
+	return &Service{
+		deps:           deps,
+		indexBuilds:    make(chan struct{}, 4),
+		userListBuilds: make(chan struct{}, 4),
+		deviceClaims:   make(chan struct{}, 128),
+	}
 }

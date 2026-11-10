@@ -73,6 +73,9 @@ type Service interface {
 // the transport handler's status mapping.
 var ErrManifestNotFound = edge.ErrManifestNotFound
 
+// ErrServerBusy reports bounded node API work at capacity.
+var ErrServerBusy = serverapi.ErrServerBusy
+
 // RequestMeta and ResponseMeta re-export the server API's conditional-request
 // negotiation types for the transport handlers.
 type (
