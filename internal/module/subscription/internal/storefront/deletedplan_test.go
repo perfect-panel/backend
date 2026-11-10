@@ -20,7 +20,7 @@ func TestQueryUserSubscribeNodeListSkipsADeletedPlan(t *testing.T) {
 	orphaned := f.Subscription(t, usersub.Subscribe{UserId: 7, SubscribeId: 99, ExpireTime: future, Status: usersub.SubscribeStatusActive})
 
 	nodes := &planNodes{nodes: []*node.Node{{Id: 5, Name: "Tokyo", Protocol: "vless", Server: &node.Server{}}}}
-	resp, err := newStorefront(f, nodes, 0).QueryUserSubscribeNodeList(ownerContext(7))
+	resp, err := newStorefront(f, nodes, 0).QueryUserSubscribeNodeList(ownerContext())
 	if err != nil {
 		t.Fatalf("QueryUserSubscribeNodeList with a deleted plan: %v", err)
 	}
