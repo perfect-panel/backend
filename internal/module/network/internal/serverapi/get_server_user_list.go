@@ -102,12 +102,10 @@ func (s *Service) rebuildUserList(ctx context.Context, serverID int64, protocol 
 		// One disconnected node must not cancel a fill needed by other nodes.
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), userListLoadTimeout)
 		defer cancel()
-		select {
-		case s.userListBuilds <- struct{}{}:
-			defer func() { <-s.userListBuilds }()
-		default:
-			return nil, ErrServerBusy
+		if err := s.userListBuilds.acquire(ctx); err != nil {
+			return nil, err
 		}
+		defer s.userListBuilds.release()
 		generation, err := s.deps.Caches.ServerCacheGeneration(ctx, serverID)
 		if err != nil {
 			return nil, err
@@ -121,10 +119,10 @@ func (s *Service) rebuildUserList(ctx context.Context, serverID int64, protocol 
 	})
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, userListWaitError(ctx.Err())
 	case result := <-result:
 		if result.Err != nil {
-			return nil, result.Err
+			return nil, userListWaitError(result.Err)
 		}
 		return result.Val.(*userList), nil
 	}

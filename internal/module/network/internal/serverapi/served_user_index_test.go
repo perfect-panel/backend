@@ -394,7 +394,7 @@ func TestConcurrentIndexFillsAreBoundedAndFailuresCanRecover(t *testing.T) {
 		t.Fatal(err)
 	}
 	var group sync.WaitGroup
-	for i := range cap(svc.indexBuilds) {
+	for i := range cap(svc.indexBuilds.active) {
 		group.Go(func() {
 			_, err := svc.servedUserIndex(t.Context(), int64(10+i), "vless")
 			if !errors.Is(err, unavailable) {
@@ -402,17 +402,24 @@ func TestConcurrentIndexFillsAreBoundedAndFailuresCanRecover(t *testing.T) {
 			}
 		})
 	}
-	for range cap(svc.indexBuilds) {
+	for range cap(svc.indexBuilds.active) {
 		<-entered
 	}
-	if _, err := svc.servedUserIndex(t.Context(), 20, "vless"); !errors.Is(err, ErrServerBusy) {
-		t.Fatalf("unbounded cold fill: %v", err)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Millisecond)
+	defer cancel()
+	if _, err := svc.servedUserIndex(ctx, 20, "vless"); !errors.Is(err, context.DeadlineExceeded) || !errors.Is(err, ErrServerBusy) {
+		t.Fatalf("queued fill did not respect the caller's deadline: %v", err)
 	}
 	if _, err := svc.servedUserIndex(t.Context(), 4, "vless"); err != nil {
 		t.Fatalf("warm index blocked by cold fills: %v", err)
 	}
 	unblock()
 	group.Wait()
+	// The canceled caller's shared fill continues for other waiters. Join it
+	// before changing the fake repository's outcome or releasing test resources.
+	if _, err := svc.servedUserIndex(t.Context(), 20, "vless"); !errors.Is(err, unavailable) {
+		t.Fatalf("queued fill: %v", err)
+	}
 	recovered.Store(true)
 	cacheIndexUsers(t, client, 10, "vless", time.Minute, dto.ServerUser{Id: 21, DeviceLimit: 3})
 	index, err := svc.servedUserIndex(t.Context(), 10, "vless")

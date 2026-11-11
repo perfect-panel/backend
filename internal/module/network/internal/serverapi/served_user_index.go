@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -14,8 +15,10 @@ const (
 	maxServedIndexUsers  = 1_000_000
 )
 
-// ErrServerBusy allows the transport to shed load without queuing more work.
+// ErrServerBusy reports exhausted admission capacity or a refresh wait budget.
 var ErrServerBusy = errors.New("server admission capacity exceeded")
+
+var errServerUserListChanged = fmt.Errorf("%w: server user list changed during admission", ErrServerBusy)
 
 // servedUserIndex contains only immutable authorization data, not UUIDs or
 // serialized lists. A warm lookup reads one generation token and one map entry.
@@ -81,47 +84,46 @@ func (c *servedIndexCache) remove(e *list.Element) {
 
 func (s *Service) servedUserIndex(ctx context.Context, serverID int64, protocol string) (*servedUserIndex, error) {
 	key := serverUserListCacheKey(serverID, protocol)
-	generation, err := s.deps.Caches.ServerCacheGeneration(ctx, serverID)
-	if err != nil {
-		return nil, err
-	}
-	if index := s.userIndexes.get(key, generation, time.Now()); index != nil {
-		return index, nil
-	}
-	result := s.indexLoads.DoChan(key, func() (any, error) {
-		return s.loadServedUserIndex(ctx, serverID, protocol)
-	})
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case result := <-result:
-		if result.Err != nil {
-			return nil, result.Err
-		}
-		index := result.Val.(*servedUserIndex)
-		// A waiter can join a fill just after its final generation check.
-		// Recheck on delivery so it cannot consume a now-revoked snapshot.
-		current, err := s.deps.Caches.ServerCacheGeneration(ctx, serverID)
+	for range 3 {
+		generation, err := s.deps.Caches.ServerCacheGeneration(ctx, serverID)
 		if err != nil {
-			return nil, err
+			return nil, userListWaitError(err)
 		}
-		if current != index.generation || !time.Now().Before(index.expiresAt) {
-			return nil, errors.New("server user list changed during admission")
+		if index := s.userIndexes.get(key, generation, time.Now()); index != nil {
+			return index, nil
 		}
-		return index, nil
+		result := s.indexLoads.DoChan(key, func() (any, error) { return s.loadServedUserIndex(ctx, serverID, protocol) })
+		select {
+		case <-ctx.Done():
+			return nil, userListWaitError(ctx.Err())
+		case result := <-result:
+			if result.Err != nil {
+				return nil, userListWaitError(result.Err)
+			}
+			index := result.Val.(*servedUserIndex)
+			// A waiter may join immediately before a fill's final generation check.
+			// Retry a changed delivery against current data, within the same deadline.
+			current, err := s.deps.Caches.ServerCacheGeneration(ctx, serverID)
+			if err != nil {
+				return nil, userListWaitError(err)
+			}
+			if current != index.generation || !time.Now().Before(index.expiresAt) {
+				continue
+			}
+			return index, nil
+		}
 	}
+	return nil, errServerUserListChanged
 }
 
 func (s *Service) loadServedUserIndex(ctx context.Context, serverID int64, protocol string) (*servedUserIndex, error) {
 	key := serverUserListCacheKey(serverID, protocol)
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), userListLoadTimeout)
 	defer cancel()
-	select {
-	case s.indexBuilds <- struct{}{}:
-		defer func() { <-s.indexBuilds }()
-	default:
-		return nil, ErrServerBusy
+	if err := s.indexBuilds.acquire(ctx); err != nil {
+		return nil, err
 	}
+	defer s.indexBuilds.release()
 	for range 3 {
 		generation, err := s.deps.Caches.ServerCacheGeneration(ctx, serverID)
 		if err != nil {
@@ -171,5 +173,5 @@ func (s *Service) loadServedUserIndex(ctx context.Context, serverID int64, proto
 		s.userIndexes.put(key, index)
 		return index, nil
 	}
-	return nil, errors.New("server user list changed during admission")
+	return nil, errServerUserListChanged
 }

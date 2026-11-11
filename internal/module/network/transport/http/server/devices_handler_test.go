@@ -1,6 +1,8 @@
 package server
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -29,6 +31,30 @@ func TestDeviceAdmissionOverloadReturns503(t *testing.T) {
 			var result serverv1.Result
 			if err := proto.Unmarshal(resp.Body(), &result); err != nil || result.Code != 503 {
 				t.Fatalf("overload protobuf: %+v %v", &result, err)
+			}
+		} else {
+			assertJSON(t, resp.Body(), `{"code":503,"message":"Server busy"}`)
+		}
+	}
+}
+
+func TestUserListRefreshTimeoutReturns503(t *testing.T) {
+	for _, binary := range []bool{false, true} {
+		svc := &nodeService{err: errors.Join(network.ErrServerBusy, context.DeadlineExceeded)}
+		h := nodeAPI(svc, testNodeSecret)
+		var headers []ut.Header
+		if binary {
+			headers = append(headers, acceptProtobuf)
+		}
+		resp := send(h, http.MethodGet, "/v1/server/user"+reportQuery, nil, headers...)
+		assertStatus(t, resp, http.StatusServiceUnavailable)
+		if string(resp.Header.Peek("Retry-After")) != "1" || string(resp.Header.Peek("Cache-Control")) != "no-store" {
+			t.Fatal("missing retry headers for refresh timeout")
+		}
+		if binary {
+			var result serverv1.Result
+			if err := proto.Unmarshal(resp.Body(), &result); err != nil || result.Code != 503 {
+				t.Fatalf("timeout protobuf: %+v %v", &result, err)
 			}
 		} else {
 			assertJSON(t, resp.Body(), `{"code":503,"message":"Server busy"}`)

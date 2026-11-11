@@ -109,8 +109,8 @@ type Service struct {
 	userIndexes    servedIndexCache
 	indexLoads     singleflight.Group
 	userListLoads  singleflight.Group
-	indexBuilds    chan struct{}
-	userListBuilds chan struct{}
+	indexBuilds    *userListBuildGate
+	userListBuilds *userListBuildGate
 	deviceClaims   chan struct{}
 }
 
@@ -118,8 +118,8 @@ type Service struct {
 func NewService(deps Deps) *Service {
 	return &Service{
 		deps:           deps,
-		indexBuilds:    make(chan struct{}, 4),
-		userListBuilds: make(chan struct{}, 4),
+		indexBuilds:    newUserListBuildGate(),
+		userListBuilds: newUserListBuildGate(),
 		deviceClaims:   make(chan struct{}, 128),
 	}
 }

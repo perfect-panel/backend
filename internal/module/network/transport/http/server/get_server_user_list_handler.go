@@ -51,6 +51,10 @@ func GetServerUserListHandler(service ServerUserListReader) app.HandlerFunc {
 		})
 		writeHeaders(ctx, respMeta.Headers)
 		if err != nil {
+			if errors.Is(err, network.ErrServerBusy) {
+				writeServerReportResult(ctx, err)
+				return
+			}
 			if errors.Is(err, xerr.ErrNotModified) {
 				ctx.String(consts.StatusNotModified, "Not Modified")
 				return

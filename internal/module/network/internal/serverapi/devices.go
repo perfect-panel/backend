@@ -21,6 +21,9 @@ func onlineDeviceKey(sid int64) string { return fmt.Sprintf("node:online:devices
 // exceeding the limit. Reports renew leases; silent nodes expire after 5 min.
 var claimDeviceScript = redis.NewScript(`
 redis.replicate_commands()
+if (redis.call('GET', KEYS[2]) or '0') ~= ARGV[4] then
+  return -1
+end
 local now = tonumber(redis.call('TIME')[1])
 local ttl = tonumber(ARGV[3])
 redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now)
@@ -78,20 +81,37 @@ func (s *Service) ClaimServerDevice(ctx context.Context, req *dto.ClaimServerDev
 	if err != nil || ip.Zone() != "" || ip.IsUnspecified() || req.SID <= 0 || req.ServerId <= 0 || req.Protocol == "" {
 		return nil, errors.New("invalid device claim")
 	}
-	index, err := s.servedUserIndex(ctx, req.ServerId, req.Protocol)
-	if err != nil {
-		return nil, err
+	// Fence the authorization snapshot and the lease write in the same Redis
+	// operation. A generation check before EVAL leaves a revocation/limit-change
+	// race; an invalidated attempt must not mutate the device set at all.
+	for range 3 {
+		index, err := s.servedUserIndex(ctx, req.ServerId, req.Protocol)
+		if err != nil {
+			return nil, err
+		}
+		limit, served := index.limits[req.SID]
+		if !served {
+			current, err := s.deps.Caches.ServerCacheGeneration(ctx, req.ServerId)
+			if err != nil {
+				return nil, userListWaitError(err)
+			}
+			if current != index.generation {
+				continue
+			}
+			return nil, errors.New("subscription is not served by this server protocol")
+		}
+		ttl := int64(node.Expiry.Seconds())
+		keys := []string{onlineDeviceKey(req.SID), fmt.Sprintf(node.ServerCacheGenerationKey, req.ServerId)}
+		allowed, err := claimDeviceScript.Run(ctx, s.deps.Redis, keys, ip.Unmap().String(), limit, ttl, index.generation).Int()
+		if err != nil {
+			return nil, userListWaitError(err)
+		}
+		if allowed == -1 {
+			continue
+		}
+		return &dto.ClaimServerDeviceResponse{Allowed: allowed == 1, TTLSeconds: ttl}, nil
 	}
-	limit, served := index.limits[req.SID]
-	if !served {
-		return nil, errors.New("subscription is not served by this server protocol")
-	}
-	ttl := int64(node.Expiry.Seconds())
-	allowed, err := claimDeviceScript.Run(ctx, s.deps.Redis, []string{onlineDeviceKey(req.SID)}, ip.Unmap().String(), limit, ttl).Int()
-	if err != nil {
-		return nil, err
-	}
-	return &dto.ClaimServerDeviceResponse{Allowed: allowed == 1, TTLSeconds: ttl}, nil
+	return nil, errServerUserListChanged
 }
 
 func (s *Service) renewOnlineDevices(ctx context.Context, online node.OnlineUserSubscribe) error {
