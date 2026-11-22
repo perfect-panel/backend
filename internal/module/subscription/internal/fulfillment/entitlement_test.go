@@ -110,8 +110,8 @@ func (p *periodTestPlans) Insert(context.Context, *subscribe.Subscribe) error {
 func (p *periodTestPlans) Update(context.Context, *subscribe.Subscribe) error {
 	return errPlanCatalogue
 }
-func (p *periodTestPlans) ReserveInventory(context.Context, int64) (bool, error) {
-	return false, errPlanCatalogue
+func (p *periodTestPlans) ReserveInventory(context.Context, int64) (repository.InventoryReservation, error) {
+	return repository.InventoryUnavailable, errPlanCatalogue
 }
 func (p *periodTestPlans) RestoreInventory(context.Context, int64) error { return errPlanCatalogue }
 func (p *periodTestPlans) Delete(context.Context, int64) error           { return errPlanCatalogue }

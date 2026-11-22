@@ -7,13 +7,23 @@ import (
 	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
 )
 
+// InventoryReservation describes what happened to a plan's stock in the
+// reservation transaction. An unlimited plan accepts the order without a debit.
+type InventoryReservation uint8
+
+const (
+	InventoryUnavailable InventoryReservation = iota
+	InventoryUnlimited
+	InventoryDeducted
+)
+
 // SubscribeRepo manages the plans (the subscribe table) and their groups,
 // including each plan's inventory and its cached projections.
 type SubscribeRepo interface {
 	Insert(ctx context.Context, data *subscribe.Subscribe) error
 	FindOne(ctx context.Context, id int64) (*subscribe.Subscribe, error)
 	Update(ctx context.Context, data *subscribe.Subscribe) error
-	ReserveInventory(ctx context.Context, id int64) (bool, error)
+	ReserveInventory(ctx context.Context, id int64) (InventoryReservation, error)
 	RestoreInventory(ctx context.Context, id int64) error
 	Delete(ctx context.Context, id int64) error
 	FilterList(ctx context.Context, params *subscribe.FilterParams) (int64, []*subscribe.Subscribe, error)

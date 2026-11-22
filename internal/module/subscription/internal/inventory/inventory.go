@@ -5,7 +5,9 @@ package inventory
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/perfect-panel/backend/internal/repository"
 )
@@ -36,52 +38,69 @@ type Service struct {
 
 func New(store Store) *Service { return &Service{store: store} }
 
-// Reserve commits one unit and its inbox marker in the same subscription
-// transaction. A duplicate marker rolls back a concurrent losing reservation.
+// Reserve records the plan ID and units debited in the stock transaction.
+// A duplicate marker rolls back a concurrent losing reservation.
 func (s *Service) Reserve(ctx context.Context, orderNo string, subscribeID int64) error {
-	store := s.store
-	mark, err := store.Inbox().Find(ctx, InventoryReserveConsumer, orderNo)
-	if err != nil {
-		return err
-	}
-	if mark != nil {
-		return nil
-	}
-	return store.InSubscriptionTx(ctx, func(tx repository.SubscriptionStore) error {
-		reserved, err := tx.Subscribe().ReserveInventory(ctx, subscribeID)
+	return s.applyOnce(ctx, InventoryReserveConsumer, orderNo, func(tx repository.SubscriptionStore) (string, error) {
+		reservation, err := tx.Subscribe().ReserveInventory(ctx, subscribeID)
 		if err != nil {
-			return err
+			return "", err
 		}
-		if !reserved {
-			return ErrOutOfStock
+		plan := strconv.FormatInt(subscribeID, 10)
+		switch reservation {
+		case repository.InventoryDeducted:
+			return plan + "|1", nil
+		case repository.InventoryUnlimited:
+			return plan + "|0", nil
+		default:
+			return "", ErrOutOfStock
 		}
-		return tx.Inbox().Insert(ctx, InventoryReserveConsumer, orderNo, strconv.FormatInt(subscribeID, 10))
 	})
 }
 
-// Restore returns the order's reserved unit exactly once. Orders
-// that never reserved (stock-out compensation, historical orders) are a
-// no-op, and a second restoration attempt is absorbed by the restore marker.
+// Restore returns the units recorded by Reserve. Even a zero-unit reservation
+// gets a restore marker so retries after a plan edit cannot move its stock.
 func (s *Service) Restore(ctx context.Context, orderNo string, subscribeID int64) error {
-	store := s.store
-	reserveMark, err := store.Inbox().Find(ctx, InventoryReserveConsumer, orderNo)
-	if err != nil {
+	mark, err := s.store.Inbox().Find(ctx, InventoryReserveConsumer, orderNo)
+	if err != nil || mark == nil {
 		return err
 	}
-	if reserveMark == nil {
-		return nil
-	}
-	restoreMark, err := store.Inbox().Find(ctx, InventoryRestoreConsumer, orderNo)
-	if err != nil {
+	return s.applyOnce(ctx, InventoryRestoreConsumer, orderNo, func(tx repository.SubscriptionStore) (string, error) {
+		_, units, recorded := strings.Cut(mark.Result, "|")
+		if !recorded {
+			// Historical markers only identified the plan. Preserve their
+			// restoration semantics since the original mode is unknown.
+			units = "1"
+		}
+		switch units {
+		case "0":
+			return "", nil
+		case "1":
+			return "", tx.Subscribe().RestoreInventory(ctx, subscribeID)
+		default:
+			return "", fmt.Errorf("invalid reserved inventory units %q for order %s", units, orderNo)
+		}
+	})
+}
+
+func (s *Service) applyOnce(ctx context.Context, consumer, orderNo string, apply func(repository.SubscriptionStore) (string, error)) error {
+	mark, err := s.store.Inbox().Find(ctx, consumer, orderNo)
+	if err != nil || mark != nil {
 		return err
 	}
-	if restoreMark != nil {
-		return nil
-	}
-	return store.InSubscriptionTx(ctx, func(tx repository.SubscriptionStore) error {
-		if err := tx.Subscribe().RestoreInventory(ctx, subscribeID); err != nil {
+	err = s.store.InSubscriptionTx(ctx, func(tx repository.SubscriptionStore) error {
+		result, err := apply(tx)
+		if err != nil {
 			return err
 		}
-		return tx.Inbox().Insert(ctx, InventoryRestoreConsumer, orderNo, "")
+		return tx.Inbox().Insert(ctx, consumer, orderNo, result)
 	})
+	if err != nil {
+		// A concurrent delivery may have committed the same operation while
+		// this one waited for the plan lock (including its last stock unit).
+		if mark, readErr := s.store.Inbox().Find(ctx, consumer, orderNo); readErr == nil && mark != nil {
+			return nil
+		}
+	}
+	return err
 }

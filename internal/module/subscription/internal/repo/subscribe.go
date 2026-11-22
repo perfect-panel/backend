@@ -192,28 +192,33 @@ func (m *subscribeRepo) Update(ctx context.Context, data *subscribe.Subscribe) e
 	return nil
 }
 
-// ReserveInventory consumes one finite inventory unit with a conditional update.
-// A stale plan object must never decide whether stock is still available.
-func (m *subscribeRepo) ReserveInventory(ctx context.Context, id int64) (bool, error) {
-	data, err := m.FindOne(ctx, id)
+// ReserveInventory reads the stock under the reservation transaction's row
+// lock, so the marker describes the inventory mode at the time of the debit.
+func (m *subscribeRepo) ReserveInventory(ctx context.Context, id int64) (repository.InventoryReservation, error) {
+	var plan subscribe.Subscribe
+	err := m.QueryNoCacheCtx(ctx, &plan, func(conn *gorm.DB, v any) error {
+		return conn.Clauses(clause.Locking{Strength: "UPDATE"}).Select("inventory").First(v, id).Error
+	})
 	if err != nil {
-		return false, err
+		return repository.InventoryUnavailable, err
 	}
-	if data.Inventory == -1 {
-		return true, nil
+	if plan.Inventory == -1 {
+		return repository.InventoryUnlimited, nil
 	}
-	if data.Inventory <= 0 {
-		return false, nil
+	if plan.Inventory <= 0 {
+		return repository.InventoryUnavailable, nil
 	}
-	var reserved bool
+	reservation := repository.InventoryUnavailable
 	err = m.ExecCtx(ctx, func(conn *gorm.DB) error {
 		result := conn.Model(&subscribe.Subscribe{}).
 			Where("id = ? AND inventory > 0", id).
 			UpdateColumn("inventory", gorm.Expr("inventory - 1"))
-		reserved = result.RowsAffected == 1
+		if result.RowsAffected == 1 {
+			reservation = repository.InventoryDeducted
+		}
 		return result.Error
-	}, m.cacheKeys(data)...)
-	return reserved, err
+	}, planCacheKey(id))
+	return reservation, err
 }
 
 // RestoreInventory returns one previously reserved finite inventory unit. An

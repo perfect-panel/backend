@@ -7,6 +7,7 @@ import (
 
 	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
 	"github.com/perfect-panel/backend/internal/module/subscription/internal/subtest"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 const inventoryPlan int64 = 9
@@ -119,5 +120,76 @@ func TestReserveInventoryRollsBackWithItsMarker(t *testing.T) {
 	}
 	if got := stock(t, f); got != 1 {
 		t.Fatalf("stock after the retry = %d, want 1", got)
+	}
+}
+
+func TestUnlimitedReservationSurvivesChangeToFiniteStock(t *testing.T) {
+	f, svc := newInventoryFixture(t, -1)
+	ctx := t.Context()
+	if err := svc.Reserve(ctx, "pending", inventoryPlan); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := f.Store.Subscribe().FindOne(ctx, inventoryPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan.Inventory = 10
+	if err := f.Store.Subscribe().Update(ctx, plan); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Reserve(ctx, "pending", inventoryPlan); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if err := svc.Restore(ctx, "pending", inventoryPlan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := stock(t, f); got != 10 || !marked(t, f, InventoryRestoreConsumer, "pending") {
+		t.Fatalf("after closing unlimited order stock = %d; want 10 and a restore marker", got)
+	}
+}
+
+func TestLegacyFiniteReservationStillRestoresOnce(t *testing.T) {
+	f, svc := newInventoryFixture(t, 1)
+	ctx := t.Context()
+	if err := f.Store.Inbox().Insert(ctx, InventoryReserveConsumer, "legacy", "9"); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if err := svc.Restore(ctx, "legacy", inventoryPlan); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := stock(t, f); got != 2 {
+		t.Fatalf("restoring legacy reservation: stock = %d, want 2", got)
+	}
+}
+
+// Model another worker committing the last unit after this worker's first
+// inbox lookup but before it starts its stock transaction.
+type interleavedReservation struct {
+	Store
+	before func()
+}
+
+func (s interleavedReservation) InSubscriptionTx(ctx context.Context, fn func(repository.SubscriptionStore) error) error {
+	s.before()
+	return s.Store.InSubscriptionTx(ctx, fn)
+}
+
+func TestConcurrentRetryOfLastUnitSeesCommittedReservation(t *testing.T) {
+	f, winner := newInventoryFixture(t, 1)
+	ctx := t.Context()
+	loser := New(interleavedReservation{Store: f.Store, before: func() {
+		if err := winner.Reserve(ctx, "same-order", inventoryPlan); err != nil {
+			t.Fatal(err)
+		}
+	}})
+	if err := loser.Reserve(ctx, "same-order", inventoryPlan); err != nil {
+		t.Fatal(err)
+	}
+	if stock(t, f) != 0 {
+		t.Fatal("the one unit was not reserved")
 	}
 }

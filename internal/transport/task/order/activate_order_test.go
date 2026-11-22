@@ -881,8 +881,8 @@ func (*activationSubscribeRepo) QueryResetCycleSubscribeIds(context.Context, int
 func (*activationSubscribeRepo) QuerySubscribeMinSortByIds(context.Context, []int64) (int64, error) {
 	return 0, errNotInScenario
 }
-func (*activationSubscribeRepo) ReserveInventory(context.Context, int64) (bool, error) {
-	return false, errNotInScenario
+func (*activationSubscribeRepo) ReserveInventory(context.Context, int64) (repository.InventoryReservation, error) {
+	return repository.InventoryUnavailable, errNotInScenario
 }
 func (*activationSubscribeRepo) RestoreInventory(context.Context, int64) error {
 	return errNotInScenario

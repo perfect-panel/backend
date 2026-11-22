@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/internal/repository"
 	"github.com/perfect-panel/backend/pkg/cache"
 )
 
@@ -61,7 +62,7 @@ func TestPlanWritesClearNodeCachesThroughTheFencedBridge(t *testing.T) {
 
 	// Inventory changes what is sold, not what the servers serve.
 	bridge.calls = nil
-	if reserved, err := plans.ReserveInventory(ctx, plan.Id); err != nil || !reserved {
+	if reserved, err := plans.ReserveInventory(ctx, plan.Id); err != nil || reserved != repository.InventoryDeducted {
 		t.Fatalf("ReserveInventory = %v, %v", reserved, err)
 	}
 	if err := plans.RestoreInventory(ctx, plan.Id); err != nil {
