@@ -3,10 +3,10 @@
 <div align="center">
 
 [![License](https://img.shields.io/github/license/perfect-panel/backend)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.27.1%2B-blue)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.27.4%2B-blue)](go.mod)
 [![Go Report Card](https://goreportcard.com/badge/github.com/perfect-panel/backend)](https://goreportcard.com/report/github.com/perfect-panel/backend)
 [![Docker](https://img.shields.io/badge/Docker-Available-blue)](Dockerfile)
-[![CI/CD](https://img.shields.io/github/actions/workflow/status/perfect-panel/backend/release.yml)](.github/workflows/release.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/perfect-panel/backend/ci.yml?branch=main&label=CI)](.github/workflows/ci.yml)
 
 **PPanel 是一个纯净、专业、完美的开源代理面板工具，旨在成为您学习和实际使用的理想选择。**
 
@@ -33,12 +33,12 @@ PPanel 服务端是 PPanel 项目的后端组件，为代理服务提供强大�
 
 ### 核心特性
 
-- **多协议支持**：支持 Shadowsocks、V2Ray、Trojan 等多种加密协议。
-- **隐私保护**：不收集用户日志，确保隐私和安全。
+- **节点协议**覆盖 Shadowsocks、VLESS、Hysteria 2 等 12 种协议，详见[节点 API 兼容表](#节点-api)。
+- **登录历史**记录登录方式、客户端 IP、User-Agent、时间和结果，供账户审计。
 - **极简设计**：简单易用，保留完整的业务逻辑。
 - **用户管理**：完善的认证和授权系统。
 - **订阅管理**：处理用户订阅和服务开通。
-- **支付集成**：支持多种支付网关。
+- **支付方式**包括 Stripe、支付宝当面付、EPay V1/V2、Cryptomus、GMPay、PayPal Checkout 和站内余额。配置指南见 [EPay](docs/guide/epay-zh.md)、[GMPay](docs/guide/gmpay-zh.md) 和 [PayPal](docs/guide/paypal-zh.md)。
 - **订单管理**：跟踪和处理用户订单。
 - **工单系统**：内置客户支持和问题跟踪。
 - **节点管理**：监控和控制服务器节点。
@@ -48,8 +48,9 @@ PPanel 服务端是 PPanel 项目的后端组件，为代理服务提供强大�
 
 ### 前提条件
 
-- **Go**：1.27.1 或更高版本
-- **数据库**：MySQL 8.0+、MariaDB 11.8+ 或 PostgreSQL 16+，以及 Redis 6.0+
+- 从源码构建需要 **Go 1.27.4 或更高版本**。
+- 数据库支持 **PostgreSQL 16+**（[配置模板](etc/ppanel.yaml)使用 PostgreSQL）、**MySQL 8.0+** 或 **MariaDB 11.8+**。
+- 缓存和任务队列可使用 **Redis 6.0+**，或 **Dragonfly v2.1 单实例**。使用 Dragonfly 时加上启动参数 `--cluster_mode=emulated --lock_on_hashtags`。ACL 用户和项目前缀见 [Redis 配置指南](docs/guide/config-zh.md#37-redis-配置-redis)。
 - **Docker**：可选，用于容器化部署
 - **Git**：用于克隆仓库
 
@@ -77,7 +78,7 @@ PPanel 服务端是 PPanel 项目的后端组件，为代理服务提供强大�
    ```bash
    ./bin/ppanel-server-linux-amd64 run --config etc/ppanel.yaml
    ```
-   配置文件为空时，首次启动会在 `127.0.0.1` 的配置端口 `Port` 上提供安装向导（默认 `http://127.0.0.1:8080/init`），只能从本机访问。远程主机请建立 SSH 隧道
+   未配置数据库地址且未设置连接环境变量时，首次启动会在 `127.0.0.1` 的配置端口 `Port` 上提供安装向导（默认 `http://127.0.0.1:8080/init`），只能从本机访问。远程主机请建立 SSH 隧道
    （`ssh -L 8080:127.0.0.1:8080 user@host`），或设置 `PPANEL_DB` 与 `PPANEL_REDIS` 进行无人值守安装；两种方式都在
    [安装指南](docs/guide/install-zh.md#4-首次启动)中说明。
 
@@ -92,19 +93,19 @@ PPanel 服务端是 PPanel 项目的后端组件，为代理服务提供强大�
 
 | 变量 | 格式 | 示例 |
 |---|---|---|
-| `PPANEL_DB` | MySQL DSN `user:password@tcp(host:port)/dbname`，或 URL：`mysql://…`、`postgres://user:password@host:5432/dbname?sslmode=require` | `ppanel:secret@tcp(db.internal:3306)/ppanel` |
-| `PPANEL_REDIS` | `redis://[:password@]host[:port][/db]` | `redis://:secret@redis.internal:6379/0` |
+| `PPANEL_DB` | MySQL DSN `user:password@tcp(host:port)/dbname`，或 URL：`mysql://…`、`postgres://user:password@host:5432/dbname?sslmode=require` | `postgres://ppanel:secret@db.internal:5432/ppanel?sslmode=require` |
+| `PPANEL_REDIS` | `redis://[username:password@]host[:port][/db][?prefix=project]` | `redis://panel:secret@redis.internal:6379/0?prefix=panel-a` |
 
 1. **构建 Docker 镜像**：
    ```bash
-   docker buildx build --platform linux/amd64 -t ppanel-server:latest .
+   docker buildx build --platform linux/amd64 --load -t ppanel-server:latest .
    ```
 
 2. **运行容器**。挂载的配置文件必须存在，且在首次启动（服务补全配置）时对 uid 65532 可写（请把数据库与 Redis 地址换成自己的）：
    ```bash
    mkdir -p etc && touch etc/ppanel.yaml && sudo chown 65532:65532 etc/ppanel.yaml
    docker run -d --name ppanel-server -p 8080:8080 \
-     -e PPANEL_DB='ppanel:secret@tcp(db.internal:3306)/ppanel' \
+     -e PPANEL_DB='postgres://ppanel:secret@db.internal:5432/ppanel?sslmode=require' \
      -e PPANEL_REDIS='redis://:secret@redis.internal:6379/0' \
      -v "$(pwd)/etc/ppanel.yaml:/app/etc/ppanel.yaml" \
      ppanel-server:latest
@@ -169,6 +170,19 @@ API 文档使用 Handler 上的 Swaggo 注解生成，并通过 Hertz 实际注�
 
 [ppanel.json](./ppanel.json)
 
+### 节点 API
+
+节点通过 `GET /v2/server/{server_id}` 获取已启用协议的完整配置。旧版配置接口返回的字段较少。节点程序和用户使用的代理客户端也需要支持所选协议。
+
+| 配置接口 | 节点协议 |
+| --- | --- |
+| V2 和旧版 `GET /v1/server/config` | Shadowsocks（含 SS2022）、VMess、VLESS、Trojan、AnyTLS、TUIC v5、Hysteria 2 |
+| 仅 V2 | ShadowsocksR（SSR）、Mieru、Naive、Snell v5/v6、Nowhere v3（NW3） |
+
+节点运行仍依赖 `/v1/server/*`。在此前缀下，节点通过 GET 读取 `/user`（用户列表）和 `/alivelist`（每个订阅的在线 IP 数），通过 POST 调用 `/device` 申请设备名额，并向 `/push`、`/online`、`/status` 分别上报流量、在线用户和节点状态。
+
+### 更新 API 文档
+
 修改路由、请求 DTO 或响应 DTO 后，运行：
 
 ```bash
@@ -176,7 +190,7 @@ API 文档使用 Handler 上的 Swaggo 注解生成，并通过 Hertz 实际注�
 go test ./internal/transport/http/routes -run '^TestSwagger' -count=1
 ```
 
-`main` 分支的 GitHub Actions 会生成 `ppanel.json` 以及 `admin.json`、`user.json`、`common.json`、`node.json` 分类文档，并同步到
+`main` 分支的 GitHub Actions 会生成 `ppanel.json` 以及 `admin.json`、`user.json`、`common.json`、`node.json`、`edge.json` 分类文档，并同步到
 [`perfect-panel/frontend`](https://github.com/perfect-panel/frontend) 的 `docs/public/swagger` 目录。`GH_TOKEN` secret 需要对该仓库具有 Contents 写权限。
 
 ## 🔗 相关项目
@@ -184,6 +198,8 @@ go test ./internal/transport/http/routes -run '^TestSwagger' -count=1
 | 项目               | 描述           | 链接                                                    |
 |------------------|--------------|-------------------------------------------------------|
 | PPanel Web       | PPanel 前端应用  | [GitHub](https://github.com/perfect-panel/frontend) |
+| ppanel-node | Go 节点服务端 | [GitHub](https://github.com/perfect-panel/ppanel-node) |
+| Terraris | Rust 节点服务端 | [GitHub](https://github.com/perfect-panel/Terraris) |
 | PPanel User Web  | PPanel 用户界面  | [预览](https://user.ppanel.dev)                         |
 | PPanel Admin Web | PPanel 管理员界面 | [预览](https://admin.ppanel.dev)                        |
 

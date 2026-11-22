@@ -3,10 +3,10 @@
 <div align="center">
 
 [![License](https://img.shields.io/github/license/perfect-panel/backend)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.27.1%2B-blue)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.27.4%2B-blue)](go.mod)
 [![Go Report Card](https://goreportcard.com/badge/github.com/perfect-panel/backend)](https://goreportcard.com/report/github.com/perfect-panel/backend)
 [![Docker](https://img.shields.io/badge/Docker-Available-blue)](Dockerfile)
-[![CI/CD](https://img.shields.io/github/actions/workflow/status/perfect-panel/backend/release.yml)](.github/workflows/release.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/perfect-panel/backend/ci.yml?branch=main&label=CI)](.github/workflows/ci.yml)
 
 **PPanel is a pure, professional, and perfect open-source proxy panel tool, designed for learning and practical use.**
 
@@ -34,12 +34,12 @@ proxy services. Built with Go, it emphasizes performance, security, and scalabil
 
 ### Key Features
 
-- **Multi-Protocol Support**: Supports Shadowsocks, V2Ray, Trojan, and more.
-- **Privacy First**: No user logs are collected, ensuring privacy and security.
+- PPanel supports **12 node protocols**, including Shadowsocks, VLESS and Hysteria 2. See the [node API compatibility table](#node-api).
+- **Login history** records the sign-in method, client IP, user agent, time and result for account auditing.
 - **Minimalist Design**: Simple yet powerful, with complete business logic.
 - **User Management**: Full authentication and authorization system.
 - **Subscription System**: Manage user subscriptions and service provisioning.
-- **Payment Integration**: Supports multiple payment gateways.
+- **Payments** support Stripe, Alipay F2F, EPay V1/V2, Cryptomus, GMPay and PayPal Checkout, plus the built-in wallet balance. Setup guides cover [EPay](docs/guide/epay.md), [GMPay](docs/guide/gmpay.md) and [PayPal](docs/guide/paypal.md).
 - **Order Management**: Track and process user orders.
 - **Ticket System**: Built-in customer support and issue tracking.
 - **Node Management**: Monitor and control server nodes.
@@ -49,8 +49,9 @@ proxy services. Built with Go, it emphasizes performance, security, and scalabil
 
 ### Prerequisites
 
-- **Go**: 1.27.1 or higher
-- **Database**: MySQL 8.0+, MariaDB 11.8+ or PostgreSQL 16+, and Redis 6.0+
+- Building from source requires **Go 1.27.4 or later**.
+- Choose **PostgreSQL 16+** (the [configuration template](etc/ppanel.yaml) uses PostgreSQL), **MySQL 8.0+** or **MariaDB 11.8+**.
+- For caching and task queues, use **Redis 6.0+** or a **single Dragonfly v2.1 instance** started with `--cluster_mode=emulated --lock_on_hashtags`. See the [Redis configuration guide](docs/guide/config.md#37-redis-redis) for ACL users and per-project key prefixes.
 - **Docker**: Optional, for containerized deployment
 - **Git**: For cloning the repository
 
@@ -79,7 +80,7 @@ Deploying a release binary instead of building? See the [installation guide](doc
    ```bash
    ./bin/ppanel-server-linux-amd64 run --config etc/ppanel.yaml
    ```
-   With an empty configuration file the first start serves the setup wizard on `127.0.0.1` at the configured
+   When the database address and connection environment variables are unset, the first start serves the setup wizard on `127.0.0.1` at the configured
    `Port` (`http://127.0.0.1:8080/init` by default), reachable from the same machine only. On a remote host open an SSH tunnel
    (`ssh -L 8080:127.0.0.1:8080 user@host`) or set `PPANEL_DB` and `PPANEL_REDIS` for a non-interactive
    installation; both are described in the [installation guide](docs/guide/install.md#4-first-start).
@@ -98,12 +99,12 @@ one of two ways:
 
 | Variable | Format | Example |
 |---|---|---|
-| `PPANEL_DB` | MySQL DSN `user:password@tcp(host:port)/dbname`, or a URL: `mysql://…`, `postgres://user:password@host:5432/dbname?sslmode=require` | `ppanel:secret@tcp(db.internal:3306)/ppanel` |
-| `PPANEL_REDIS` | `redis://[:password@]host[:port][/db]` | `redis://:secret@redis.internal:6379/0` |
+| `PPANEL_DB` | MySQL DSN `user:password@tcp(host:port)/dbname`, or a URL: `mysql://…`, `postgres://user:password@host:5432/dbname?sslmode=require` | `postgres://ppanel:secret@db.internal:5432/ppanel?sslmode=require` |
+| `PPANEL_REDIS` | `redis://[username:password@]host[:port][/db][?prefix=project]` | `redis://panel:secret@redis.internal:6379/0?prefix=panel-a` |
 
 1. **Build the Docker image**:
    ```bash
-   docker buildx build --platform linux/amd64 -t ppanel-server:latest .
+   docker buildx build --platform linux/amd64 --load -t ppanel-server:latest .
    ```
 
 2. **Run the container**. The mounted configuration file must exist and be writable by uid 65532 on the first
@@ -111,7 +112,7 @@ one of two ways:
    ```bash
    mkdir -p etc && touch etc/ppanel.yaml && sudo chown 65532:65532 etc/ppanel.yaml
    docker run -d --name ppanel-server -p 8080:8080 \
-     -e PPANEL_DB='ppanel:secret@tcp(db.internal:3306)/ppanel' \
+     -e PPANEL_DB='postgres://ppanel:secret@db.internal:5432/ppanel?sslmode=require' \
      -e PPANEL_REDIS='redis://:secret@redis.internal:6379/0' \
      -v "$(pwd)/etc/ppanel.yaml:/app/etc/ppanel.yaml" \
      ppanel-server:latest
@@ -176,6 +177,19 @@ API documentation is generated from Swaggo annotations on the handlers and check
 
 [ppanel.json](ppanel.json)
 
+### Node API
+
+Nodes fetch the full configuration of their enabled protocols with `GET /v2/server/{server_id}`. The legacy configuration endpoint returns a smaller set of fields. The node software and the user’s proxy client must support the selected protocol.
+
+| Configuration endpoint | Node protocols |
+| --- | --- |
+| V2 and legacy `GET /v1/server/config` | Shadowsocks (including SS2022), VMess, VLESS, Trojan, AnyTLS, TUIC v5, Hysteria 2 |
+| V2 only | ShadowsocksR (SSR), Mieru, Naive, Snell v5/v6, Nowhere v3 (NW3) |
+
+Keep `/v1/server/*` reachable for node operations. Under this prefix, nodes use GET for `/user` (user list) and `/alivelist` (active IP counts per subscription), and POST for `/device` (device admission), `/push` (traffic), `/online` (online users) and `/status` (node health).
+
+### Updating the API documentation
+
 After changing a route, request DTO, or response DTO, run:
 
 ```bash
@@ -183,13 +197,15 @@ After changing a route, request DTO, or response DTO, run:
 go test ./internal/transport/http/routes -run '^TestSwagger' -count=1
 ```
 
-GitHub Actions on `main` generates the full document plus the `admin.json`, `user.json`, `common.json`, and `node.json` scopes, then syncs them to `docs/public/swagger` in [`perfect-panel/frontend`](https://github.com/perfect-panel/frontend). The `GH_TOKEN` secret needs Contents write access to that repository.
+GitHub Actions on `main` generates the full document plus the `admin.json`, `user.json`, `common.json`, `node.json`, and `edge.json` scopes, then syncs them to `docs/public/swagger` in [`perfect-panel/frontend`](https://github.com/perfect-panel/frontend). The `GH_TOKEN` secret needs Contents write access to that repository.
 
 ## 🔗 Related Projects
 
 | Project          | Description                | Link                                                  |
 |------------------|----------------------------|-------------------------------------------------------|
 | PPanel Web       | Frontend for PPanel        | [GitHub](https://github.com/perfect-panel/frontend) |
+| ppanel-node | Go node server | [GitHub](https://github.com/perfect-panel/ppanel-node) |
+| Terraris | Rust node server | [GitHub](https://github.com/perfect-panel/Terraris) |
 | PPanel User Web  | User interface for PPanel  | [Preview](https://user.ppanel.dev)                    |
 | PPanel Admin Web | Admin interface for PPanel | [Preview](https://admin.ppanel.dev)                   |
 
