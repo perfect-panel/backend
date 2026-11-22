@@ -251,7 +251,7 @@ MaxMind GeoLite2 城市库为登录与审计日志中的地址标注位置。没
   - 默认：`5`，即队列一直使用的数据库，升级后已排队的任务得以保留。多个部署共用相同数据库时应使用互不重叠的项目前缀。
 
 - **`KeyPrefix`** 为缓存、会话、限流、任务队列、worker 元数据及 Pub/Sub 频道统一添加项目前缀。填 `panel-a` 或 `panel-a:` 都会生成 `panel-a:` 开头的名称，例如 `panel-a:asynq:queues`。相应的 ACL 键规则为 `~panel-a:*`，频道规则为 `&panel-a:*`。
-  留空时沿用原有名称。启用或更换前缀会切换到新的键空间，现有会话和待处理任务仍在旧键下。使用队列检查工具时也要指定同一前缀，PPanel 所用的 [Asynq 分支](https://github.com/pars-aria-labs/asynq/tree/v1.0.1) 提供带 `--prefix` 的 CLI。切换前应先处理完待执行任务或迁移数据，并同步更新生产者和消费者。
+  留空时沿用原有名称。启用或更换前缀会切换到新的键空间，现有会话和待处理任务仍在旧键下。使用队列检查工具时也要指定同一前缀，PPanel 所用的 [Asynq 分支](https://github.com/pars-aria-labs/asynq/tree/v1.2.0) 提供带 `--prefix` 的 CLI。切换前应先处理完待执行任务或迁移数据，并同步更新生产者和消费者。
 
 ### 3.8 管理员登录 (`Administrator`)
 

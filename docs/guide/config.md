@@ -297,7 +297,7 @@ server runs normally and records the addresses alone.
   - Default: `5`, the database the queue always used, so an upgrade keeps its queued tasks. Deployments sharing the same databases should use distinct project prefixes.
 
 - **`KeyPrefix`** scopes cache, session, rate-limit and queue keys, worker metadata and Pub/Sub channels. With `panel-a` or `panel-a:`, keys start with `panel-a:`, including `panel-a:asynq:queues`. ACL patterns for this project are `~panel-a:*` for keys and `&panel-a:*` for channels.
-  An empty prefix keeps existing names. Enabling or changing it selects a new keyspace. Drain outstanding jobs or migrate the old data before switching all producers and workers together. Existing sessions and pending jobs stay under the old names. Use the same prefix for queue inspection. The [Asynq fork used by PPanel](https://github.com/pars-aria-labs/asynq/tree/v1.0.1) provides a CLI with a `--prefix` option.
+  An empty prefix keeps existing names. Enabling or changing it selects a new keyspace. Drain outstanding jobs or migrate the old data before switching all producers and workers together. Existing sessions and pending jobs stay under the old names. Use the same prefix for queue inspection. The [Asynq fork used by PPanel](https://github.com/pars-aria-labs/asynq/tree/v1.2.0) provides a CLI with a `--prefix` option.
 
 ### 3.8 Admin Login (`Administrator`)
 
