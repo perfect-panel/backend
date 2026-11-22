@@ -274,26 +274,28 @@ func (b RedisBroker) Subscribe(ctx context.Context, orderNo string) (Subscriptio
 		_ = pubsub.Close()
 		return nil, err
 	}
-	subscription := &redisSubscription{pubsub: pubsub, wake: make(chan struct{})}
-	go subscription.forward(pubsub.Channel())
-	return subscription, nil
+	return &redisSubscription{pubsub: pubsub, wake: redisWakeups(pubsub.Channel())}, nil
 }
 
 type redisSubscription struct {
 	pubsub *redis.PubSub
-	wake   chan struct{}
+	wake   <-chan struct{}
 }
 
-// forward turns published messages into wake-ups and closes the wake
-// channel once the Redis channel closes, which Close causes.
-func (s *redisSubscription) forward(messages <-chan *redis.Message) {
-	defer close(s.wake)
-	for range messages {
-		select {
-		case s.wake <- struct{}{}:
-		default: // a wake-up is already pending; the replay reads every event.
+// redisWakeups keeps one replay pending while the stream is busy. Each
+// replay reads all durable events since the stream's cursor.
+func redisWakeups(messages <-chan *redis.Message) <-chan struct{} {
+	wake := make(chan struct{}, 1)
+	go func() {
+		defer close(wake)
+		for range messages {
+			select {
+			case wake <- struct{}{}:
+			default:
+			}
 		}
-	}
+	}()
+	return wake
 }
 
 func (s *redisSubscription) Wake() <-chan struct{} { return s.wake }

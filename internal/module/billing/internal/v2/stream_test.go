@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
@@ -17,6 +18,7 @@ import (
 	"github.com/perfect-panel/server/internal/module/billing/entity/order"
 	"github.com/perfect-panel/server/internal/module/billing/internal/orderevents"
 	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/redis/go-redis/v9"
 )
 
 // streamOrder is a user's pending order and the ticket that streams it.
@@ -374,8 +376,28 @@ func TestOrderStreamUsesProjectChannel(t *testing.T) {
 		t.Fatal(err)
 	}
 	select {
-	case <-sub.Wake():
+	case _, ok := <-sub.Wake():
+		if !ok {
+			t.Fatal("subscription closed before the broadcast")
+		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("project-scoped order stream missed the broadcast")
 	}
+}
+
+func TestRedisWakeupsRetainOneReplayWhileStreamIsBusy(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		messages := make(chan *redis.Message)
+		wake := redisWakeups(messages)
+		messages <- &redis.Message{}
+		messages <- &redis.Message{}
+		close(messages)
+		synctest.Wait() // the forwarder has finished before the stream begins reading
+		if _, ok := <-wake; !ok {
+			t.Fatal("no replay pending after a burst")
+		}
+		if _, ok := <-wake; ok {
+			t.Fatal("burst scheduled a second replay")
+		}
+	})
 }
