@@ -77,6 +77,20 @@ func (s *scopeStore) ServableSubscriptionsByNodeScope(_ context.Context, nodeIDs
 	}, nil
 }
 
+func (s *scopeStore) SubscriptionsByIDs(ctx context.Context, ids []int64) ([]*usersub.Subscribe, error) {
+	var rows []*usersub.Subscribe
+	for _, id := range ids {
+		r, err := s.SubscriptionByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if r != nil {
+			rows = append(rows, r)
+		}
+	}
+	return rows, nil
+}
+
 func (s *scopeStore) SubscriptionByID(_ context.Context, id int64) (*usersub.Subscribe, error) {
 	if s.placeholderOwner == nil || s.placeholderOwner.Id != id {
 		return nil, gorm.ErrRecordNotFound

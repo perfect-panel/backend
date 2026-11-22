@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/perfect-panel/backend/internal/repository/kernel"
+
 	"github.com/alicebob/miniredis/v2"
 	"github.com/perfect-panel/backend/internal/module/platform/entity/inbox"
 	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
@@ -237,7 +239,10 @@ func NewInbox(db *gorm.DB) *Inbox { return &Inbox{db: db} }
 func NewLogs(db *gorm.DB) *Logs { return &Logs{db: db} }
 
 // Inbox is a SQLite-backed repository.InboxRepo.
-type Inbox struct{ db *gorm.DB }
+type Inbox struct {
+	kernel.TrafficReportReceipts
+	db *gorm.DB
+}
 
 var _ repository.InboxRepo = (*Inbox)(nil)
 

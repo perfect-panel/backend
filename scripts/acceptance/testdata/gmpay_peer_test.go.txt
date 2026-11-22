@@ -1,0 +1,81 @@
+// Compiled only in the pinned epusdt test checkout by scripts/acceptance/gmpay.sh.
+package mq
+
+import (
+	"encoding/pem"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"testing"
+
+	"github.com/GMWalletApp/epusdt/internal/testutil"
+	"github.com/GMWalletApp/epusdt/model/dao"
+	"github.com/GMWalletApp/epusdt/model/data"
+	"github.com/GMWalletApp/epusdt/model/mdb"
+	"github.com/GMWalletApp/epusdt/model/request"
+	"github.com/GMWalletApp/epusdt/model/service"
+	"github.com/GMWalletApp/epusdt/route"
+	"github.com/labstack/echo/v4"
+	"github.com/spf13/viper"
+)
+
+func TestPPanelMerchantInterop(t *testing.T) {
+	defer testutil.SetupTestDatabases(t)()
+	if err := dao.Mdb.Create(&mdb.WalletAddress{Network: mdb.NetworkTron, Address: "TTestTronAddress001", Status: mdb.TokenStatusEnable}).Error; err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	api := echo.New()
+	route.RegisterRoute(api)
+	// Feed one synthetic chain confirmation into the upstream production ledger.
+	api.POST("/_fixture/confirm/:id", func(c echo.Context) error {
+		id := c.Param("id")
+		if err := service.OrderProcessing(&request.OrderProcessingRequest{TradeId: id, BlockTransactionId: "fixture-" + id}); err != nil {
+			return err
+		}
+		return c.NoContent(200)
+	})
+	api.POST("/_fixture/notify/:id", func(c echo.Context) error {
+		o, err := data.GetOrderInfoByTradeId(c.Param("id"))
+		if err != nil {
+			return err
+		}
+		if o.Status != mdb.StatusPaySuccess {
+			return echo.NewHTTPError(409)
+		}
+		raw, err := os.ReadFile(filepath.Join(dir, "merchant.url"))
+		if err != nil {
+			return err
+		}
+		local, err := url.Parse(string(raw))
+		if err != nil || local.Hostname() != "127.0.0.1" || local.Scheme != "http" {
+			return echo.NewHTTPError(500)
+		}
+		target, err := url.Parse(o.NotifyUrl)
+		if err != nil {
+			return err
+		}
+		// The worker sends its real signed payload to the local merchant handler.
+		local.Path = target.Path
+		o.NotifyUrl = local.String()
+		if err := sendOrderCallback(o); err != nil {
+			t.Logf("worker callback: %v", err)
+			return err
+		}
+		return c.NoContent(http.StatusOK)
+	})
+	peer := httptest.NewTLSServer(api)
+	defer peer.Close()
+	viper.Set("app_uri", peer.URL)
+	cert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: peer.Certificate().Raw})
+	cmd := exec.CommandContext(t.Context(), os.Getenv("PPANEL_ACCEPT_BIN"), "-test.run", "^TestLTSGMPayMerchant$", "-test.v")
+	cmd.Env = append(os.Environ(), "PPANEL_ACCEPT_GMPAY_URL="+peer.URL, "PPANEL_ACCEPT_GMPAY_CA="+string(cert), "PPANEL_ACCEPT_DIR="+dir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatal(err)
+	}
+}

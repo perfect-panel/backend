@@ -8,6 +8,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/perfect-panel/backend/internal/module/network/internal/trafficagg"
+
 	"github.com/perfect-panel/backend/internal/config"
 	"github.com/perfect-panel/backend/internal/module/network/entity/node"
 	"github.com/perfect-panel/backend/internal/module/subscription"
@@ -26,6 +28,7 @@ type Snapshot struct {
 // Deps declares the subdomain's dependencies; the module facade forwards
 // them from the composition root.
 type Deps struct {
+	Reports      trafficagg.ReportStore
 	TrafficUsage subscription.TrafficUsage
 	Redis        *redis.Client
 	// Config snapshots the runtime-mutable settings per request.
@@ -94,6 +97,7 @@ type OnlineRecorder interface {
 // SubscriptionReader is the subscription read port (the subscription
 // facade): the subscriptions the nodes of a scope serve, and one by id.
 type SubscriptionReader interface {
+	trafficagg.SubscriptionReader
 	ServableSubscriptionsByNodeScope(ctx context.Context, nodeIDs []int64, tags []string) ([]subscription.ServedSubscription, error)
 	SubscriptionByID(ctx context.Context, id int64) (*usersub.Subscribe, error)
 }

@@ -18,3 +18,6 @@ type Record struct {
 func (Record) TableName() string {
 	return "domain_event_inbox"
 }
+
+// NodeTrafficReportPrefix marks durable per-report accounting checkpoints.
+const NodeTrafficReportPrefix = "node-report:"

@@ -8,6 +8,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/common/ut"
 	serverv1 "github.com/perfect-panel/backend/api/server/v1"
+	"github.com/perfect-panel/backend/internal/module/network"
 	dto "github.com/perfect-panel/backend/internal/module/network/contract"
 	"github.com/perfect-panel/backend/pkg/xerr"
 	"google.golang.org/protobuf/proto"
@@ -81,9 +82,15 @@ func TestReports_decodeByContentTypeAndAnswerByAccept(t *testing.T) {
 					headers = append(headers, acceptProtobuf)
 				}
 
+				expected := endpoint.request
+				if traffic, ok := expected.(*dto.ServerPushUserTrafficRequest); ok {
+					headers = append(headers, ut.Header{Key: "Idempotency-Key", Value: "frozen-batch"})
+					copy := *traffic
+					copy.ReportID = "frozen-batch"
+					expected = &copy
+				}
 				resp := send(nodeAPI(svc, testNodeSecret), http.MethodPost, endpoint.path+reportQuery, tc.body, headers...)
-
-				assertFacadeRequest(t, svc, endpoint.request)
+				assertFacadeRequest(t, svc, expected)
 				if tc.answerProtobuf {
 					assertProtobufResult(t, resp, http.StatusOK, 200, "success")
 				} else {
@@ -212,4 +219,23 @@ func TestNodeAPI_answersPlainInternalErrorForAResultProtobufCannotCarry(t *testi
 	resp := send(nodeAPI(svc, testNodeSecret), http.MethodPost, "/v1/server/status"+reportQuery, []byte(`{}`), jsonContent, acceptProtobuf)
 
 	assertText(t, resp, http.StatusInternalServerError, "Internal Server Error")
+}
+
+func TestTrafficReportConflictInBothEncodings(t *testing.T) {
+	for _, binary := range []bool{false, true} {
+		svc := &nodeService{err: network.ErrTrafficReportConflict}
+		headers := []ut.Header{{Key: "Content-Type", Value: "application/json"}, {Key: "Idempotency-Key", Value: "stable-id"}}
+		if binary {
+			headers = append(headers, acceptProtobuf)
+		}
+		res := send(nodeAPI(svc, testNodeSecret), http.MethodPost, "/v1/server/push"+reportQuery, []byte(`{"traffic":[]}`), headers...)
+		if binary {
+			assertProtobufResult(t, res, http.StatusConflict, 409, network.ErrTrafficReportConflict.Error())
+			continue
+		}
+		if res.StatusCode() != http.StatusConflict {
+			t.Fatal("expected HTTP 409")
+		}
+		assertJSON(t, res.Body(), `{"code":409,"msg":"traffic report ID already identifies a different batch"}`)
+	}
 }

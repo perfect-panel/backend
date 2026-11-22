@@ -74,6 +74,10 @@ func (s *accountingStore) InsertTrafficLogs(_ context.Context, logs []*trafficEn
 	return nil
 }
 
+func (*accountingStore) FinishTrafficReport(context.Context, string) (bool, error) {
+	panic("unexpected report in legacy bucket fixture")
+}
+
 func (s *accountingStore) InsertInboxRecord(_ context.Context, consumer, key string) error {
 	if s.fail == consumer {
 		return errAccounting

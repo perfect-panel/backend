@@ -26,6 +26,7 @@ type Store interface {
 // TrafficLogTx is what a bucket flush writes in its network transaction:
 // the traffic log rows and the bucket's inbox marker.
 type TrafficLogTx interface {
+	FinishTrafficReport(context.Context, string) (bool, error)
 	// InsertTrafficLogs inserts the rows in batches of batchSize.
 	InsertTrafficLogs(ctx context.Context, logs []*trafficEntity.TrafficLog, batchSize int) error
 	// InsertInboxRecord marks the step processed. A second marker for the
@@ -80,4 +81,8 @@ func (t trafficLogTx) InsertTrafficLogs(ctx context.Context, logs []*trafficEnti
 
 func (t trafficLogTx) InsertInboxRecord(ctx context.Context, consumer, eventKey string) error {
 	return t.store.Inbox().Insert(ctx, consumer, eventKey, "")
+}
+
+func (t trafficLogTx) FinishTrafficReport(ctx context.Context, key string) (bool, error) {
+	return t.store.Inbox().FinishTrafficReport(ctx, key)
 }

@@ -1,4 +1,5 @@
-// Package trafficagg is the network module's traffic pipeline. Node reports
+// Package trafficagg is the network module's traffic pipeline. Identified
+// reports have durable SQL receipts. Legacy node reports
 // accumulate in per-minute Redis buckets; a scheduled flush bills each bucket
 // to the subscriptions' usage and writes the traffic log, retrying a failed
 // bucket until it moves to the dead letters, which the flush replays with a
@@ -17,6 +18,7 @@ import (
 
 	"github.com/perfect-panel/backend/internal/module/network/entity/node"
 	trafficEntity "github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/inbox"
 	"github.com/perfect-panel/backend/internal/module/subscription"
 	"github.com/perfect-panel/backend/pkg/logger"
 	"github.com/perfect-panel/backend/pkg/timeutil"
@@ -141,6 +143,7 @@ type trafficKey struct {
 }
 
 type trafficDelta struct {
+	UserId      int64
 	ServerId    int64
 	SubscribeId int64
 	Upload      int64
@@ -151,9 +154,10 @@ type trafficDelta struct {
 // this pipeline through the network facade. Usage writes are performed by
 // the injected subscription service, not the store.
 type Deps struct {
-	Store Store
-	Usage subscription.TrafficUsage
-	Redis *redis.Client
+	Reports ReportStore
+	Store   Store
+	Usage   subscription.TrafficUsage
+	Redis   *redis.Client
 	// Subscriptions reads the owners of the subscriptions a bucket charges.
 	Subscriptions SubscriptionReader
 	// Multiplier returns the node traffic multiplier in effect at the given
@@ -207,34 +211,35 @@ func (a *Aggregator) AddReportAt(ctx context.Context, serverInfo *node.Server, p
 
 	pipe := a.deps.Redis.TxPipeline()
 	pipe.HSet(ctx, serverLastReportedKey, strconv.FormatInt(serverInfo.Id, 10), strconv.FormatInt(now.UnixMilli(), 10))
-
-	if len(logs) == 0 {
-		_, err := pipe.Exec(ctx)
-		return err
-	}
-
-	ratio, ok, err := protocolRatio(serverInfo, protocol)
+	deltas, err := a.admittedDeltas(ctx, serverInfo, protocol, logs, now)
 	if err != nil {
-		logger.WithContext(ctx).Error("[TrafficAggregator] Unmarshal protocols failed",
-			logger.Field("server_id", serverInfo.Id),
-			logger.Field("protocol", protocol),
-			logger.Field("error", err.Error()),
-		)
-		_, execErr := pipe.Exec(ctx)
-		return execErr
+		_, heartbeatErr := pipe.Exec(ctx)
+		return errors.Join(err, heartbeatErr)
 	}
-	if !ok {
-		logger.WithContext(ctx).Error("[TrafficAggregator] Protocol not found",
-			logger.Field("server_id", serverInfo.Id),
-			logger.Field("protocol", protocol),
-		)
-		_, execErr := pipe.Exec(ctx)
-		return execErr
-	}
-
 	minute := bucketMinute(now)
 	suffix := bucketSuffix(minute)
 	bucketKey := bucketPrefix + suffix
+	for _, d := range deltas {
+		pipe.HIncrBy(ctx, bucketKey, trafficField(d.ServerId, d.SubscribeId, trafficFieldDownload), d.Download)
+		pipe.HIncrBy(ctx, bucketKey, trafficField(d.ServerId, d.SubscribeId, trafficFieldUpload), d.Upload)
+	}
+	if len(deltas) > 0 {
+		pipe.Expire(ctx, bucketKey, bucketTTL)
+		pipe.ZAdd(ctx, bucketIndexKey, redis.Z{Score: float64(minute.Unix()), Member: suffix})
+	}
+	_, err = pipe.Exec(ctx)
+	return err
+}
+
+func (a *Aggregator) admittedDeltas(ctx context.Context, serverInfo *node.Server, protocol string, logs []UserTraffic, now time.Time) ([]trafficDelta, error) {
+	if len(logs) == 0 {
+		return nil, nil
+	}
+	ratio, ok, err := protocolRatio(serverInfo, protocol)
+	if err != nil || !ok {
+		logger.WithContext(ctx).Errorw("[TrafficAggregator] unusable protocol", logger.Field("server_id", serverInfo.Id), logger.Field("protocol", protocol), logger.Field("error", err))
+		return nil, nil
+	}
 	multiplier := float64(defaultTrafficMultiplier)
 	if a.deps.Multiplier != nil {
 		multiplier = float64(a.deps.Multiplier(now))
@@ -245,7 +250,7 @@ func (a *Aggregator) AddReportAt(ctx context.Context, serverInfo *node.Server, p
 	var invalid, unserved droppedEntries
 	scope := servedScope{resolve: a.deps.ServedSubscriptions}
 	reported := make(map[int64]int64, len(logs))
-	trafficOps := 0
+	deltas := make([]trafficDelta, 0, len(logs))
 	for _, item := range logs {
 		if item.SID <= 0 {
 			continue
@@ -260,15 +265,7 @@ func (a *Aggregator) AddReportAt(ctx context.Context, serverInfo *node.Server, p
 		}
 		serves, err := scope.serves(ctx, serverInfo.Id, protocol, item.SID)
 		if err != nil {
-			// Nothing can be attributed without the scope; the heartbeat is
-			// still recorded.
-			if _, execErr := pipe.Exec(ctx); execErr != nil {
-				logger.WithContext(ctx).Error("[TrafficAggregator] Record server report failed",
-					logger.Field("server_id", serverInfo.Id),
-					logger.Field("error", execErr.Error()),
-				)
-			}
-			return fmt.Errorf("resolve served subscriptions: %w", err)
+			return nil, fmt.Errorf("resolve served subscriptions: %w", err)
 		}
 		if !serves {
 			unserved.add(item.SID)
@@ -280,22 +277,10 @@ func (a *Aggregator) AddReportAt(ctx context.Context, serverInfo *node.Server, p
 			continue
 		}
 		reported[item.SID] += total
-		pipe.HIncrBy(ctx, bucketKey, trafficField(serverInfo.Id, item.SID, trafficFieldDownload), scaleTraffic(item.Download, ratio, multiplier))
-		pipe.HIncrBy(ctx, bucketKey, trafficField(serverInfo.Id, item.SID, trafficFieldUpload), scaleTraffic(item.Upload, ratio, multiplier))
-		trafficOps++
+		deltas = append(deltas, trafficDelta{ServerId: serverInfo.Id, SubscribeId: item.SID, Upload: scaleTraffic(item.Upload, ratio, multiplier), Download: scaleTraffic(item.Download, ratio, multiplier)})
 	}
 	logDropped(ctx, serverInfo.Id, protocol, invalid, unserved)
-
-	if trafficOps > 0 {
-		pipe.Expire(ctx, bucketKey, bucketTTL)
-		pipe.ZAdd(ctx, bucketIndexKey, redis.Z{
-			Score:  float64(minute.Unix()),
-			Member: suffix,
-		})
-	}
-
-	_, err = pipe.Exec(ctx)
-	return err
+	return deltas, nil
 }
 
 // scaleTraffic applies the protocol ratio and the multiplier to a reported
@@ -362,7 +347,15 @@ func logDropped(ctx context.Context, serverID int64, protocol string, invalid, u
 // returned together. A failed replay is only logged: the dead letter's own
 // backoff schedules its next attempt.
 func (a *Aggregator) FlushDueBuckets(ctx context.Context, now time.Time) error {
-	if a == nil || a.deps.Redis == nil {
+	if a == nil {
+		return errors.New("traffic aggregator is not initialized")
+	}
+	// Database-backed receipts can continue to settle during a Redis outage.
+	return errors.Join(a.flushRedisBuckets(ctx, now), a.flushIdentified(ctx, now))
+}
+
+func (a *Aggregator) flushRedisBuckets(ctx context.Context, now time.Time) error {
+	if a.deps.Redis == nil {
 		return errors.New("traffic aggregator is not initialized")
 	}
 
@@ -735,6 +728,17 @@ func (a *Aggregator) persistBucket(ctx context.Context, suffix string, deltas []
 		return err
 	}
 
+	deltas, err = a.attribute(ctx, deltas)
+	if err != nil {
+		return err
+	}
+	return a.persistDeltas(ctx, suffix, timestamp, deltas)
+}
+
+func (a *Aggregator) attribute(ctx context.Context, deltas []trafficDelta) ([]trafficDelta, error) {
+	if len(deltas) == 0 {
+		return nil, nil
+	}
 	subscribeIDs := make([]int64, 0, len(deltas))
 	seen := make(map[int64]struct{}, len(deltas))
 	for _, delta := range deltas {
@@ -746,11 +750,11 @@ func (a *Aggregator) persistBucket(ctx context.Context, suffix string, deltas []
 	}
 
 	if a.deps.Subscriptions == nil {
-		return errors.New("subscription reads are not configured")
+		return nil, errors.New("subscription reads are not configured")
 	}
 	subs, err := a.deps.Subscriptions.SubscriptionsByIDs(ctx, subscribeIDs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	subMap := make(map[int64]int64, len(subs))
 	for _, sub := range subs {
@@ -759,8 +763,7 @@ func (a *Aggregator) persistBucket(ctx context.Context, suffix string, deltas []
 		}
 	}
 
-	updateMap := make(map[int64]trafficEntity.SubscribeTrafficDelta)
-	logs := make([]*trafficEntity.TrafficLog, 0, len(deltas))
+	resolved := deltas[:0]
 	for _, delta := range deltas {
 		userID, ok := subMap[delta.SubscribeId]
 		if !ok {
@@ -770,6 +773,16 @@ func (a *Aggregator) persistBucket(ctx context.Context, suffix string, deltas []
 			)
 			continue
 		}
+		delta.UserId = userID
+		resolved = append(resolved, delta)
+	}
+	return resolved, nil
+}
+
+func (a *Aggregator) persistDeltas(ctx context.Context, suffix string, timestamp time.Time, deltas []trafficDelta) error {
+	updateMap := make(map[int64]trafficEntity.SubscribeTrafficDelta)
+	logs := make([]*trafficEntity.TrafficLog, 0, len(deltas))
+	for _, delta := range deltas {
 		current := updateMap[delta.SubscribeId]
 		current.SubscribeId = delta.SubscribeId
 		current.Download += delta.Download
@@ -778,13 +791,14 @@ func (a *Aggregator) persistBucket(ctx context.Context, suffix string, deltas []
 		logs = append(logs, &trafficEntity.TrafficLog{
 			ServerId:    delta.ServerId,
 			SubscribeId: delta.SubscribeId,
-			UserId:      userID,
+			UserId:      delta.UserId,
 			Upload:      delta.Upload,
 			Download:    delta.Download,
 			Timestamp:   timestamp,
 		})
 	}
-	if len(updateMap) == 0 {
+	reportKey, identified := strings.CutPrefix(suffix, inbox.NodeTrafficReportPrefix)
+	if len(updateMap) == 0 && !identified {
 		return nil
 	}
 
@@ -807,6 +821,15 @@ func (a *Aggregator) persistBucket(ctx context.Context, suffix string, deltas []
 	}
 	if err := a.deps.Usage.ApplyBucketOnce(ctx, suffix, updates); err != nil {
 		return err
+	}
+	if identified {
+		return a.deps.Store.InTrafficLogTx(ctx, func(tx TrafficLogTx) error {
+			claimed, err := tx.FinishTrafficReport(ctx, reportKey)
+			if err != nil || !claimed {
+				return err
+			}
+			return tx.InsertTrafficLogs(ctx, logs, defaultTrafficBatchSize)
+		})
 	}
 	processed, err := a.bucketProcessed(ctx, networkTrafficBucketConsumer, suffix)
 	if err != nil {

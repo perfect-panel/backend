@@ -31,6 +31,7 @@
 | [design/package-layout.md](design/package-layout.md) | 包结构与职责归属 |
 | [design/device-authentication.md](design/device-authentication.md) | 设备登录的签名信封协议 |
 | [design/node-device-admission.md](design/node-device-admission.md) | 节点设备准入、共享用户索引、过载行为与压测 |
+| [design/lts-2.0-acceptance.md](design/lts-2.0-acceptance.md) | 2.0 LTS 发布验收、节点批次重传契约和复验步骤 |
 | [design/edge-subscribe.md](design/edge-subscribe.md) | 边缘节点订阅下发 |
 | [design/telegram-bot.md](design/telegram-bot.md) | Telegram Bot 集成 |
 | [design/v2-order-checkout-design.md](design/v2-order-checkout-design.md) | 订单 outbox 与对账设计 |

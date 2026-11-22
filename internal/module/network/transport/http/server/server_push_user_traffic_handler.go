@@ -24,8 +24,10 @@ var _ UserTrafficReporter = network.Service(nil)
 // @Accept json,application/protobuf
 // @Produce json,application/protobuf
 // @Security NodeSecret
+// @Param Idempotency-Key header string false "Stable ID of this immutable traffic batch, reused on retry"
 // @Param request body dto.ServerPushUserTrafficRequest true "Request parameters"
 // @Success 200 {object} httpx.ResponseSuccessBean
+// @Failure 409 {object} httpx.ResponseSuccessBean "Batch ID reused with different traffic"
 // @Router /v1/server/push [post]
 func ServerPushUserTrafficHandler(service UserTrafficReporter) app.HandlerFunc {
 	return func(c context.Context, ctx *app.RequestContext) {
@@ -40,6 +42,7 @@ func ServerPushUserTrafficHandler(service UserTrafficReporter) app.HandlerFunc {
 			return
 		}
 		req.ServerCommon = commonReq
+		req.ReportID = string(ctx.GetHeader("Idempotency-Key"))
 		if validateErr := validation.Validate(&req); validateErr != nil {
 			writeParamError(ctx, validateErr)
 			return

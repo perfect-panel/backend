@@ -53,20 +53,23 @@ func (s *Service) UpdateUserBasicInfo(ctx context.Context, req *dto.UpdateUserBa
 			"enable":              req.Enable,
 			"is_admin":            req.IsAdmin,
 		}
-		if req.Password != "" && req.Password != "***" {
+		passwordChanged = req.Password != "" && req.Password != "***"
+		if passwordChanged {
 			if userInfo.Id == demoAdminID && demoMode() {
 				return demoRestricted("modify the admin user's password")
 			}
 			for column, value := range password.UserColumns(req.Password) {
 				columns[column] = value
 			}
-			passwordChanged = true
 		}
 		// Only these profile columns are written: the billing-owned money
 		// columns go through the admin's wallet adjustment in its own
 		// billing transaction below.
 		if err := store.User().UpdateColumns(ctx, userInfo.Id, columns); err != nil {
 			return xerr.Wrapf(err, xerr.DatabaseUpdateError, "update user %d", userInfo.Id)
+		}
+		if accessStateChanged {
+			return s.rotateAccessEpoch(ctx, req.UserId, req.Enable)
 		}
 		return nil
 	})
@@ -81,8 +84,8 @@ func (s *Service) UpdateUserBasicInfo(ctx context.Context, req *dto.UpdateUserBa
 	if accessStateChanged {
 		clearUserAccessCaches(ctx, s.deps, []int64{req.UserId})
 	}
-	// An administrator sets a new password when the old one leaked; the
-	// sessions opened with it end too.
+	// Rotate after the password write is visible: a concurrent sign-in may
+	// have checked the previous password until the transaction committed.
 	if passwordChanged {
 		if err := usersession.Revoke(ctx, s.deps.Redis, req.UserId); err != nil {
 			return xerr.Wrapf(err, xerr.ERROR, "revoke sessions of user %d", req.UserId)

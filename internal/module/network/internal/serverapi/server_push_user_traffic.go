@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/perfect-panel/backend/pkg/timeutil"
+
 	dto "github.com/perfect-panel/backend/internal/module/network/contract"
 	"github.com/perfect-panel/backend/internal/module/network/internal/trafficagg"
 	"github.com/perfect-panel/backend/pkg/logger"
@@ -21,13 +23,21 @@ func (s *Service) ServerPushUserTraffic(ctx context.Context, req *dto.ServerPush
 	}
 
 	aggregator := trafficagg.New(trafficagg.Deps{
-		Usage:      s.deps.TrafficUsage,
-		Redis:      s.deps.Redis,
-		Multiplier: s.deps.Multiplier,
+		Usage:         s.deps.TrafficUsage,
+		Subscriptions: s.deps.Subscriptions,
+		Reports:       s.deps.Reports,
+		Redis:         s.deps.Redis,
+		Multiplier:    s.deps.Multiplier,
 		// A node may only bill the subscriptions its user list hands it.
 		ServedSubscriptions: s.servedSubscriptionIDs,
 	})
-	if err := aggregator.AddReport(ctx, serverInfo, req.Protocol, dtoTrafficToAggregator(req.Traffic)); err != nil {
+	logs := dtoTrafficToAggregator(req.Traffic)
+	if req.ReportID != "" {
+		err = aggregator.AdmitIdentified(ctx, serverInfo, req.Protocol, req.ReportID, logs, timeutil.Now())
+	} else {
+		err = aggregator.AddReport(ctx, serverInfo, req.Protocol, logs)
+	}
+	if err != nil {
 		log.Errorw("[ServerPushUserTraffic] Aggregate traffic error", logger.Field("error", err.Error()))
 		return fmt.Errorf("aggregate traffic: %w", err)
 	}

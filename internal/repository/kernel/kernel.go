@@ -94,7 +94,14 @@ type OutboxRepo interface {
 // records that it processed an event inside its own transaction, so
 // at-least-once deliveries and reconciliation replays never apply the same
 // mutation twice.
+type TrafficReportReceipts interface {
+	AdmitTrafficReport(context.Context, *inbox.TrafficReport) error
+	PendingTrafficReports(context.Context, int64, time.Time, int) ([]inbox.TrafficReport, error)
+	ClaimTrafficReportUsage(context.Context, string) (bool, error)
+	FinishTrafficReport(context.Context, string) (bool, error)
+}
 type InboxRepo interface {
+	TrafficReportReceipts
 	// Find returns the processed marker, or (nil, nil) when the step has not
 	// run yet.
 	Find(ctx context.Context, consumer, eventKey string) (*inbox.Record, error)

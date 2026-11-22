@@ -1,6 +1,9 @@
 package network
 
-import "github.com/perfect-panel/backend/internal/module/network/internal/trafficagg"
+import (
+	"github.com/perfect-panel/backend/internal/module/network/internal/trafficagg"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/inbox"
+)
 
 // TrafficAggregator is the network-owned pipeline shared by node reports and
 // scheduled flush tasks. Queue adapters enter through this facade.
@@ -26,3 +29,6 @@ func NewTrafficAggregator(deps TrafficAggregatorDeps) *TrafficAggregator {
 func NewTrafficAggregatorStore(store TrafficAggregatorAppStore) TrafficAggregatorStore {
 	return trafficagg.NewStore(store)
 }
+
+var ErrTrafficReportConflict = inbox.ErrTrafficReportConflict
+var ErrInvalidReportID = trafficagg.ErrInvalidReportID

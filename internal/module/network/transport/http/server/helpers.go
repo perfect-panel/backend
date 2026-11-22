@@ -88,6 +88,18 @@ func writeHTTPResult(ctx *app.RequestContext, resp any, err error) {
 }
 
 func writeServerReportResult(ctx *app.RequestContext, err error) {
+	if errors.Is(err, network.ErrInvalidReportID) {
+		writeParamError(ctx, err)
+		return
+	}
+	if errors.Is(err, network.ErrTrafficReportConflict) {
+		if acceptsProtobuf(ctx) {
+			writeServerProtobuf(ctx, consts.StatusConflict, &serverv1.Result{Code: 409, Message: network.ErrTrafficReportConflict.Error()})
+		} else {
+			ctx.JSON(consts.StatusConflict, map[string]any{"code": 409, "msg": network.ErrTrafficReportConflict.Error()})
+		}
+		return
+	}
 	if errors.Is(err, network.ErrServerBusy) {
 		ctx.Header("Retry-After", "1")
 		ctx.Header("Cache-Control", "no-store")

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/perfect-panel/backend/internal/repository/kernel"
+
 	"github.com/pars-aria-labs/asynq"
 	"github.com/perfect-panel/backend/internal/infra/taskqueue"
 	"github.com/perfect-panel/backend/internal/module/billing"
@@ -152,6 +154,8 @@ func (r *activationPeriodRepo) InsertPeriod(_ context.Context, p *entitlement.Pe
 // activationInboxRepo keeps the inbox markers the activation stages record
 // to skip themselves on a replay.
 type activationInboxRepo struct {
+	kernel.TrafficReportReceipts
+
 	records map[string]*inboxEntity.Record
 }
 

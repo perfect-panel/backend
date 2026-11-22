@@ -140,6 +140,7 @@ func New(deps Deps) Service {
 			Subscriptions: deps.Subscription,
 		}),
 		api: serverapi.NewService(serverapi.Deps{
+			Reports:      deps.Store.Inbox(),
 			TrafficUsage: deps.TrafficUsage,
 			Redis:        deps.Redis,
 			Config: func() serverapi.Snapshot {
@@ -277,6 +278,7 @@ func (s *service) EdgeManifest(ctx context.Context, token string) (*dto.EdgeMani
 // Store is the persistence capability required by this package. It excludes
 // unrelated repositories and application-wide transactions.
 type Store interface {
+	Inbox() repository.InboxRepo
 	adminserver.Store
 	edge.Store
 	// TrafficLog serves the traffic-log reads of the other modules.

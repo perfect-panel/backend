@@ -178,6 +178,7 @@ func (srv *Application) taskDependencies(bootstrapped *lifecycle.Readiness) task
 			Statistics: srv.Network,
 			Logs:       srv.Platform,
 			Aggregator: network.TrafficAggregatorDeps{
+				Reports:       srv.Store.Inbox(),
 				Usage:         srv.TrafficUsage,
 				Store:         network.NewTrafficAggregatorStore(srv.Store),
 				Subscriptions: srv.Subscription,

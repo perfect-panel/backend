@@ -101,6 +101,9 @@ jobs:
         env:
           PPANEL_TEST_DRAGONFLY_ADDR: 127.0.0.1:6379
           PPANEL_TEST_MYSQL_DSN: "root:mysql@tcp(127.0.0.1:3306)/ppanel?charset=utf8mb4&parseTime=true&loc=UTC&interpolateParams=true"
+          PPANEL_LTS_TEST_MYSQL_DSN: "root:mysql@tcp(127.0.0.1:3306)/ppanel?charset=utf8mb4&parseTime=true&loc=UTC"
+          PPANEL_LTS_TEST_MARIADB_DSN: "root:mariadb@tcp(127.0.0.1:3307)/ppanel?charset=utf8mb4&parseTime=true&loc=UTC"
+          PPANEL_LTS_TEST_POSTGRES_DSN: postgres://postgres:postgres@127.0.0.1:5432/ppanel?sslmode=disable
           PPANEL_TEST_POSTGRES_DSN: postgres://postgres:postgres@127.0.0.1:5432/ppanel?sslmode=disable
           PPANEL_TEST_EPAY_POSTGRES_DSN: postgres://postgres:postgres@127.0.0.1:5432/ppanel?sslmode=disable
         run: go test ./...

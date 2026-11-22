@@ -2,7 +2,8 @@ package dto
 
 type ServerPushUserTrafficRequest struct {
 	ServerCommon
-	Traffic []UserTraffic `json:"traffic"`
+	ReportID string        `json:"-" swaggerignore:"true"`
+	Traffic  []UserTraffic `json:"traffic"`
 }
 
 // UserTraffic is one node-reported usage entry: SID is the user_subscribe id

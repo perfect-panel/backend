@@ -11294,6 +11294,12 @@
                 "summary": "Push user Traffic",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "Stable ID of this immutable traffic batch, reused on retry",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    },
+                    {
                         "description": "Request parameters",
                         "name": "request",
                         "in": "body",
@@ -11306,6 +11312,12 @@
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/result.ResponseSuccessBean"
+                        }
+                    },
+                    "409": {
+                        "description": "Batch ID reused with different traffic",
                         "schema": {
                             "$ref": "#/definitions/result.ResponseSuccessBean"
                         }
