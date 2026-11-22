@@ -17,7 +17,7 @@ arm64), verifies it against the release's `SHA256SUMS`, installs it to `/opt/ppa
 system user and a systemd unit, and starts the service:
 
 ```shell
-curl -fsSL https://raw.githubusercontent.com/perfect-panel/backend/master/script/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/perfect-panel/backend/main/script/install.sh -o install.sh
 less install.sh    # read what you are about to run as root
 sudo bash install.sh
 ```
@@ -87,7 +87,7 @@ The layout after the first start: `/opt/ppanel-server/ppanel-server` (binary), `
 sudo tee /etc/systemd/system/ppanel.service > /dev/null <<'EOF'
 [Unit]
 Description=PPanel Server
-Documentation=https://github.com/perfect-panel/backend/blob/master/docs/guide/install.md
+Documentation=https://github.com/perfect-panel/backend/blob/main/docs/guide/install.md
 After=network-online.target
 Wants=network-online.target
 

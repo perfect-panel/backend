@@ -4,9 +4,11 @@ on:
     tags:
       - 'v*'
 
-# Read-only by default. The jobs that create the release and upload its assets
-# ask for contents: write themselves; the image job pushes to Docker Hub with
-# its own credentials and needs nothing more.
+# Serialize tagged releases so concurrent runs cannot interleave floating tags.
+concurrency:
+  group: ppanel-version-releases
+  queue: max
+
 permissions:
   contents: read
 
@@ -25,6 +27,7 @@ jobs:
     outputs:
       version: ${{ steps.meta.outputs.version }}
       channel: ${{ steps.meta.outputs.channel }}
+      tags: ${{ steps.meta.outputs.tags }}
       build_time: ${{ steps.meta.outputs.build_time }}
     steps:
       - name: Checkout code
@@ -42,12 +45,7 @@ jobs:
       - name: Resolve release metadata
         id: meta
         run: |
-          echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-          if [[ "$GITHUB_REF_NAME" == *beta* ]]; then
-            echo "channel=beta" >> "$GITHUB_OUTPUT"
-          else
-            echo "channel=stable" >> "$GITHUB_OUTPUT"
-          fi
+          ./script/image-release.sh "$GITHUB_REF" "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
           echo "build_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       # GoReleaser only writes the changelog and creates the release
@@ -68,85 +66,22 @@ jobs:
   build-docker:
     runs-on: ubuntu-latest
     needs: release-notes
-    env:
-      IMAGE_NAME: ppanel-server
-      VERSION: ${{ needs.release-notes.outputs.version }}
-      BUILD_TIME: ${{ needs.release-notes.outputs.build_time }}
-
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Publish release image
+        uses: ./.github/actions/publish-image
         with:
-          fetch-depth: 0
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      # 1.16.0 -> 1.16, so operators can follow a minor series. Only the
-      # stable step uses it: on a prerelease tag this would yield a value
-      # like 1.16.0-beta, which is why the beta step leaves it out.
-      - name: Resolve image tags
-        run: |
-          echo "MAJOR_MINOR=${VERSION%.*}" >> $GITHUB_ENV
-          echo "GIT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
-
-      # A tag fires this workflow no matter which line it sits on, so the floating
-      # tag has to be routed: :latest must keep pointing at the feature line even
-      # while the frozen LTS line publishes patches of its own. A commit reachable
-      # from master belongs to LTS; anything else is the feature line. Treating an
-      # ambiguous commit as LTS is the safe direction, since it leaves :latest be.
-      - name: Resolve release line
-        run: |
-          git fetch --quiet origin master
-          if git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
-            echo "FLOATING_TAG=lts" >> $GITHUB_ENV
-          else
-            echo "FLOATING_TAG=latest" >> $GITHUB_ENV
-          fi
-
-      - name: Build and push Docker image for main release
-        if: "!contains(github.ref_name, 'beta')"
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          build-args: |
-            VERSION=${{ env.VERSION }}
-            CHANNEL=stable
-            BUILD_TIME=${{ env.BUILD_TIME }}
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.FLOATING_TAG }}
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.MAJOR_MINOR }}
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.GIT_SHA }}
-
-      - name: Build and push Docker image for beta release
-        if: contains(github.ref_name, 'beta')
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          build-args: |
-            VERSION=${{ env.VERSION }}
-            CHANNEL=beta
-            BUILD_TIME=${{ env.BUILD_TIME }}
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:beta
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}-${{ env.GIT_SHA }}
+          version: ${{ needs.release-notes.outputs.version }}
+          channel: ${{ needs.release-notes.outputs.channel }}
+          build-time: ${{ needs.release-notes.outputs.build_time }}
+          tags: ${{ needs.release-notes.outputs.tags }}
+          docker-username: ${{ secrets.DOCKER_USERNAME }}
+          docker-password: ${{ secrets.DOCKER_PASSWORD }}
 
   # Builds every binary with the Makefile, so the release, the nightly and the
   # image share one set of flags (CGO_ENABLED=0, -trimpath, script/ldflags.sh):

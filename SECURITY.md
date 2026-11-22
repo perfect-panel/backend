@@ -8,9 +8,9 @@ one responsibly.
 
 | Line | Branch | Where it ships | Security fixes |
 |---|---|---|---|
-| LTS | `master` | Tagged releases and the `lts` image tag | Yes, as a patch release |
+| Stable | `main` | Tagged releases and the `latest` image tag | Yes, as a patch release |
 | Development | `dev` | The rolling `nightly` release and image tag | Yes, in the next nightly |
-| Older tagged releases | | | No: upgrade to the latest LTS release |
+| Older tagged releases | | | Upgrade to the current stable release |
 
 The frontend lives in [perfect-panel/frontend](https://github.com/perfect-panel/frontend)
 and has its own policy; reports about it belong there.
@@ -47,7 +47,7 @@ one.
 - Acknowledgement within 3 business days of the report.
 - An assessment (confirmed, not a vulnerability, duplicate, out of scope) and
   a severity within 7 days, with questions if we cannot reproduce it.
-- A fix on the LTS line, released as a patch version and a new `lts` image,
+- A fix on the stable line, released as a patch version and a new `latest` image,
   and on `dev`. We aim at 30 days for critical and high severity and 90 days
   otherwise, and we tell you when that is not achievable and why.
 - Coordinated disclosure: the advisory is published with the fix, and you are

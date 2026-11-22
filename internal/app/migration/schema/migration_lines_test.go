@@ -103,7 +103,7 @@ func (r *migrationLineRepo) applyChange(change string) {
 func (r *migrationLineRepo) runGuard(script string) (string, error) {
 	cmd := exec.Command("bash", script)
 	cmd.Dir = r.dir
-	cmd.Env = append(os.Environ(), "LTS_REF=HEAD")
+	cmd.Env = append(os.Environ(), "MIGRATION_BASE=HEAD")
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
@@ -124,10 +124,11 @@ func TestMigrationLineGuardAcrossDirectoryMove(t *testing.T) {
 	}{
 		{"legacy reference", legacyMigrationPath, "", ""},
 		{"relocated reference", migrationPath, "", ""},
-		{"missing LTS migration", legacyMigrationPath, "missing", "exist on HEAD but not here"},
+		{"missing stable migration", legacyMigrationPath, "missing", "exist on HEAD but not here"},
 		{"missing dialect", legacyMigrationPath, "asymmetric", "missing one of the two dialects"},
-		{"low numbered feature", legacyMigrationPath, "02002", "exists only on this line but is numbered below"},
-		{"feature band", legacyMigrationPath, "03000", ""},
+		{"backdated migration", legacyMigrationPath, "01999", "falls below 02001"},
+		{"next migration", legacyMigrationPath, "02002", ""},
+		{"higher migration", legacyMigrationPath, "03000", ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := newMigrationLineRepo(t)

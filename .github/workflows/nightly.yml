@@ -2,8 +2,12 @@ name: Nightly
 
 on:
   push:
-    branches: [dev, main]
+    branches: [dev]
   workflow_dispatch:
+
+concurrency:
+  group: ppanel-dev-nightly
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -15,6 +19,7 @@ jobs:
   # Nothing is published unless these pass. ci.yml deliberately skips pushes to
   # dev so the checks run once per push instead of twice.
   verify:
+    if: github.ref == 'refs/heads/dev'
     uses: ./.github/workflows/checks.yml
 
   publish:
@@ -34,73 +39,38 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      # main builds toward the next series, so it reports that series rather than a
-      # commit: operators reading the panel see "2.0(...) Nightly" and can tell a
-      # v2 preview from a bleeding-edge dev build without decoding a sha.
-      # BUILD_TIME uses the one format script/ldflags.sh accepts and is passed to
-      # both the binaries and the image, so every artifact of a run agrees.
       - name: Resolve build metadata
+        id: meta
         run: |
-          echo "BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
-          echo "SHORT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
-          if [ "$GITHUB_REF_NAME" = "main" ]; then
-            echo "VERSION=2.0" >> $GITHUB_ENV
-            echo "IMAGE_CHANNEL=v2.0-nightly" >> $GITHUB_ENV
-          else
-            echo "VERSION=${GITHUB_SHA::8}" >> $GITHUB_ENV
-            echo "IMAGE_CHANNEL=nightly" >> $GITHUB_ENV
-          fi
+          ./script/image-release.sh "$GITHUB_REF" "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
 
-      # Only the dev line publishes a GitHub release, so only it needs binaries.
       - name: Build binaries
-        if: github.ref_name == 'dev'
-        run: make linux-amd64 linux-arm64 VERSION=${{ env.VERSION }} CHANNEL=nightly BUILD_TIME=${{ env.BUILD_TIME }}
+        run: make linux-amd64 linux-arm64 VERSION=${{ steps.meta.outputs.version }} CHANNEL=nightly BUILD_TIME="$BUILD_TIME"
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+      - name: Publish nightly image
+        uses: ./.github/actions/publish-image
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ steps.meta.outputs.version }}
+          channel: ${{ steps.meta.outputs.channel }}
+          build-time: ${{ env.BUILD_TIME }}
+          tags: ${{ steps.meta.outputs.tags }}
+          docker-username: ${{ secrets.DOCKER_USERNAME }}
+          docker-password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-
-      # amd64 only: an arm64 leg would run under QEMU on every push.
-      - name: Build and push the nightly image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64
-          push: true
-          build-args: |
-            VERSION=${{ env.VERSION }}
-            CHANNEL=nightly
-            BUILD_TIME=${{ env.BUILD_TIME }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_CHANNEL }}
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_CHANNEL }}-${{ env.SHORT_SHA }}
-
-      # Replacing the release keeps one rolling entry whose asset URLs never
-      # change, so releases/download/nightly/<name> always resolves to the newest
-      # build. The tag is nightly rather than v-prefixed so it cannot trigger the
-      # stable pipeline, which fires on 'v*'. The feature line publishes only
-      # images, so it deliberately has no release of its own -- and could not reuse
-      # a v2.0-prefixed tag here without firing that pipeline.
       - name: Publish the rolling nightly release
-        if: github.ref_name == 'dev'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.meta.outputs.version }}
         run: |
           gh release delete nightly --yes --cleanup-tag || true
           gh release create nightly \
             --target "$GITHUB_SHA" \
             --prerelease \
-            --title "Nightly ${{ env.VERSION }}" \
-            --notes "Untested-in-production build from \`dev\` at \`${{ env.VERSION }}\`, built ${{ env.BUILD_TIME }}.
+            --title "Nightly $VERSION" \
+            --notes "Untested-in-production build from \`dev\` at \`$VERSION\`, built ${{ env.BUILD_TIME }}.
 
-          Container image: \`ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:nightly-${{ env.VERSION }}\` (linux/amd64).
+          Container images (linux/amd64): \`ppanel/ppanel-server:nightly-$VERSION\` and \`ghcr.io/${{ github.repository_owner }}/ppanel-server:nightly-$VERSION\`.
 
           Nightly builds apply database migrations automatically at boot, and a migration published here may still be renumbered before it reaches a stable release. Downgrading is not supported once a migration has run: the only rollback is restoring a database backup. Do not point this at production data." \
             bin/${{ env.IMAGE_NAME }}-linux-amd64 \

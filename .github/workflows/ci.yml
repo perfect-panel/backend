@@ -4,9 +4,9 @@ on:
   push:
     # Pushes to dev are covered by nightly.yml, which gates publishing on the
     # same checks; running them here too would double every dev push.
-    branches: [master, main]
+    branches: [main]
   pull_request:
-    branches: [master, main, dev]
+    branches: [main, dev]
 
 permissions:
   contents: read
@@ -17,11 +17,6 @@ jobs:
   checks:
     uses: ./.github/workflows/checks.yml
 
-  # master is the LTS line and dev takes the features, so the two can each
-  # gain migrations. This keeps their numbering compatible; see the script for
-  # what an incompatible pair does to an upgrading database. While master is
-  # only behind dev (fast-forwarded), the script sees one line and skips the
-  # band check.
   migration-lines:
     name: Check migration lines
     runs-on: ubuntu-latest
@@ -29,11 +24,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The script tells one line from two by ancestry, which a shallow
-          # clone cannot answer.
           fetch-depth: 0
 
       - name: Check migration lines
-        run: |
-          git fetch --quiet origin master
-          ./script/check-migration-lines.sh
+        env:
+          MIGRATION_BASE: ${{ github.event_name == 'push' && github.event.before || 'origin/main' }}
+        run: ./script/check-migration-lines.sh

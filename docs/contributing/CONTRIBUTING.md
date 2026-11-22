@@ -85,7 +85,7 @@ lefthook install
     - Fix bugs based on `fix/*` branches.
     - Ensure the target branch of the PR aligns with the project's branching strategy.
 
-- **Sync with Base Branch**: Before submitting the PR, ensure your branch is up-to-date with the target branch (`master` or `dev`).
+- **Sync with Base Branch**: Before submitting the PR, ensure your branch is up-to-date with the target branch (`main` or `dev`).
 
 ## 4. Review Process
 

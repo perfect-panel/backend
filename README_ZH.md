@@ -145,10 +145,19 @@ PPanel 服务端是 PPanel 项目的后端组件，为代理服务提供强大�
    `stop_grace_period` 为优雅停机（先排空 HTTP，再依次停止调度器、任务 worker 和链路追踪导出，最长约 18 秒）留出时间；直接用 `docker run`
    启动的容器请用 `docker stop --time 20` 停止。
 
-4. **拉取已发布的镜像**：`ppanel/ppanel-server:lts` 跟随 LTS 线（`master`），`:latest` 跟随功能线，`:beta` 为预发布，
-   `ghcr.io/perfect-panel/ppanel-server:nightly` 是 `dev` 分支的每日构建：
+4. **拉取已发布的镜像**。以下规则适用于新发布的镜像。每次发布后，Docker Hub 和 GHCR 上同名标签的摘要一致。
+
+   | 触发条件 | 两个镜像仓库的标签 |
+   |---|---|
+   | 推送到 `dev` | `nightly`、`nightly-<短 SHA>` |
+   | 推送 Beta 标签，例如 `v2.0.0-beta.1` | `beta`、`2.0.0-beta.1` |
+   | 给 `main` 历史中的提交推送正式标签，例如 `v2.0.0` | `latest`、`2.0.0`、`2.0`、`2.0.0-<短 SHA>` |
+
+   普通推送到 `main` 运行 CI。`lts` 固定为 1.21.7。正式版和 Beta 镜像支持 Linux amd64 和 arm64。Nightly 镜像支持 Linux amd64，Linux arm64 二进制可从滚动 GitHub 预发布下载。
+
    ```bash
-   docker pull ppanel/ppanel-server:lts
+   docker pull ppanel/ppanel-server:latest
+   docker pull ghcr.io/perfect-panel/ppanel-server:latest
    ```
 
 服务提供 `GET /healthz`（存活探针）与 `GET /readyz`（就绪探针：数据库与 Redis 可达）供监控和负载均衡使用，见
@@ -167,7 +176,7 @@ API 文档使用 Handler 上的 Swaggo 注解生成，并通过 Hertz 实际注�
 go test ./internal/transport/http/routes -run '^TestSwagger' -count=1
 ```
 
-`master` 分支的 GitHub Actions 会生成 `ppanel.json` 以及 `admin.json`、`user.json`、`common.json`、`node.json` 分类文档，并同步到
+`main` 分支的 GitHub Actions 会生成 `ppanel.json` 以及 `admin.json`、`user.json`、`common.json`、`node.json` 分类文档，并同步到
 [`perfect-panel/frontend`](https://github.com/perfect-panel/frontend) 的 `docs/public/swagger` 目录。`GH_TOKEN` secret 需要对该仓库具有 Contents 写权限。
 
 ## 🔗 相关项目

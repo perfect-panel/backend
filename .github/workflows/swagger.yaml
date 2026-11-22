@@ -2,7 +2,7 @@ name: Generate and sync Swagger
 
 on:
   pull_request:
-    branches: [master, dev, main]
+    branches: [main, dev]
     paths:
       - "**/*.go"
       - "api/**/*.proto"
@@ -13,7 +13,7 @@ on:
       - "script/check-swagger-workflow-contract.py"
       - ".github/workflows/swagger.yaml"
   push:
-    branches: [master, dev, main]
+    branches: [main, dev]
     paths:
       - "**/*.go"
       - "api/**/*.proto"
@@ -59,7 +59,7 @@ jobs:
         run: python3 script/check-swagger-workflow-contract.py
 
       - name: Checkout frontend repository
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: perfect-panel/frontend
@@ -68,7 +68,7 @@ jobs:
           path: frontend
 
       - name: Copy Swagger documents
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: |
           mkdir -p frontend/docs/public/swagger
           manifest="frontend/docs/public/swagger/.backend-generated"
@@ -83,7 +83,7 @@ jobs:
           done < "${manifest}"
 
       - name: Commit frontend Swagger changes
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         working-directory: frontend
         run: |
           git add --all -- docs/public/swagger
