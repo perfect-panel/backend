@@ -17,15 +17,15 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/module/platform/entity/task"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/requestmeta"
-	"github.com/perfect-panel/server/pkg/slicesx"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/slicesx"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // Inbox consumer name of the grant stage; the gift stage's marker is the

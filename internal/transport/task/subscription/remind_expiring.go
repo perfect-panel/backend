@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/pars-aria-labs/asynq"
-	module "github.com/perfect-panel/server/internal/module/subscription"
+	module "github.com/perfect-panel/backend/internal/module/subscription"
 )
 
 // RemindExpiringHandler is the queue shell of the pre-expiry reminder.

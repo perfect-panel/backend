@@ -3,13 +3,13 @@ package startup
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/auth/identifier"
-	"github.com/perfect-panel/server/internal/auth/password"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/account"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/timeutil"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/identifier"
+	"github.com/perfect-panel/backend/internal/auth/password"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/account"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/timeutil"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // CreateInitialAdministrator creates the first administrator, signing in

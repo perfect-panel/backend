@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/task"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/subtest"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/subtest"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // The task reads its targets once when it starts. A grant applied later must

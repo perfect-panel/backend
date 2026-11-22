@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // SystemConfigEntry is the narrow data contract needed to apply persisted

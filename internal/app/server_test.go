@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/config"
-	httpserver "github.com/perfect-panel/server/internal/transport/http/server"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/internal/config"
+	httpserver "github.com/perfect-panel/backend/internal/transport/http/server"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 )
 
 // fakeServer is a transport server under the test's control: Start blocks

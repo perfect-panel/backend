@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/internal/module/subscription"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/pkg/httpx"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/subscription"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/pkg/httpx"
 	"github.com/redis/go-redis/v9"
 )
 

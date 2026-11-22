@@ -3,10 +3,10 @@ package usersub
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	dto "github.com/perfect-panel/server/internal/module/subscription/contract"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // GetUserSubscribeResetTrafficLogs pages a subscription's traffic reset log.

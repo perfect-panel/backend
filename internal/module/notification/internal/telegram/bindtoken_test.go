@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/backend/internal/config"
 )
 
 func newBindHarness(tokens map[string]string) (*Bot, *fakeRedisStore, *fakeAccounts, *recordingMessenger) {

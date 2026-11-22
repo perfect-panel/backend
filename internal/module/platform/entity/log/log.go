@@ -10,9 +10,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/requestmeta"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 type Type uint8

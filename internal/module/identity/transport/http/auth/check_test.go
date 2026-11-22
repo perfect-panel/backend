@@ -8,11 +8,11 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/ut"
-	"github.com/perfect-panel/server/internal/module/identity"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/identitytest"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/identity"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/identitytest"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // The existence checks run over the real identity facade, with one account

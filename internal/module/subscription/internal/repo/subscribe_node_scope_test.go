@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	"github.com/perfect-panel/server/pkg/cache"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/pkg/cache"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

@@ -3,7 +3,7 @@ package usersub
 import (
 	"time"
 
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // StatusSet names a group of subscription statuses that one business rule

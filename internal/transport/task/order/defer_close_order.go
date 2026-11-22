@@ -6,10 +6,10 @@ import (
 	"errors"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
-	"github.com/perfect-panel/server/internal/module/billing"
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // DeferCloseOrderHandler closes a pending order once its payment window has

@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/entity/auth"
-	usermodel "github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/account"
-	"github.com/perfect-panel/server/internal/module/identity/internal/verification"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
+	usermodel "github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/account"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/verification"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 func (f *rebindFixture) bindMobile(u *usermodel.User, req *dto.UpdateBindMobileRequest) error {

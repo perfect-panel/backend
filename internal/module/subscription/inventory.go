@@ -3,7 +3,7 @@ package subscription
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/subscription/internal/inventory"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/inventory"
 )
 
 // InventoryStore restricts order-driven inventory changes to subscription

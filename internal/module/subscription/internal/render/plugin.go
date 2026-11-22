@@ -4,7 +4,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
 )
 
 func clientPluginConfig(protocol node.Protocol, server string) (string, map[string]any) {

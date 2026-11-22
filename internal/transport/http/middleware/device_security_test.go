@@ -9,10 +9,10 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/perfect-panel/server/internal/auth/deviceauth"
-	appconfig "github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/infra/requestctx"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/auth/deviceauth"
+	appconfig "github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
 	"github.com/redis/go-redis/v9"
 )
 

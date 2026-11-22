@@ -3,8 +3,8 @@ package log_test
 import (
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/internal/transport/http/validation"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/internal/transport/http/validation"
 )
 
 func TestLogDateRangeValidation(t *testing.T) {

@@ -6,11 +6,11 @@ import (
 	"time"
 	"uuid"
 
-	dto "github.com/perfect-panel/server/internal/module/subscription/contract"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/subtest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/subtest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 type planFixture struct {

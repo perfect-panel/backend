@@ -3,10 +3,10 @@ package plan
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/subscription/contract"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // UpdateSubscribeGroup renames a plan group and replaces its description.

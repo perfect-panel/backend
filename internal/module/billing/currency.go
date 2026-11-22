@@ -1,6 +1,6 @@
 package billing
 
-import "github.com/perfect-panel/server/internal/module/billing/internal/exchangerate"
+import "github.com/perfect-panel/backend/internal/module/billing/internal/exchangerate"
 
 // CurrencyRateCache is shared with application assembly and the refresh worker.
 // Provider communication remains private to billing.

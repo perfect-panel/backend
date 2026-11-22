@@ -4,10 +4,10 @@ import (
 	"context"
 	"sort"
 
-	"github.com/perfect-panel/server/internal/auth/identifier"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/auth/identifier"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // The credential changes the login audit records, as the method of a

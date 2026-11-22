@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 // deliveryAuditRepo records the audit row, or fails with err.

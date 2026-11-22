@@ -4,8 +4,8 @@ import (
 	"context"
 	"slices"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // administrators is the read of the administrator rows the guard needs; the

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
 	"github.com/stripe/stripe-go/v81/webhook"
 )
 

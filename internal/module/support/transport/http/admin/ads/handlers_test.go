@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/perfect-panel/server/internal/module/support"
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	adsEntity "github.com/perfect-panel/server/internal/module/support/entity/ads"
-	"github.com/perfect-panel/server/internal/module/support/internal/supporttest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/support"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	adsEntity "github.com/perfect-panel/backend/internal/module/support/entity/ads"
+	"github.com/perfect-panel/backend/internal/module/support/internal/supporttest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // The ads handlers run against the real support facade over the harness

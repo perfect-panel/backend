@@ -6,8 +6,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // quotaGiftConsumer is the inbox consumer of the gift stage of an

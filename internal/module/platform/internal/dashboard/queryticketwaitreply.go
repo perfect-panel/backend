@@ -3,8 +3,8 @@ package dashboard
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/pkg/logger"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // QueryTicketWaitReply counts the tickets waiting for a staff reply.

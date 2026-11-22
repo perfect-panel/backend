@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/pkg/orm"
 	"gopkg.in/yaml.v3"
 )
 

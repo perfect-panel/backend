@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 type Type int8

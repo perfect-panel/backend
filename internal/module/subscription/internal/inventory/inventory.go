@@ -7,7 +7,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // Inbox consumers for the plan-inventory lifecycle (ADR-001 step 2).

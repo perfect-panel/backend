@@ -1,9 +1,9 @@
 package app
 
 import (
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/orm"
 )
 
 // warnDatabaseTimeZone reports a database session zone that differs from

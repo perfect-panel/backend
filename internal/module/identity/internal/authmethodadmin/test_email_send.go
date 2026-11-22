@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/infra/mail"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/infra/mail"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // TestEmailSend sends a test email through the configured email sender.

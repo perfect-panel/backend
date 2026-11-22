@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/internal/module/network/internal/nodeconfig"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/module/network/internal/nodeconfig"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // UpdateServerNodeConfig stores a server's node configuration override, or

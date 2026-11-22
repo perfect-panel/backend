@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 type configFieldValue struct {

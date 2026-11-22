@@ -7,11 +7,11 @@ package selfsub
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/platform/entity/inbox"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/inbox"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // Deps declares the subdomain's dependencies; the module facade forwards

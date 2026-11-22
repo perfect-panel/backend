@@ -3,9 +3,9 @@ package adminuser
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/internal/devicestate"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/devicestate"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // DeleteUserDevice removes a device with its identity and sessions, and

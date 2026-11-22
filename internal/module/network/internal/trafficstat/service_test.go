@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	trafficEntity "github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
+	trafficEntity "github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
 )
 
 // statTraffic ranks one subscription and one server, and records the

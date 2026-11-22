@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/backend/internal/config"
 )
 
 func TestStatePublishesConcurrentConfigUpdates(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
-	"github.com/perfect-panel/server/internal/module/billing/internal/portal"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/portal"
 )
 
 // Guest orders carry no user until activation and keep their identity

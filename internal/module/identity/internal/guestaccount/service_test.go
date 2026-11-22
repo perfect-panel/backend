@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/auth/password"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/identitytest"
-	"github.com/perfect-panel/server/internal/module/platform/entity/inbox"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/password"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/identitytest"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/inbox"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // countingStore is the real identity store, counting the identity

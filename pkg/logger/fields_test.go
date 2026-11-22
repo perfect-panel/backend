@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 	"github.com/stretchr/testify/assert"
 )
 

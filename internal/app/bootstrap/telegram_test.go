@@ -10,10 +10,10 @@ import (
 
 	tgbot "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/identity/entity/auth"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/orm"
 )
 
 // emptyTelegramToken stores a Telegram auth method without a bot token.

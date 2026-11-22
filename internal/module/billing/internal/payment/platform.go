@@ -4,7 +4,7 @@
 package payment
 
 import (
-	"github.com/perfect-panel/server/internal/infra/integration"
+	"github.com/perfect-panel/backend/internal/infra/integration"
 )
 
 type Platform int

@@ -3,9 +3,9 @@ package portal
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // GetAvailablePaymentMethods lists the payment methods enabled for checkout.

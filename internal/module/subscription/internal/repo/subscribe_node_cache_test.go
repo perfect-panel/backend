@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	"github.com/perfect-panel/server/pkg/cache"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/pkg/cache"
 )
 
 // recordingBridge records the node scopes the plan writes hand the network

@@ -4,8 +4,8 @@ package trafficusage
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // BucketConsumer is persisted in the inbox; changing it replays old usage.

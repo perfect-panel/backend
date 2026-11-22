@@ -4,12 +4,12 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/network"
-	"github.com/perfect-panel/server/internal/module/platform/entity/system"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/random"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/network"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/system"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/random"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // nodeMultiplierKey is the server setting holding the traffic multiplier

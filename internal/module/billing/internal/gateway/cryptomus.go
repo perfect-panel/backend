@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"strings"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	paymentEntity "github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment/cryptomus"
-	"github.com/perfect-panel/server/internal/module/billing/internal/settle"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	paymentEntity "github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment/cryptomus"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/settle"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 type cryptomusGateway struct {

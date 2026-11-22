@@ -9,7 +9,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // Buffer holds the log entries written while it is installed.

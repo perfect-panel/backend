@@ -3,11 +3,11 @@ package wallet
 import (
 	"context"
 
-	walletEntity "github.com/perfect-panel/server/internal/module/billing/entity/wallet"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/timeutil"
-	"github.com/perfect-panel/server/pkg/xerr"
+	walletEntity "github.com/perfect-panel/backend/internal/module/billing/entity/wallet"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/timeutil"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // FindWallet reads the user's wallet for display; a user without a wallet

@@ -9,14 +9,14 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/infra/mapping"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	entity "github.com/perfect-panel/server/internal/module/support/entity/ticket"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/infra/mapping"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	entity "github.com/perfect-panel/backend/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // Notifier mirrors ticket lifecycle into other channels — today the forum

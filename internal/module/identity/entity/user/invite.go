@@ -3,7 +3,7 @@ package user
 import (
 	"time"
 
-	"github.com/perfect-panel/server/pkg/random"
+	"github.com/perfect-panel/backend/pkg/random"
 )
 
 // GenerateInviteCode preserves the existing user invitation-code format.

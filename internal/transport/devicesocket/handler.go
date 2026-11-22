@@ -6,10 +6,10 @@ import (
 	"strconv"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/infra/requestctx"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/pkg/httpx"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/pkg/httpx"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // HandlerDeps is what the device socket route needs besides the manager.

@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/sms"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
-	"github.com/perfect-panel/server/internal/module/identity/entity/auth"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/requestmeta"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/infra/sms"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // SendSmsHandler sends the verification code a task carries through the

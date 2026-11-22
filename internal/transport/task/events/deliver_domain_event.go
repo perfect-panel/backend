@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/eventbus"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
+	"github.com/perfect-panel/backend/internal/infra/eventbus"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
 )
 
 // DeliverDomainEventHandler is the delivery worker: each task carries one

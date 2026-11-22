@@ -3,7 +3,7 @@ package adminuser
 import (
 	"context"
 
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // SetUserEnabled enables or disables an account for a caller outside the

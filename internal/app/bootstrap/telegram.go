@@ -12,10 +12,10 @@ import (
 
 	tgbot "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/identity/entity/auth"
-	"github.com/perfect-panel/server/internal/module/notification"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
+	"github.com/perfect-panel/backend/internal/module/notification"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // telegramPoll tracks the long-polling loop across re-initialisations. The

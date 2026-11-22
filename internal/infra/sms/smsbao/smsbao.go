@@ -9,8 +9,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/infra/integration"
-	"github.com/perfect-panel/server/internal/infra/protocolkey"
+	"github.com/perfect-panel/backend/internal/infra/integration"
+	"github.com/perfect-panel/backend/internal/infra/protocolkey"
 )
 
 // BaseURL is the API the client sends to.

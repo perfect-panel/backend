@@ -17,8 +17,8 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
-	appconfig "github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/pkg/xerr"
+	appconfig "github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 var routeHandlerName = regexp.MustCompile(`^(.*)\.func[0-9]+$`)

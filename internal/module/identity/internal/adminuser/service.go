@@ -8,10 +8,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/wallet"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/wallet"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"github.com/redis/go-redis/v9"
 )
 

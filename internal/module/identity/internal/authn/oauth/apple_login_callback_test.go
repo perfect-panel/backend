@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/perfect-panel/server/internal/infra/requestctx"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/internal/oauthstate"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/oauthstate"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 	"github.com/redis/go-redis/v9"
 )
 

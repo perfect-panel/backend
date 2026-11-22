@@ -12,7 +12,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // HTTPResult is a response before it is written: its status and envelope.

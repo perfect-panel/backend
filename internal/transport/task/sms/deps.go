@@ -3,8 +3,8 @@
 package sms
 
 import (
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // Dependencies are the SMS task's: the message log (the platform kernel's)

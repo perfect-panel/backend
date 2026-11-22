@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	paymentEntity "github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment/alipay"
-	"github.com/perfect-panel/server/pkg/logger"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	paymentEntity "github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment/alipay"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // alipayCurrency is the only currency face-to-face trades collect.

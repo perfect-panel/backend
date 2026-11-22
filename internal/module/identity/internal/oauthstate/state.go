@@ -14,7 +14,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/random"
+	"github.com/perfect-panel/backend/pkg/random"
 	"github.com/redis/go-redis/v9"
 )
 

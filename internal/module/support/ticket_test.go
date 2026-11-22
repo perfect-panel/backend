@@ -8,10 +8,10 @@ import (
 	"errors"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/perfect-panel/server/internal/module/support"
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	ticketEntity "github.com/perfect-panel/server/internal/module/support/entity/ticket"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/support"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	ticketEntity "github.com/perfect-panel/backend/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"github.com/redis/go-redis/v9"
 )
 

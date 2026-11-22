@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/billing"
-	"github.com/perfect-panel/server/internal/module/identity/entity/auth"
-	"github.com/perfect-panel/server/internal/module/network"
-	"github.com/perfect-panel/server/internal/module/platform/entity/system"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
+	"github.com/perfect-panel/backend/internal/module/network"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/system"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 )
 
 var errStoreDown = errors.New("store unavailable")

@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	dto "github.com/perfect-panel/server/internal/module/subscription/contract"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/render"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/timeutil"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/render"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/timeutil"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // previewNodeLimit bounds the nodes a template preview renders.

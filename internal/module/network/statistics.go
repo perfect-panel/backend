@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // Statistics is the part of the facade the platform's dashboards, audit

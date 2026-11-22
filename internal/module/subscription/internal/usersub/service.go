@@ -5,11 +5,11 @@ package usersub
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	trafficEntity "github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	trafficEntity "github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // The ports onto the identity, network and platform domains the admin views

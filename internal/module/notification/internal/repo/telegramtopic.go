@@ -6,8 +6,8 @@ package repo
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/notification/entity/telegramtopic"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/notification/entity/telegramtopic"
+	"github.com/perfect-panel/backend/internal/repository"
 	"gorm.io/gorm"
 )
 

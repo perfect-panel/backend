@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
 	"golang.org/x/sync/singleflight"
 )
 

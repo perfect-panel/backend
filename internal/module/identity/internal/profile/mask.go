@@ -3,9 +3,9 @@ package profile
 import (
 	"strings"
 
-	"github.com/perfect-panel/server/internal/auth/identifier"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/auth/identifier"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
 )
 
 // The self-service views show an account its own identifiers masked. An

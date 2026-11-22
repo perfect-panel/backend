@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/module/billing"
-	"github.com/perfect-panel/server/internal/module/notification"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	"github.com/perfect-panel/backend/internal/module/notification"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // DailyOrderReportHandler posts the previous day's settlement summary into

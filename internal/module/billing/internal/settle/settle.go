@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
 )
 
 // Orders is the order persistence settlement needs.

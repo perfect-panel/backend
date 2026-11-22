@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/common/ut"
-	"github.com/perfect-panel/server/internal/auth/usersession"
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/usersession"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 const idempotencyKeyRule = "Idempotency-Key must contain 16-128 printable ASCII characters"

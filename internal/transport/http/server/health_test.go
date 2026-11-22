@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 )
 
 // A listener that cannot bind used to be logged and forgotten, leaving a

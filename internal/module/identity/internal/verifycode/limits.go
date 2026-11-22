@@ -3,12 +3,12 @@ package verifycode
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/auth/ratelimit"
-	"github.com/perfect-panel/server/internal/module/identity/entity/auth"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/authn/registerpolicy"
-	"github.com/perfect-panel/server/pkg/requestmeta"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/ratelimit"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/authn/registerpolicy"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // Every code costs a delivery, and an SMS costs money. The per-address

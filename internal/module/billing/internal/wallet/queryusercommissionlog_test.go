@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
 )
 
 // commissionLogRepo serves a fixed page of log entries.

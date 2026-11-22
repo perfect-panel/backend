@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	paymentPlatform "github.com/perfect-panel/server/internal/module/billing/internal/payment"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/cache"
-	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	paymentPlatform "github.com/perfect-panel/backend/internal/module/billing/internal/payment"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/cache"
+	"github.com/perfect-panel/backend/pkg/orm"
 	"gorm.io/gorm"
 )
 

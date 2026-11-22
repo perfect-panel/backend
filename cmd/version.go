@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/app/buildinfo"
+	"github.com/perfect-panel/backend/internal/app/buildinfo"
 	"github.com/spf13/cobra"
 )
 

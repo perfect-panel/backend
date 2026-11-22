@@ -7,16 +7,16 @@ import (
 	"time"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/mail"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
-	"github.com/perfect-panel/server/internal/module/billing"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/notification"
-	"github.com/perfect-panel/server/internal/module/subscription"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/transport/devicesocket"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/infra/mail"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/notification"
+	"github.com/perfect-panel/backend/internal/module/subscription"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/internal/transport/devicesocket"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // newSubscriptionModule wires the subscription module against the shared

@@ -6,15 +6,15 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/auth/password"
-	"github.com/perfect-panel/server/internal/auth/usersession"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/entity/auth"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/account"
-	"github.com/perfect-panel/server/internal/module/identity/internal/identitytest"
-	"github.com/perfect-panel/server/internal/module/identity/internal/verification"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/password"
+	"github.com/perfect-panel/backend/internal/auth/usersession"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/account"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/identitytest"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/verification"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // A reset usually follows a compromise, so sessions issued before it end

@@ -3,7 +3,7 @@ package order
 import (
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/billing"
+	"github.com/perfect-panel/backend/internal/module/billing"
 )
 
 func TestDailyReportFormatsMinorUnits(t *testing.T) {

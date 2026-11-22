@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/go-telegram/bot/models"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // TelegramMessenger sends a response to a Telegram chat. A non-zero

@@ -3,7 +3,7 @@ package subscription
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
 )
 
 // Accounts is the module's port onto the identity domain: the owner accounts,

@@ -3,9 +3,9 @@ package plan
 import (
 	"fmt"
 
-	dto "github.com/perfect-panel/server/internal/module/subscription/contract"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/period"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/period"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 func validateSubscribeInput(unitTime string, unitPrice, replacement, inventory, traffic, speedLimit, deviceLimit, quota, deductionRatio, resetCycle int64, discounts []dto.SubscribeDiscount) error {

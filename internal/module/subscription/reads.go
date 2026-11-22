@@ -3,9 +3,9 @@ package subscription
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	usersubEntity "github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	usersubEntity "github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // Reads is the part of the facade serving the other modules' plan and

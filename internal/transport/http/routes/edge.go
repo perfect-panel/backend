@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	edge "github.com/perfect-panel/server/internal/module/network/transport/http/edge"
+	edge "github.com/perfect-panel/backend/internal/module/network/transport/http/edge"
 )
 
 func registerEdgeRoutes(router *server.Hertz, deps Dependencies) {

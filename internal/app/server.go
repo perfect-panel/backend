@@ -8,13 +8,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/perfect-panel/server/internal/app/bootstrap"
-	"github.com/perfect-panel/server/internal/app/lifecycle"
-	"github.com/perfect-panel/server/internal/config"
-	httpserver "github.com/perfect-panel/server/internal/transport/http/server"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/trace"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/app/bootstrap"
+	"github.com/perfect-panel/backend/internal/app/lifecycle"
+	"github.com/perfect-panel/backend/internal/config"
+	httpserver "github.com/perfect-panel/backend/internal/transport/http/server"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/trace"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // shutdownTimeout is how long open requests get when the server stops or

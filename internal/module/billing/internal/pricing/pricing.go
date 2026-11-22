@@ -11,8 +11,8 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/coupon"
-	"github.com/perfect-panel/server/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/coupon"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/payment"
 )
 
 // Tier is one row of a plan's quantity discount table: buying at least

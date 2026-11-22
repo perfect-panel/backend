@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/repository"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/pkg/orm"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

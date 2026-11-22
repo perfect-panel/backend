@@ -8,12 +8,12 @@ package authn
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/internal/account"
-	"github.com/perfect-panel/server/internal/module/identity/internal/authn/oauth"
-	"github.com/perfect-panel/server/internal/module/identity/internal/authn/registerpolicy"
-	"github.com/perfect-panel/server/internal/module/identity/internal/oauthflow"
-	"github.com/perfect-panel/server/internal/repository"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/account"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/authn/oauth"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/authn/registerpolicy"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/oauthflow"
+	"github.com/perfect-panel/backend/internal/repository"
 	"github.com/redis/go-redis/v9"
 )
 

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/subtest"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/subtest"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 	"gorm.io/gorm"
 )
 

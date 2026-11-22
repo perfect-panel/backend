@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/infra/requestctx"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
 )
 
 func TestFromContext(t *testing.T) {

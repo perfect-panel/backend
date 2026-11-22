@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/perfect-panel/server/internal/infra/integration"
+	"github.com/perfect-panel/backend/internal/infra/integration"
 	"github.com/twilio/twilio-go/client"
 	twilioApi "github.com/twilio/twilio-go/rest/api/v2010"
 )

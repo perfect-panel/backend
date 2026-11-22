@@ -6,10 +6,10 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	"github.com/perfect-panel/server/pkg/httpx"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/requestmeta"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/pkg/httpx"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 const requestActorIDKey = "audit_actor_id"

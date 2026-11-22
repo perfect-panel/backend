@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	logEntity "github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	logEntity "github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 // captureLogRepo keeps the last entry written to the audit log.

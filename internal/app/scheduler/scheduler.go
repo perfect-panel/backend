@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
+	"github.com/perfect-panel/backend/pkg/logger"
 	"github.com/robfig/cron/v3"
 )
 

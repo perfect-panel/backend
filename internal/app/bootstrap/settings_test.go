@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/system"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/system"
 )
 
 // The admin's verification-code settings are stored under VerifyCode-prefixed

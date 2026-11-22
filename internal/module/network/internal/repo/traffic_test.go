@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/module/network/entity/traffic"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"

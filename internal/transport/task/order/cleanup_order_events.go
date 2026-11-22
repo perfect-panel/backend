@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // orderEventRetention is the replay contract billing's order events and the

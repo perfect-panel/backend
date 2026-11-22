@@ -12,12 +12,12 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/oschwald/geoip2-golang"
-	"github.com/perfect-panel/server/internal/app/buildinfo"
-	"github.com/perfect-panel/server/internal/infra/geoip/geoiptest"
-	"github.com/perfect-panel/server/internal/module/platform"
-	"github.com/perfect-panel/server/internal/module/platform/transport/http/internal/handlertest"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/app/buildinfo"
+	"github.com/perfect-panel/backend/internal/infra/geoip/geoiptest"
+	"github.com/perfect-panel/backend/internal/module/platform"
+	"github.com/perfect-panel/backend/internal/module/platform/transport/http/internal/handlertest"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // The tool handlers run against the real platform facade: the admin tools

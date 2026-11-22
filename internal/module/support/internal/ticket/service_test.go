@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	entity "github.com/perfect-panel/server/internal/module/support/entity/ticket"
-	"github.com/perfect-panel/server/internal/module/support/internal/supporttest"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	entity "github.com/perfect-panel/backend/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/internal/module/support/internal/supporttest"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"gorm.io/gorm"
 )
 

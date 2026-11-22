@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 
-	"github.com/perfect-panel/server/internal/auth/identifier"
-	"github.com/perfect-panel/server/internal/auth/password"
-	"github.com/perfect-panel/server/internal/auth/usersession"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/account"
-	"github.com/perfect-panel/server/internal/module/identity/internal/verification"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/identifier"
+	"github.com/perfect-panel/backend/internal/auth/password"
+	"github.com/perfect-panel/backend/internal/auth/usersession"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/account"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/verification"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"gorm.io/gorm"
 )
 

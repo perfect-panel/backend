@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/infra/requestctx"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
-	"github.com/perfect-panel/server/internal/module/billing/internal/gateway"
-	"github.com/perfect-panel/server/internal/module/billing/internal/ledger"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/gateway"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/ledger"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // ------------------------------------------------------ balance payment

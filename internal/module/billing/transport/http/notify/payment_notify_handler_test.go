@@ -11,8 +11,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/perfect-panel/server/internal/infra/requestctx"
-	"github.com/perfect-panel/server/internal/module/billing"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
+	"github.com/perfect-panel/backend/internal/module/billing"
 )
 
 func TestPaymentNotifyHandler_writesErrorEnvelope_whenPlatformIsMissing(t *testing.T) {

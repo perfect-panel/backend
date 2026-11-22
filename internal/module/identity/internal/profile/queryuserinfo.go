@@ -4,9 +4,9 @@ import (
 	"context"
 	"sort"
 
-	"github.com/perfect-panel/server/internal/infra/mapping"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/infra/mapping"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // QueryUserInfo returns the calling account with its wallet. Identifiers

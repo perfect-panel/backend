@@ -13,11 +13,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/inbox"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/module/platform/entity/outbox"
-	"github.com/perfect-panel/server/internal/module/platform/entity/system"
-	"github.com/perfect-panel/server/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/inbox"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/outbox"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/system"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/task"
 )
 
 // SystemRepo manages the system table: the settings administrators edit,

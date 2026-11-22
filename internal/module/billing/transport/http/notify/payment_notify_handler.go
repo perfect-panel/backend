@@ -10,10 +10,10 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	"github.com/perfect-panel/server/internal/infra/requestctx"
-	"github.com/perfect-panel/server/internal/module/billing"
-	"github.com/perfect-panel/server/pkg/httpx"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	"github.com/perfect-panel/backend/pkg/httpx"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // maxNotifyPayloadSize caps the raw body of gateways that sign it.

@@ -3,7 +3,7 @@ package validation
 import (
 	"testing"
 
-	identity "github.com/perfect-panel/server/internal/module/identity/contract"
+	identity "github.com/perfect-panel/backend/internal/module/identity/contract"
 )
 
 // Facebook signs in through the same OAuth flow as the other providers, so

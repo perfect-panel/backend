@@ -17,10 +17,10 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/perfect-panel/server/internal/auth/devicesession"
-	"github.com/perfect-panel/server/internal/auth/token"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/auth/devicesession"
+	"github.com/perfect-panel/backend/internal/auth/token"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 	"github.com/redis/go-redis/v9"
 )
 

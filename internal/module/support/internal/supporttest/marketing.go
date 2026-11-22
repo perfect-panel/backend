@@ -3,7 +3,7 @@ package supporttest
 import (
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/task"
 )
 
 // EmailCampaign is a batch email task as the marketing service records it.

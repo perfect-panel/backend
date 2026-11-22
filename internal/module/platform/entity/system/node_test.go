@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/backend/internal/config"
 )
 
 func serverRows(values map[string]string) []*System {

@@ -7,12 +7,12 @@ import (
 	"crypto/rand"
 	"errors"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	entity "github.com/perfect-panel/server/internal/module/billing/entity/coupon"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/random"
-	"github.com/perfect-panel/server/pkg/slicesx"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	entity "github.com/perfect-panel/backend/internal/module/billing/entity/coupon"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/random"
+	"github.com/perfect-panel/backend/pkg/slicesx"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"gorm.io/gorm"
 )
 

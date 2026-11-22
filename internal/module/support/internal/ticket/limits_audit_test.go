@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	entity "github.com/perfect-panel/server/internal/module/support/entity/ticket"
-	"github.com/perfect-panel/server/internal/module/support/internal/supporttest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	entity "github.com/perfect-panel/backend/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/internal/module/support/internal/supporttest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // The reply limit refuses a flood of replies without storing or mirroring

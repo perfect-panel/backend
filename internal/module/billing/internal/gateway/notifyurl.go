@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"strings"
 
-	paymentEntity "github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/pkg/xerr"
+	paymentEntity "github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // NotifyURL builds the callback URL of a payment method; it carries the

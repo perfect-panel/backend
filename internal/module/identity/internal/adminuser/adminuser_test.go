@@ -9,14 +9,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/auth/password"
-	walletEntity "github.com/perfect-panel/server/internal/module/billing/entity/wallet"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/identitytest"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/password"
+	walletEntity "github.com/perfect-panel/backend/internal/module/billing/entity/wallet"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/identitytest"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // wallets is the billing port of the admin flows: the wallet table the admin

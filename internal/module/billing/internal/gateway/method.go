@@ -5,9 +5,9 @@ import (
 	"errors"
 	"strings"
 
-	paymentEntity "github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment"
-	"github.com/perfect-panel/server/pkg/xerr"
+	paymentEntity "github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"gorm.io/gorm"
 )
 

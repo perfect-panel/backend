@@ -3,8 +3,8 @@ package system
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/platform"
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/internal/module/platform"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
 )
 
 // Settings is the part of the platform facade the system setting handlers

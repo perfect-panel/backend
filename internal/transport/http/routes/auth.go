@@ -2,8 +2,8 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	auth "github.com/perfect-panel/server/internal/module/identity/transport/http/auth"
-	authOauth "github.com/perfect-panel/server/internal/module/identity/transport/http/auth/oauth"
+	auth "github.com/perfect-panel/backend/internal/module/identity/transport/http/auth"
+	authOauth "github.com/perfect-panel/backend/internal/module/identity/transport/http/auth/oauth"
 )
 
 func registerAuthRoutes(router *server.Hertz, deps Dependencies) {

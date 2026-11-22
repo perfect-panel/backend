@@ -14,14 +14,14 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	hertzconfig "github.com/cloudwego/hertz/pkg/common/config"
-	"github.com/perfect-panel/server/internal/config"
-	billingHTTP "github.com/perfect-panel/server/internal/module/billing/transport/http"
-	"github.com/perfect-panel/server/internal/module/notification"
-	notificationHTTP "github.com/perfect-panel/server/internal/module/notification/transport/http"
-	"github.com/perfect-panel/server/internal/transport/http/middleware"
-	"github.com/perfect-panel/server/internal/transport/http/routes"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/internal/config"
+	billingHTTP "github.com/perfect-panel/backend/internal/module/billing/transport/http"
+	"github.com/perfect-panel/backend/internal/module/notification"
+	notificationHTTP "github.com/perfect-panel/backend/internal/module/notification/transport/http"
+	"github.com/perfect-panel/backend/internal/transport/http/middleware"
+	"github.com/perfect-panel/backend/internal/transport/http/routes"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 type Server struct {

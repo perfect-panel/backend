@@ -3,7 +3,7 @@ package auth
 import (
 	"testing"
 
-	"github.com/perfect-panel/server/internal/infra/mail"
+	"github.com/perfect-panel/backend/internal/infra/mail"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

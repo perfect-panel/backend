@@ -3,7 +3,7 @@ package user
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/infra/requestctx"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
 )
 
 // NewContext returns ctx carrying u as the authenticated user of the request.

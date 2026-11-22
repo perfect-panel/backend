@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )

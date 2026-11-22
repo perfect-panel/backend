@@ -3,10 +3,10 @@ package profile
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/oauthstate"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/oauthstate"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // BindOAuth returns the URL that starts binding a req.Method identity to the

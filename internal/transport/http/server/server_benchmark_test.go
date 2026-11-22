@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 func BenchmarkHTTPServerNativeServerForbidden(b *testing.B) {

@@ -10,8 +10,8 @@ import (
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/ut"
-	"github.com/perfect-panel/server/internal/module/billing"
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
 )
 
 // epayConfig configures an EPay method whose checkout is a signed URL built

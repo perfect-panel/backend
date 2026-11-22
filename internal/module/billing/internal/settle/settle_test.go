@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
-	"github.com/perfect-panel/server/internal/module/billing/internal/settle"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/settle"
 )
 
 func TestValidateTradeNo(t *testing.T) {

@@ -9,11 +9,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/repository/kernel"
+	"github.com/perfect-panel/backend/internal/repository/kernel"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/platform/entity/system"
-	"github.com/perfect-panel/server/pkg/cache"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/system"
+	"github.com/perfect-panel/backend/pkg/cache"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

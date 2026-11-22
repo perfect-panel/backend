@@ -8,13 +8,13 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/perfect-panel/server/internal/app/bootstrap"
-	"github.com/perfect-panel/server/internal/app/lifecycle"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/infra/geoip"
-	httpserver "github.com/perfect-panel/server/internal/transport/http/server"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/backend/internal/app/bootstrap"
+	"github.com/perfect-panel/backend/internal/app/lifecycle"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/infra/geoip"
+	httpserver "github.com/perfect-panel/backend/internal/transport/http/server"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/orm"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -75,7 +75,7 @@ func unwired(v reflect.Value, path string) []string {
 		field, name := v.Field(i), path+"."+v.Type().Field(i).Name
 		switch field.Kind() {
 		case reflect.Struct:
-			if strings.HasPrefix(field.Type().PkgPath(), "github.com/perfect-panel/server/") && !isConfigValue(field.Type()) {
+			if strings.HasPrefix(field.Type().PkgPath(), "github.com/perfect-panel/backend/") && !isConfigValue(field.Type()) {
 				nils = append(nils, unwired(field, name)...)
 			}
 		case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Chan:
@@ -90,7 +90,7 @@ func unwired(v reflect.Value, path string) []string {
 // isConfigValue reports whether t is configuration data rather than a set of
 // dependencies: its zero fields are settings, not missing wiring.
 func isConfigValue(t reflect.Type) bool {
-	return t.PkgPath() == "github.com/perfect-panel/server/internal/config" || strings.HasSuffix(fmt.Sprint(t), "Snapshot")
+	return t.PkgPath() == "github.com/perfect-panel/backend/internal/config" || strings.HasSuffix(fmt.Sprint(t), "Snapshot")
 }
 
 // The process stops the HTTP server first, so no new request arrives while

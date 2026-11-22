@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	userEntity "github.com/perfect-panel/server/internal/module/identity/entity/user"
-	taskEntity "github.com/perfect-panel/server/internal/module/platform/entity/task"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/module/support"
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	userEntity "github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	taskEntity "github.com/perfect-panel/backend/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/support"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 type fakeTaskRepo struct {

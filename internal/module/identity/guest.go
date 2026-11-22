@@ -3,7 +3,7 @@ package identity
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/identity/internal/guestaccount"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/guestaccount"
 )
 
 // GuestAccountCommand is the account a paid guest order asks for.

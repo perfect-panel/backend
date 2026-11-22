@@ -1,4 +1,4 @@
-module github.com/perfect-panel/server
+module github.com/perfect-panel/backend
 
 go 1.27.4
 

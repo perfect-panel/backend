@@ -3,8 +3,8 @@ package tool
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/app/buildinfo"
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/internal/app/buildinfo"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
 )
 
 // GetVersion reports the version the server was built as.

@@ -6,8 +6,8 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/module/subscription"
-	"github.com/perfect-panel/server/pkg/httpx"
+	"github.com/perfect-panel/backend/internal/module/subscription"
+	"github.com/perfect-panel/backend/pkg/httpx"
 )
 
 // Get subscribe group list

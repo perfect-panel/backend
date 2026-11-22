@@ -24,7 +24,7 @@ import (
 
 	mysqlDriver "github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/backend/pkg/orm"
 )
 
 const schemaMigrationsTable = "schema_migrations"

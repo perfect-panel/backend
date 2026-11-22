@@ -3,9 +3,9 @@ package adminuser
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/infra/mapping"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/infra/mapping"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // GetUserDetail returns an account with its wallet, for the admin edit form.

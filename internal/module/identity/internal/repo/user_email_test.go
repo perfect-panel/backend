@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	authid "github.com/perfect-panel/server/internal/auth/identifier"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/pkg/xerr"
+	authid "github.com/perfect-panel/backend/internal/auth/identifier"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

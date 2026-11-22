@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/infra/requestctx"
-	"github.com/perfect-panel/server/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/payment"
 )
 
 type PaymentParams struct {

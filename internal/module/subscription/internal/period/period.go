@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // Unit is a purchasable subscription time unit, a plan's unit_time.

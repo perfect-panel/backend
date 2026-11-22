@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	trafficEntity "github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/internal/module/platform/entity/inbox"
-	"github.com/perfect-panel/server/internal/module/subscription"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
+	trafficEntity "github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/inbox"
+	"github.com/perfect-panel/backend/internal/module/subscription"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
 )
 
 var errAccounting = errors.New("accounting write failed")

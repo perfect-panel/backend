@@ -8,11 +8,11 @@ import (
 	"errors"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/module/billing"
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/transport/http/validation"
-	"github.com/perfect-panel/server/pkg/httpx"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/transport/http/validation"
+	"github.com/perfect-panel/backend/pkg/httpx"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // OrderCloser is the part of the billing facade CloseOrderHandler uses.

@@ -3,9 +3,9 @@ package checkout
 import (
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
 )
 
 // A renewal and a traffic reset name the subscription they apply to by its

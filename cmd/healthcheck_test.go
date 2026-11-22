@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/backend/internal/config"
 )
 
 // healthConfig writes a configuration file naming the listener at addr and

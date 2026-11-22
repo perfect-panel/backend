@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // OrderStatistics is the part of the facade the platform's dashboard and the

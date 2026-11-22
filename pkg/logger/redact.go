@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 // RedactedValue replaces a redacted field value or text in the log.

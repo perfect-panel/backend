@@ -5,9 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/auth/ratelimit"
-	"github.com/perfect-panel/server/pkg/requestmeta"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/ratelimit"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // countingLimiter grants quota permits per key and counts the calls.

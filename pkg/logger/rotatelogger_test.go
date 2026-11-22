@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/random"
+	"github.com/perfect-panel/backend/pkg/random"
 
 	"github.com/stretchr/testify/assert"
 )

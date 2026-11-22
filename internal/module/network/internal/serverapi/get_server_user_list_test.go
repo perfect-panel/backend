@@ -9,10 +9,10 @@ import (
 	"uuid"
 
 	"github.com/alicebob/miniredis/v2"
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/pkg/httpx"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/pkg/httpx"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"github.com/redis/go-redis/v9"
 )
 

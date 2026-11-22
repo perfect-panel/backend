@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/eventbus"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
-	"github.com/perfect-panel/server/internal/module/identity"
-	"github.com/perfect-panel/server/internal/module/subscription"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/infra/eventbus"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
+	"github.com/perfect-panel/backend/internal/module/identity"
+	"github.com/perfect-panel/backend/internal/module/subscription"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )

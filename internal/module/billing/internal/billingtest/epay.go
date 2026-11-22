@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/payment"
 )
 
 // EPayV2 is a local HTTPS peer with independent merchant/platform RSA keys.

@@ -3,9 +3,9 @@ package app
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/internal/module/platform"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/module/platform"
 )
 
 // The adapters below serve one module's port from another module's facade

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/cache"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/cache"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/client"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/client"
 	"gorm.io/gorm"
 )
 

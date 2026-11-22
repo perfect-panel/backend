@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
 	"gorm.io/gorm"
 )
 

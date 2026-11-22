@@ -2,10 +2,10 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	publicOrder "github.com/perfect-panel/server/internal/module/billing/transport/http/public/order"
-	publicPayment "github.com/perfect-panel/server/internal/module/billing/transport/http/public/payment"
-	publicSubscribe "github.com/perfect-panel/server/internal/module/subscription/transport/http/public/subscribe"
-	publicTicket "github.com/perfect-panel/server/internal/module/support/transport/http/public/ticket"
+	publicOrder "github.com/perfect-panel/backend/internal/module/billing/transport/http/public/order"
+	publicPayment "github.com/perfect-panel/backend/internal/module/billing/transport/http/public/payment"
+	publicSubscribe "github.com/perfect-panel/backend/internal/module/subscription/transport/http/public/subscribe"
+	publicTicket "github.com/perfect-panel/backend/internal/module/support/transport/http/public/ticket"
 )
 
 func registerPublicOrderRoutes(router *server.Hertz, deps Dependencies) {

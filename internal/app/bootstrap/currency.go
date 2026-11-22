@@ -3,8 +3,8 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // currencySettings mirrors the stored currency keys. The seeded Currency key

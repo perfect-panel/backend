@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/internal/module/network/internal/trafficagg"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/internal/trafficagg"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // ServerPushStatus records a server's status report and heartbeat. A changed

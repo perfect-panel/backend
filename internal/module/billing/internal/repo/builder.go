@@ -4,7 +4,7 @@
 // NewBuilder for store assembly (ADR-001 step-6 preparation).
 package repo
 
-import "github.com/perfect-panel/server/internal/repository"
+import "github.com/perfect-panel/backend/internal/repository"
 
 // NewBuilder assembles the billing repository bundle over a module
 // connection; the module facade exports it for store assembly.

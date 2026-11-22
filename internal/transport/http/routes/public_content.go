@@ -2,9 +2,9 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	publicPortal "github.com/perfect-panel/server/internal/module/billing/transport/http/public/portal"
-	publicAnnouncement "github.com/perfect-panel/server/internal/module/support/transport/http/public/announcement"
-	publicDocument "github.com/perfect-panel/server/internal/module/support/transport/http/public/document"
+	publicPortal "github.com/perfect-panel/backend/internal/module/billing/transport/http/public/portal"
+	publicAnnouncement "github.com/perfect-panel/backend/internal/module/support/transport/http/public/announcement"
+	publicDocument "github.com/perfect-panel/backend/internal/module/support/transport/http/public/document"
 )
 
 func registerPublicAnnouncementRoutes(router *server.Hertz, deps Dependencies) {

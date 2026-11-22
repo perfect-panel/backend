@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment"
 )
 
 // The trade must ask for exactly the amount the order expects; the float

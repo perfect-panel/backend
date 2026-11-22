@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/cloudwego/hertz/pkg/app/server/render"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/orm"
 	"gopkg.in/yaml.v3"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

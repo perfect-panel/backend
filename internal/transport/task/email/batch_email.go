@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/mail"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
-	taskEntity "github.com/perfect-panel/server/internal/module/platform/entity/task"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/infra/mail"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
+	taskEntity "github.com/perfect-panel/backend/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // BatchEmailHandler runs a marketing email campaign, the batch task an

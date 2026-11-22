@@ -3,8 +3,8 @@ package systemsetting
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // PreViewNodeMultiplier reports the node traffic multiplier in effect now.

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/pkg/httpx"
+	"github.com/perfect-panel/backend/pkg/httpx"
 )
 
 func TestRequestError_returnsParameterError_whenNativeContextHasRecordedParameterError(t *testing.T) {

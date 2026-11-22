@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 )
 
 // The otlpgrpc exporter sends spans in plaintext unless OtlpGrpcSecure asks

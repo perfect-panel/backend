@@ -10,9 +10,9 @@ package config
 import (
 	"encoding/json"
 
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/orm"
-	"github.com/perfect-panel/server/pkg/trace"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/orm"
+	"github.com/perfect-panel/backend/pkg/trace"
 )
 
 // Config is the server's whole configuration: the boot settings, read from

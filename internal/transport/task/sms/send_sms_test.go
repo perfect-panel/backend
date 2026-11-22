@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 func TestSMSMessageLogDoesNotPersistRecipientOrCode(t *testing.T) {

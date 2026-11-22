@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
 )
 
 // A renewal or reset order can be created before the subscription is refunded

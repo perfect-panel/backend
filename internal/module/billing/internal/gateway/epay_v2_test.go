@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
 )
 
 func TestEPayProtocolConfiguration(t *testing.T) {

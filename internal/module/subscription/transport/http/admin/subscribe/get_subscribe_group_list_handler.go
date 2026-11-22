@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/module/subscription"
-	dto "github.com/perfect-panel/server/internal/module/subscription/contract"
-	"github.com/perfect-panel/server/pkg/httpx"
+	"github.com/perfect-panel/backend/internal/module/subscription"
+	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
+	"github.com/perfect-panel/backend/pkg/httpx"
 )
 
 var _ dto.GetSubscribeGroupListResponse

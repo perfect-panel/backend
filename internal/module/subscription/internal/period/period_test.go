@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
 )
 
 func mustZone(t *testing.T, name string) *time.Location {

@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/internal/module/network/internal/onlinecache"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/internal/onlinecache"
 	"github.com/redis/go-redis/v9"
 )
 

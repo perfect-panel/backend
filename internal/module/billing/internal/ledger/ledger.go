@@ -9,9 +9,9 @@ import (
 	"context"
 	"time"
 
-	logEntity "github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/pkg/timeutil"
-	"github.com/perfect-panel/server/pkg/xerr"
+	logEntity "github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/pkg/timeutil"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // Remarks of gift-credit movements, shown to administrators in the gift log.

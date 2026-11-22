@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
-	"github.com/perfect-panel/server/internal/module/billing/internal/userorder"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/userorder"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 func assertCode(t *testing.T, err error, want uint32) {

@@ -7,11 +7,11 @@ import (
 	"time"
 	"uuid"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/period"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/subtest"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/period"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/subtest"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 func newTrialService(f *subtest.Fixture, policy *Policy) *Service {

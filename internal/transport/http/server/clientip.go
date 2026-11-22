@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	appconfig "github.com/perfect-panel/server/internal/config"
+	appconfig "github.com/perfect-panel/backend/internal/config"
 )
 
 // remoteIPHeaders are the headers a trusted reverse proxy names the client

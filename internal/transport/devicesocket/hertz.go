@@ -17,7 +17,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/network"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/gorilla/websocket"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // HandshakeError reports a refused WebSocket handshake with the HTTP status

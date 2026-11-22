@@ -3,12 +3,12 @@ package adminuser
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/auth/password"
-	"github.com/perfect-panel/server/internal/auth/usersession"
-	"github.com/perfect-panel/server/internal/module/billing/entity/wallet"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/password"
+	"github.com/perfect-panel/backend/internal/auth/usersession"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/wallet"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // UpdateUserBasicInfo applies an administrator's edit of an account: its

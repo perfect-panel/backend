@@ -3,17 +3,17 @@ package checkout
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/internal/gateway"
-	"github.com/perfect-panel/server/internal/module/billing/internal/ledger"
-	"github.com/perfect-panel/server/internal/module/billing/internal/orderaudit"
-	"github.com/perfect-panel/server/internal/module/billing/internal/ordercontext"
-	"github.com/perfect-panel/server/internal/module/billing/internal/pricing"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/timeutil"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/gateway"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/ledger"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/orderaudit"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/ordercontext"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/pricing"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/timeutil"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // ResetTraffic creates a paid traffic-reset order for an active subscription.

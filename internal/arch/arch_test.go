@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-const importPrefix = "github.com/perfect-panel/server/"
+const importPrefix = "github.com/perfect-panel/backend/"
 
 // appImporters is the closed composition-root boundary. Only cmd may import
 // internal/app to build the application; every runtime consumer receives a

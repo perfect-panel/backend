@@ -7,9 +7,9 @@ import (
 	"slices"
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // memorySorts holds the positions of both sortable lists, counts the sort

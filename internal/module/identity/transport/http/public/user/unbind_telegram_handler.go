@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/module/identity"
-	"github.com/perfect-panel/server/pkg/httpx"
+	"github.com/perfect-panel/backend/internal/module/identity"
+	"github.com/perfect-panel/backend/pkg/httpx"
 )
 
 // UnbindTelegramService is the part of the identity facade

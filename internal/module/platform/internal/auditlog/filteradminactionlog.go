@@ -3,8 +3,8 @@ package auditlog
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
 )
 
 // FilterAdminActionLog pages the administrators' mutations: every settings

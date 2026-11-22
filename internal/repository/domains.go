@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 
-	walletEntity "github.com/perfect-panel/server/internal/module/billing/entity/wallet"
-	"github.com/perfect-panel/server/internal/repository/kernel"
+	walletEntity "github.com/perfect-panel/backend/internal/module/billing/entity/wallet"
+	"github.com/perfect-panel/backend/internal/repository/kernel"
 )
 
 // Domain store views (ADR-001 step 2). A scoped transaction hands the closure

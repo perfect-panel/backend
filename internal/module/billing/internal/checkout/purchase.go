@@ -4,17 +4,17 @@ import (
 	"context"
 	"errors"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/internal/ledger"
-	"github.com/perfect-panel/server/internal/module/billing/internal/orderaudit"
-	"github.com/perfect-panel/server/internal/module/billing/internal/ordercontext"
-	"github.com/perfect-panel/server/internal/module/billing/internal/pricing"
-	"github.com/perfect-panel/server/internal/module/subscription"
-	subscribeEntity "github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/ledger"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/orderaudit"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/ordercontext"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/pricing"
+	"github.com/perfect-panel/backend/internal/module/subscription"
+	subscribeEntity "github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // Purchase creates a pending order for a new subscription. The billing

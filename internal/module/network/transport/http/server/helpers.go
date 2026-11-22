@@ -13,11 +13,11 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
-	serverv1 "github.com/perfect-panel/server/api/server/v1"
-	"github.com/perfect-panel/server/internal/module/network"
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/pkg/httpx"
-	"github.com/perfect-panel/server/pkg/xerr"
+	serverv1 "github.com/perfect-panel/backend/api/server/v1"
+	"github.com/perfect-panel/backend/internal/module/network"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/pkg/httpx"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"google.golang.org/protobuf/proto"
 )
 

@@ -8,9 +8,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/period"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/period"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // Error definitions for validation and calculation failures

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment/epay"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment/epay/protocol"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment/epay"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment/epay/protocol"
 )
 
 func (g *epayGateway) queryOrder(ctx context.Context, orderNo string) (*epay.QueryResult, error) {

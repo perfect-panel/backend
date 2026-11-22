@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/module/network"
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/internal/transport/http/validation"
-	"github.com/perfect-panel/server/pkg/httpx"
+	"github.com/perfect-panel/backend/internal/module/network"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/transport/http/validation"
+	"github.com/perfect-panel/backend/pkg/httpx"
 )
 
 // ServerUpdater is the part of the network facade UpdateServerHandler

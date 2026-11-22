@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/perfect-panel/server/internal/transport/devicesocket"
+	"github.com/perfect-panel/backend/internal/transport/devicesocket"
 )
 
 // registerDeviceRoutes serves the device WebSocket behind the session

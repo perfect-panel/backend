@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/gateway"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/gateway"
 )
 
 func signCryptomusTestPayload(t *testing.T, apiKey string, fields map[string]any) []byte {

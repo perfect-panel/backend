@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
-	"github.com/perfect-panel/server/internal/module/billing/internal/gateway"
-	"github.com/perfect-panel/server/internal/module/billing/internal/portal"
-	"github.com/perfect-panel/server/internal/module/billing/internal/settle"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/gateway"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/portal"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/settle"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"gorm.io/gorm"
 )
 

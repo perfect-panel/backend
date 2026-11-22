@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/payment"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/payment"
 )
 
 // The admin list shows the callback URL checkout actually gives the

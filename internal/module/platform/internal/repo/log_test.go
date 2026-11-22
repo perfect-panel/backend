@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	logEntity "github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	logEntity "github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

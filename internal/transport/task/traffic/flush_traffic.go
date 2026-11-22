@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/module/network"
-	"github.com/perfect-panel/server/internal/transport/task/tasklock"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/module/network"
+	"github.com/perfect-panel/backend/internal/transport/task/tasklock"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 const (

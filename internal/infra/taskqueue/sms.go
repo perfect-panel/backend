@@ -1,6 +1,6 @@
 package taskqueue
 
-import "github.com/perfect-panel/server/pkg/requestmeta"
+import "github.com/perfect-panel/backend/pkg/requestmeta"
 
 const (
 	// ForthwithSendSms sends one text message (SendSmsPayload).

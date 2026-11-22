@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"github.com/redis/go-redis/v9"
 )
 

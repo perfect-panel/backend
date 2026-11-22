@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/entitlement"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/entitlement"
 )
 
 // EntitlementRepo is used only inside the subscription transaction.

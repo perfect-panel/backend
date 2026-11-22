@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/slicesx"
+	"github.com/perfect-panel/backend/pkg/slicesx"
 	"gorm.io/gorm"
 )
 

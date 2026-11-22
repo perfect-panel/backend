@@ -6,11 +6,11 @@ package profile
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/wallet"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/authn/registerpolicy"
-	"github.com/perfect-panel/server/internal/module/identity/internal/oauthflow"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/wallet"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/authn/registerpolicy"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/oauthflow"
+	"github.com/perfect-panel/backend/internal/repository"
 	"github.com/redis/go-redis/v9"
 )
 

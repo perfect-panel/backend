@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/support/entity/ads"
-	"github.com/perfect-panel/server/pkg/cache"
+	"github.com/perfect-panel/backend/internal/module/support/entity/ads"
+	"github.com/perfect-panel/backend/pkg/cache"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"slices"
 
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // BatchDeleteUser soft-deletes the accounts and drops the caches that keep

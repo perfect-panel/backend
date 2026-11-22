@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/deduction"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/period"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/deduction"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/period"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // remainingAmount is the refund for cancelling the subscription now: the

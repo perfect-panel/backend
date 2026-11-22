@@ -3,10 +3,10 @@ package storefront
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/infra/mapping"
-	dto "github.com/perfect-panel/server/internal/module/subscription/contract"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/infra/mapping"
+	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // QuerySubscribeGroupList lists every plan group for the storefront.

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/perfect-panel/server/internal/repository/kernel"
+	"github.com/perfect-panel/backend/internal/repository/kernel"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/inbox"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/inbox"
 	"gorm.io/gorm"
 )
 

@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 
 	tgbot "github.com/go-telegram/bot"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/network"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/network"
 )
 
 type restartHandler struct{ fn func() error }

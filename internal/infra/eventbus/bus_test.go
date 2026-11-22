@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/outbox"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/outbox"
 )
 
 type fakeOutbox struct {

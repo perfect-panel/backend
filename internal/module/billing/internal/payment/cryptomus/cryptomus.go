@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perfect-panel/server/internal/infra/protocolkey"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment"
+	"github.com/perfect-panel/backend/internal/infra/protocolkey"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment"
 )
 
 const (

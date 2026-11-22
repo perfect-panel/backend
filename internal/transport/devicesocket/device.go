@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 type Operator int

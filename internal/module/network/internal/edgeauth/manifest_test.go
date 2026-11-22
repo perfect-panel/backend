@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/backend/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 

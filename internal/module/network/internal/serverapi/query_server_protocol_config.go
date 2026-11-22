@@ -3,11 +3,11 @@ package serverapi
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/internal/module/network/internal/nodeconfig"
-	"github.com/perfect-panel/server/internal/module/network/internal/protocolmap"
-	"github.com/perfect-panel/server/pkg/logger"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/internal/nodeconfig"
+	"github.com/perfect-panel/backend/internal/module/network/internal/protocolmap"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // QueryServerProtocolConfig returns the configuration a node pulls for its

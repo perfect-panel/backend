@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 )
 
 // Accounts the admin panel created stored their number as "<area>-<number>"

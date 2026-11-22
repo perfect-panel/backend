@@ -3,8 +3,8 @@ package log
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/platform"
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/internal/module/platform"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
 )
 
 // Logs is the part of the platform facade the log handlers call: the audit

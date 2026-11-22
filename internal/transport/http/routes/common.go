@@ -2,9 +2,9 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	identityCommon "github.com/perfect-panel/server/internal/module/identity/transport/http/common"
-	platformCommon "github.com/perfect-panel/server/internal/module/platform/transport/http/common"
-	supportCommon "github.com/perfect-panel/server/internal/module/support/transport/http/common"
+	identityCommon "github.com/perfect-panel/backend/internal/module/identity/transport/http/common"
+	platformCommon "github.com/perfect-panel/backend/internal/module/platform/transport/http/common"
+	supportCommon "github.com/perfect-panel/backend/internal/module/support/transport/http/common"
 )
 
 func registerCommonRoutes(router *server.Hertz, deps Dependencies) {

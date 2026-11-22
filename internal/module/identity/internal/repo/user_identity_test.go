@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
 	"gorm.io/gorm"
 )
 

@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	serverHandler "github.com/perfect-panel/server/internal/module/network/transport/http/server"
+	serverHandler "github.com/perfect-panel/backend/internal/module/network/transport/http/server"
 )
 
 func registerServerRoutes(router *server.Hertz, deps Dependencies) {

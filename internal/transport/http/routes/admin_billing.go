@@ -2,11 +2,11 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	adminCoupon "github.com/perfect-panel/server/internal/module/billing/transport/http/admin/coupon"
-	adminOrder "github.com/perfect-panel/server/internal/module/billing/transport/http/admin/order"
-	adminPayment "github.com/perfect-panel/server/internal/module/billing/transport/http/admin/payment"
-	adminWithdrawal "github.com/perfect-panel/server/internal/module/billing/transport/http/admin/withdrawal"
-	adminSubscribe "github.com/perfect-panel/server/internal/module/subscription/transport/http/admin/subscribe"
+	adminCoupon "github.com/perfect-panel/backend/internal/module/billing/transport/http/admin/coupon"
+	adminOrder "github.com/perfect-panel/backend/internal/module/billing/transport/http/admin/order"
+	adminPayment "github.com/perfect-panel/backend/internal/module/billing/transport/http/admin/payment"
+	adminWithdrawal "github.com/perfect-panel/backend/internal/module/billing/transport/http/admin/withdrawal"
+	adminSubscribe "github.com/perfect-panel/backend/internal/module/subscription/transport/http/admin/subscribe"
 )
 
 func registerAdminCouponRoutes(router *server.Hertz, deps Dependencies) {

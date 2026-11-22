@@ -3,8 +3,8 @@ package authmethodadmin
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // GetAuthMethodList returns every stored method with its configuration.

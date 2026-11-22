@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
 )
 
 // The bot's ban and unban write only the enable flag and drop the account's

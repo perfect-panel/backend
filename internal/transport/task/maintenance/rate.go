@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/billing"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // RateHandler refreshes billing's cached exchange rate from the site

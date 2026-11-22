@@ -6,8 +6,8 @@
 package adminserver
 
 import (
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // Snapshot is the per-request view of the runtime-mutable node settings.

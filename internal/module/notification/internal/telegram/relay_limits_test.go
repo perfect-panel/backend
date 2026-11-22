@@ -9,8 +9,8 @@ import (
 	"unicode/utf8"
 
 	tgbot "github.com/go-telegram/bot"
-	"github.com/perfect-panel/server/internal/module/notification/entity/telegramtopic"
-	"github.com/perfect-panel/server/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/internal/module/notification/entity/telegramtopic"
+	"github.com/perfect-panel/backend/internal/module/support/entity/ticket"
 )
 
 func seededTopic(t *testing.T) (*fakeTopicRepo, *telegramtopic.Topic) {

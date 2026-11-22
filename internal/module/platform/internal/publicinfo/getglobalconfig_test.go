@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/platform/entity/system"
-	"github.com/perfect-panel/server/internal/module/platform/internal/readmodel"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/system"
+	"github.com/perfect-panel/backend/internal/module/platform/internal/readmodel"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 )
 
 // globalConfigSettings has no stored currency or verification code settings

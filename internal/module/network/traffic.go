@@ -1,6 +1,6 @@
 package network
 
-import "github.com/perfect-panel/server/internal/module/network/internal/trafficagg"
+import "github.com/perfect-panel/backend/internal/module/network/internal/trafficagg"
 
 // TrafficAggregator is the network-owned pipeline shared by node reports and
 // scheduled flush tasks. Queue adapters enter through this facade.

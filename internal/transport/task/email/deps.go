@@ -8,8 +8,8 @@ import (
 	"context"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // TaskScheduler enqueues the follow-up task a campaign continues from once

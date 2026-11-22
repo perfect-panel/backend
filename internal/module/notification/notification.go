@@ -17,13 +17,13 @@ import (
 
 	tgbot "github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
-	"github.com/perfect-panel/server/internal/module/notification/entity/telegramtopic"
-	"github.com/perfect-panel/server/internal/module/notification/internal/repo"
-	"github.com/perfect-panel/server/internal/module/notification/internal/telegram"
-	"github.com/perfect-panel/server/internal/module/support/entity/ticket"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/module/notification/entity/telegramtopic"
+	"github.com/perfect-panel/backend/internal/module/notification/internal/repo"
+	"github.com/perfect-panel/backend/internal/module/notification/internal/telegram"
+	"github.com/perfect-panel/backend/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 	"github.com/redis/go-redis/v9"
 )
 

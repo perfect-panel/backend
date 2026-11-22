@@ -8,11 +8,11 @@ import (
 	"net/url"
 	"strings"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment/epay/protocol"
-	"github.com/perfect-panel/server/internal/module/billing/internal/settle"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment/epay/protocol"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/settle"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 type epayPaymentSession struct {

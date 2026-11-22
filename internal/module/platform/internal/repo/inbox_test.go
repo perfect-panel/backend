@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/inbox"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/inbox"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 func newInboxTestRepo(t *testing.T, name string) repository.InboxRepo {

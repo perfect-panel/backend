@@ -1,8 +1,8 @@
 package verification
 
 import (
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/identity/entity/auth"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
 )
 
 // EmailCodeKey is the Redis key holding the code sent to email for purpose.

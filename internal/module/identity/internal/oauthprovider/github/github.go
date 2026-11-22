@@ -10,7 +10,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 )

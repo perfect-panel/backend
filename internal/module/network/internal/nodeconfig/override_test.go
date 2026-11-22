@@ -3,8 +3,8 @@ package nodeconfig
 import (
 	"testing"
 
-	"github.com/perfect-panel/server/internal/config"
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/config"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
 )
 
 func TestOverrideModelAndApplyOverride(t *testing.T) {

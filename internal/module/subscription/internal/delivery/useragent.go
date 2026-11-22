@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/slicesx"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/slicesx"
 )
 
 func (s *Service) IsUserAgentAllowed(ctx context.Context, userAgent string) bool {

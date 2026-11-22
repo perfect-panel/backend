@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 func TestGenerateTradeNoFormat(t *testing.T) {

@@ -6,7 +6,7 @@ package plan
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // SubscriptionTransactor mirrors the store's subscription-scoped transaction.

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

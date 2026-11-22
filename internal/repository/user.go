@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	walletEntity "github.com/perfect-panel/server/internal/module/billing/entity/wallet"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	trafficEntity "github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
+	walletEntity "github.com/perfect-panel/backend/internal/module/billing/entity/wallet"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	trafficEntity "github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
 )
 
 // UserRepo provides user profile, account, reporting, and marketing queries.

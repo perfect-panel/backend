@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/notification/entity/telegramtopic"
+	"github.com/perfect-panel/backend/internal/module/notification/entity/telegramtopic"
 )
 
 // TelegramTopicRepo persists the mapping between forum topics in the

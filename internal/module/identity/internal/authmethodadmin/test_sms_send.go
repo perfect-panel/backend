@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/infra/sms"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/infra/sms"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // TestSmsSend sends a test verification code through the configured SMS

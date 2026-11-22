@@ -5,7 +5,7 @@ import (
 
 	"errors"
 
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 const validAvatar = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="

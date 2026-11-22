@@ -3,7 +3,7 @@ package tool
 import (
 	"context"
 
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // RestartSystem restarts the transport server in the background and returns

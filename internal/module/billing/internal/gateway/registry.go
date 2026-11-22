@@ -5,8 +5,8 @@ import (
 	"errors"
 	"net/http"
 
-	paymentEntity "github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment"
+	paymentEntity "github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment"
 	stripeSDK "github.com/stripe/stripe-go/v81"
 )
 

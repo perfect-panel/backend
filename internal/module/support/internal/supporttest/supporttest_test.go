@@ -5,13 +5,13 @@ import (
 	"errors"
 	"testing"
 
-	taskEntity "github.com/perfect-panel/server/internal/module/platform/entity/task"
-	"github.com/perfect-panel/server/internal/module/support"
-	ticketEntity "github.com/perfect-panel/server/internal/module/support/entity/ticket"
-	"github.com/perfect-panel/server/internal/module/support/internal/document"
-	"github.com/perfect-panel/server/internal/module/support/internal/marketing"
-	"github.com/perfect-panel/server/internal/module/support/internal/supporttest"
-	"github.com/perfect-panel/server/internal/module/support/internal/ticket"
+	taskEntity "github.com/perfect-panel/backend/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/internal/module/support"
+	ticketEntity "github.com/perfect-panel/backend/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/internal/module/support/internal/document"
+	"github.com/perfect-panel/backend/internal/module/support/internal/marketing"
+	"github.com/perfect-panel/backend/internal/module/support/internal/supporttest"
+	"github.com/perfect-panel/backend/internal/module/support/internal/ticket"
 )
 
 // The fakes stand in for the ports the facade and the subdomains declare.

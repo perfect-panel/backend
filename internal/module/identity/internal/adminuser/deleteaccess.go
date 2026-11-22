@@ -3,8 +3,8 @@ package adminuser
 import (
 	"context"
 
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/slicesx"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/slicesx"
 )
 
 // SubscriptionCaches is the subscription module's cache invalidation for

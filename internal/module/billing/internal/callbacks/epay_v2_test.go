@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
-	"github.com/perfect-panel/server/internal/module/billing/internal/gateway"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/gateway"
 )
 
 func TestEPayV2CallbackRequiresMatchingSignedQueryAndSettlesIdempotently(t *testing.T) {

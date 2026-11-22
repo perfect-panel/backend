@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/app/migration/schema"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/internal/app/migration/schema"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 )
 
 // stubMigration replaces the schema migration with one that returns err,

@@ -2,18 +2,18 @@ package task
 
 import (
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/eventbus"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
-	"github.com/perfect-panel/server/internal/module/billing"
-	moduleSubscription "github.com/perfect-panel/server/internal/module/subscription"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/internal/transport/task/email"
-	"github.com/perfect-panel/server/internal/transport/task/events"
-	"github.com/perfect-panel/server/internal/transport/task/maintenance"
-	"github.com/perfect-panel/server/internal/transport/task/order"
-	"github.com/perfect-panel/server/internal/transport/task/sms"
-	"github.com/perfect-panel/server/internal/transport/task/subscription"
-	"github.com/perfect-panel/server/internal/transport/task/traffic"
+	"github.com/perfect-panel/backend/internal/infra/eventbus"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	moduleSubscription "github.com/perfect-panel/backend/internal/module/subscription"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/internal/transport/task/email"
+	"github.com/perfect-panel/backend/internal/transport/task/events"
+	"github.com/perfect-panel/backend/internal/transport/task/maintenance"
+	"github.com/perfect-panel/backend/internal/transport/task/order"
+	"github.com/perfect-panel/backend/internal/transport/task/sms"
+	"github.com/perfect-panel/backend/internal/transport/task/subscription"
+	"github.com/perfect-panel/backend/internal/transport/task/traffic"
 )
 
 // Dependencies are what the task handlers are built from; the composition

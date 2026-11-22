@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 // storedEncodings are the system_logs.content encodings of goldenEntries,

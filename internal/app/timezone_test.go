@@ -4,9 +4,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/orm"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/orm"
 )
 
 func TestWarnDatabaseTimeZone(t *testing.T) {

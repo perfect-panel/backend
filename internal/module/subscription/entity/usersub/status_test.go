@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

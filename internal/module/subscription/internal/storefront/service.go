@@ -5,8 +5,8 @@ package storefront
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // NodeLister is the network read port (the network facade) listing the

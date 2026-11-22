@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/subtest"
+	"github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/subtest"
 )
 
 // A bucket charges its usage once: a transaction that fails to commit leaves

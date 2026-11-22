@@ -3,8 +3,8 @@ package authmethodadmin
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/infra/sms"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/infra/sms"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
 )
 
 // GetSmsPlatform lists the SMS providers a sender can be configured with.

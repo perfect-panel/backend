@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	entity "github.com/perfect-panel/server/internal/module/billing/entity/coupon"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	entity "github.com/perfect-panel/backend/internal/module/billing/entity/coupon"
 	"gorm.io/gorm"
 )
 

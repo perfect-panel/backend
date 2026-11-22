@@ -3,14 +3,14 @@ package subscription
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/client"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	usersubEntity "github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/application"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/delivery"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/nodeaccess"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/storefront"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/usersub"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/client"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	usersubEntity "github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/application"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/delivery"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/nodeaccess"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/storefront"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/usersub"
 )
 
 // Access is the part of the facade the other modules compose (ADR-001 rule

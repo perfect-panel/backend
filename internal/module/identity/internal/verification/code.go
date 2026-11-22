@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/backend/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 

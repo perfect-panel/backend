@@ -9,8 +9,8 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
-	orderEntity "github.com/perfect-panel/server/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
+	orderEntity "github.com/perfect-panel/backend/internal/module/billing/entity/order"
 )
 
 // reconcileOrders serves billing's order scan from a list of orders sorted

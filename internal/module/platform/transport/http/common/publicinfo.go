@@ -3,8 +3,8 @@ package common
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/platform"
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/internal/module/platform"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
 )
 
 // PublicInfo is the part of the platform facade the site-level handlers

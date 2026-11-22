@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // UpdateUserRules stores the calling account's rules; an empty list leaves

@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/perfect-panel/server/internal/app/migration/mysql2postgres"
+	"github.com/perfect-panel/backend/internal/app/migration/mysql2postgres"
 	"github.com/spf13/cobra"
 )
 

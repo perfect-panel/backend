@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/infra/protocolkey"
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/infra/protocolkey"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
 )
 
 const (

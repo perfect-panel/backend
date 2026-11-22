@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/internal/module/network/internal/trafficagg"
-	"github.com/perfect-panel/server/pkg/logger"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/module/network/internal/trafficagg"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // ServerPushUserTraffic adds a server's traffic report to the aggregation

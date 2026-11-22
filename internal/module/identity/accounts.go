@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/auth"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/repo"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/repo"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // Accounts is the part of the facade other modules and the entry points use

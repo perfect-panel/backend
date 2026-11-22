@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/coupon"
-	"github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/billingtest"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/coupon"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/billingtest"
 )
 
 // An administrator's coupon edit writes the editable columns only: the

@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/identity"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	account "github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/identitytest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/identity"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	account "github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/identitytest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // The OAuth binding handlers run over the real identity facade, so the

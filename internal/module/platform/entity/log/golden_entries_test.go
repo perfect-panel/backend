@@ -1,6 +1,6 @@
 package log
 
-import "github.com/perfect-panel/server/pkg/requestmeta"
+import "github.com/perfect-panel/backend/pkg/requestmeta"
 
 type goldenEntry struct {
 	name  string

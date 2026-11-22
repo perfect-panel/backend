@@ -7,8 +7,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/internal/readmodel"
-	"github.com/perfect-panel/server/internal/repository/kernel"
+	"github.com/perfect-panel/backend/internal/module/platform/internal/readmodel"
+	"github.com/perfect-panel/backend/internal/repository/kernel"
 )
 
 // TrafficReader is the subdomain's port onto the network domain's traffic

@@ -10,10 +10,10 @@ import (
 	"slices"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/repository/kernel"
-	"github.com/perfect-panel/server/pkg/orm"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/repository/kernel"
+	"github.com/perfect-panel/backend/pkg/orm"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 	"gorm.io/gorm"
 )
 

@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/perfect-panel/server/internal/app/migration/mysql2postgres"
+	"github.com/perfect-panel/backend/internal/app/migration/mysql2postgres"
 )
 
 func main() {

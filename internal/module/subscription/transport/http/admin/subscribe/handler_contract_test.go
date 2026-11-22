@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/module/subscription"
+	"github.com/perfect-panel/backend/internal/module/subscription"
 )
 
 // handlerFactory compiles only for a handler factory that takes S and returns

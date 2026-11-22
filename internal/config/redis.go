@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/infra/rediskeys"
+	"github.com/perfect-panel/backend/internal/infra/rediskeys"
 	"github.com/redis/go-redis/v9"
 )
 

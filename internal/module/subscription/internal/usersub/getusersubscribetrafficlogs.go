@@ -3,8 +3,8 @@ package usersub
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/subscription/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // GetUserSubscribeTrafficLogs pages a subscription's traffic records.

@@ -4,7 +4,7 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/perfect-panel/server/internal/auth/ratelimit"
+	"github.com/perfect-panel/backend/internal/auth/ratelimit"
 	"github.com/redis/go-redis/v9"
 )
 

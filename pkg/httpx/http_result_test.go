@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 func TestBuildHTTPResultSuccess(t *testing.T) {

@@ -3,9 +3,9 @@ package profile
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/auth/usersession"
-	"github.com/perfect-panel/server/internal/infra/requestctx"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/usersession"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // Logout ends only the calling session; a password change ends them all.

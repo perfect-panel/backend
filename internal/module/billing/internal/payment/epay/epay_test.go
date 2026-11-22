@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment"
 )
 
 // The pay URL must carry exactly the amount the order expects: every amount

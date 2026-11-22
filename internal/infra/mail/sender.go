@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/infra/integration"
+	"github.com/perfect-panel/backend/internal/infra/integration"
 )
 
 // Sender delivers email through one provider account. It is safe for

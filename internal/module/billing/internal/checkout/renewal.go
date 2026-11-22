@@ -3,15 +3,15 @@ package checkout
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/internal/module/billing/internal/ledger"
-	"github.com/perfect-panel/server/internal/module/billing/internal/orderaudit"
-	"github.com/perfect-panel/server/internal/module/billing/internal/ordercontext"
-	"github.com/perfect-panel/server/internal/module/billing/internal/pricing"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/ledger"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/orderaudit"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/ordercontext"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/pricing"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // Renewal creates a pending order that extends one of the buyer's

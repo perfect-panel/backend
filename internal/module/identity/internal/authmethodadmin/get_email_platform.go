@@ -3,8 +3,8 @@ package authmethodadmin
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/infra/mail"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/infra/mail"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
 )
 
 // GetEmailPlatform lists the email providers a sender can be configured

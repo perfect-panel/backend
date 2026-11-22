@@ -7,14 +7,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/infra/requestctx"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	entity "github.com/perfect-panel/server/internal/module/support/entity/document"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/slicesx"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/infra/requestctx"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	entity "github.com/perfect-panel/backend/internal/module/support/entity/document"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/slicesx"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	"gorm.io/gorm"
 )
 

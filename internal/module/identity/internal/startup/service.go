@@ -6,7 +6,7 @@
 package startup
 
 import (
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // Deps declares the subdomain's dependencies; the module facade forwards

@@ -8,14 +8,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perfect-panel/server/internal/infra/mail"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	logEntity "github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/module/platform/entity/task"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/requestmeta"
-	"github.com/perfect-panel/server/pkg/slicesx"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/infra/mail"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	logEntity "github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/slicesx"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 )
 
 // ErrorInfo is one failed delivery of a campaign, as the task records it.

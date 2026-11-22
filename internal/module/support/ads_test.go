@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/support"
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	adsEntity "github.com/perfect-panel/server/internal/module/support/entity/ads"
+	"github.com/perfect-panel/backend/internal/module/support"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	adsEntity "github.com/perfect-panel/backend/internal/module/support/entity/ads"
 )
 
 type fakeAdsRepo struct {

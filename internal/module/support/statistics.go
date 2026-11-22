@@ -3,8 +3,8 @@ package support
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/support/entity/ticket"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // TicketStatistics is the part of the facade the platform's dashboard reads

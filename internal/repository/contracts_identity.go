@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/auth"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
 )
 
 // AuthRepo manages the auth_method rows: the settings of each sign-in method

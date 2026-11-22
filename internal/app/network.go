@@ -3,8 +3,8 @@ package app
 import (
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/network"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/network"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // newNetworkModule wires the network module against the shared store; the

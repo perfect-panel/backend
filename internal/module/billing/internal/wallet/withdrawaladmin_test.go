@@ -5,12 +5,12 @@ import (
 	"testing"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	walletEntity "github.com/perfect-panel/server/internal/module/billing/entity/wallet"
-	userEntity "github.com/perfect-panel/server/internal/module/identity/entity/user"
-	logEntity "github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	walletEntity "github.com/perfect-panel/backend/internal/module/billing/entity/wallet"
+	userEntity "github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	logEntity "github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 type withdrawalTestRepo struct{ item *walletEntity.Withdrawal }

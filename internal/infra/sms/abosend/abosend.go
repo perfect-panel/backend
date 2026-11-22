@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/infra/integration"
-	"github.com/perfect-panel/server/internal/infra/protocolkey"
-	"github.com/perfect-panel/server/pkg/random"
+	"github.com/perfect-panel/backend/internal/infra/integration"
+	"github.com/perfect-panel/backend/internal/infra/protocolkey"
+	"github.com/perfect-panel/backend/pkg/random"
 )
 
 // BaseURL is the API domain of a configuration that names none.

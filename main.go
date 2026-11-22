@@ -8,7 +8,7 @@ import (
 	// one exists.
 	_ "time/tzdata"
 
-	"github.com/perfect-panel/server/cmd"
+	"github.com/perfect-panel/backend/cmd"
 )
 
 // @title PPanel API

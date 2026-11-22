@@ -2,8 +2,8 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	identityAdminUser "github.com/perfect-panel/server/internal/module/identity/transport/http/admin/user"
-	subscriptionAdminUser "github.com/perfect-panel/server/internal/module/subscription/transport/http/admin/user"
+	identityAdminUser "github.com/perfect-panel/backend/internal/module/identity/transport/http/admin/user"
+	subscriptionAdminUser "github.com/perfect-panel/backend/internal/module/subscription/transport/http/admin/user"
 )
 
 func registerAdminUserRoutes(router *server.Hertz, deps Dependencies) {

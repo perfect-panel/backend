@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	logEntity "github.com/perfect-panel/server/internal/module/platform/entity/log"
+	logEntity "github.com/perfect-panel/backend/internal/module/platform/entity/log"
 )
 
 // A content field filter matches the field's value itself, in the

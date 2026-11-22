@@ -3,9 +3,9 @@ package systemsetting
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/config"
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/config"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // GetVerifyConfig returns the stored verification settings, the Turnstile

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
 )
 
 var ErrProviderManaged = errors.New("subscription is managed by its payment provider")

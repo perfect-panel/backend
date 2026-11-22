@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/notification/entity/telegramtopic"
-	"github.com/perfect-panel/server/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/internal/module/notification/entity/telegramtopic"
+	"github.com/perfect-panel/backend/internal/module/support/entity/ticket"
 )
 
 // The web client and the support module write user follows as "User"; only

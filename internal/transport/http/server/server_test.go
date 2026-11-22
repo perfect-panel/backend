@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"testing"
 
-	appconfig "github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/platform"
-	"github.com/perfect-panel/server/internal/transport/http/routes"
+	appconfig "github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/platform"
+	"github.com/perfect-panel/backend/internal/transport/http/routes"
 )
 
 func TestServerSecretMiddlewareBlocksMigratedPost(t *testing.T) {

@@ -3,8 +3,8 @@ package oauth
 import (
 	"context"
 
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/internal/oauthstate"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/oauthstate"
 )
 
 // OAuthLogin returns the URL that starts a sign-in through req.Method. The

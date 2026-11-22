@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/subscription/internal/period"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/period"
 )
 
 func TestSubscribe_Validate(t *testing.T) {

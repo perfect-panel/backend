@@ -8,8 +8,8 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/perfect-panel/server/internal/module/billing"
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
 )
 
 // statusService records the status request it served and answers it with a

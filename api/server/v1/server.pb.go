@@ -2344,7 +2344,7 @@ const file_api_server_v1_server_proto_rawDesc = "" +
 	"\x19ClaimServerDeviceResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\rR\x04code\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x12;\n" +
-	"\x04data\x18\x03 \x01(\v2'.ppanel.server.v1.ServerDeviceClaimDataR\x04dataB8Z6github.com/perfect-panel/server/api/server/v1;serverv1b\x06proto3"
+	"\x04data\x18\x03 \x01(\v2'.ppanel.server.v1.ServerDeviceClaimDataR\x04dataB9Z7github.com/perfect-panel/backend/api/server/v1;serverv1b\x06proto3"
 
 var (
 	file_api_server_v1_server_proto_rawDescOnce sync.Once

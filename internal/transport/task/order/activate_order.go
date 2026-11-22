@@ -10,9 +10,9 @@ import (
 	"encoding/json"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
-	orderEntity "github.com/perfect-panel/server/internal/module/billing/entity/order"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
+	orderEntity "github.com/perfect-panel/backend/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // Order types and statuses of the billing order entity, under the names the

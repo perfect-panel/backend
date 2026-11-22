@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"strings"
 
-	paymentEntity "github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment/epay"
-	"github.com/perfect-panel/server/internal/module/billing/internal/payment/epay/protocol"
+	paymentEntity "github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment/epay"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment/epay/protocol"
 )
 
 // Version is selected by stored configuration, never by untrusted callback data.

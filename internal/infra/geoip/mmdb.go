@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/oschwald/geoip2-golang"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 const (

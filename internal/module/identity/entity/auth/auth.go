@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/perfect-panel/server/internal/infra/mail"
+	"github.com/perfect-panel/backend/internal/infra/mail"
 )
 
 // Auth is the stored configuration of one authentication method: email,

@@ -1,11 +1,11 @@
 package supporttest
 
 import (
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	"github.com/perfect-panel/server/internal/module/support/entity/ads"
-	"github.com/perfect-panel/server/internal/module/support/entity/announcement"
-	"github.com/perfect-panel/server/internal/module/support/entity/document"
-	"github.com/perfect-panel/server/internal/module/support/entity/ticket"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	"github.com/perfect-panel/backend/internal/module/support/entity/ads"
+	"github.com/perfect-panel/backend/internal/module/support/entity/announcement"
+	"github.com/perfect-panel/backend/internal/module/support/entity/document"
+	"github.com/perfect-panel/backend/internal/module/support/entity/ticket"
 )
 
 // The views below are how the API shows a stored row, its times in Unix

@@ -11,8 +11,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/cache"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/cache"
+	"github.com/perfect-panel/backend/pkg/logger"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )

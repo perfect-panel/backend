@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
 )
 
 // serverOnlyFields are the protocol settings a client never receives: the

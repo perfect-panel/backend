@@ -2,9 +2,9 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	billingPublicUser "github.com/perfect-panel/server/internal/module/billing/transport/http/public/user"
-	identityPublicUser "github.com/perfect-panel/server/internal/module/identity/transport/http/public/user"
-	subscriptionPublicUser "github.com/perfect-panel/server/internal/module/subscription/transport/http/public/user"
+	billingPublicUser "github.com/perfect-panel/backend/internal/module/billing/transport/http/public/user"
+	identityPublicUser "github.com/perfect-panel/backend/internal/module/identity/transport/http/public/user"
+	subscriptionPublicUser "github.com/perfect-panel/backend/internal/module/subscription/transport/http/public/user"
 )
 
 func registerPublicUserRoutes(router *server.Hertz, deps Dependencies) {

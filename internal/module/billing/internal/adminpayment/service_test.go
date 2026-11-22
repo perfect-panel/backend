@@ -11,10 +11,10 @@ import (
 	"sync"
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	paymentModel "github.com/perfect-panel/server/internal/module/billing/entity/payment"
-	"github.com/perfect-panel/server/internal/module/billing/internal/gateway"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	paymentModel "github.com/perfect-panel/backend/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/internal/gateway"
+	"github.com/perfect-panel/backend/pkg/xerr"
 	stripeSDK "github.com/stripe/stripe-go/v81"
 	"gorm.io/gorm"
 )

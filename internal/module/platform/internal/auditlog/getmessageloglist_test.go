@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
 )
 
 func TestGetMessageLogListRejectsNonMessageTypes(t *testing.T) {

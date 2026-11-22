@@ -3,10 +3,10 @@ package adminuser
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/auth/devicesession"
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/devicesession"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // UpdateUserDevice enables or disables a device. Its sessions end either

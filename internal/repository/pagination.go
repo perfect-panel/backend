@@ -1,6 +1,6 @@
 package repository
 
-import "github.com/perfect-panel/server/internal/repository/kernel"
+import "github.com/perfect-panel/backend/internal/repository/kernel"
 
 // The pagination helpers belong to the shared kernel; these re-export them.
 const (

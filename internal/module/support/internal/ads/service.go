@@ -6,11 +6,11 @@ import (
 	"context"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	entity "github.com/perfect-panel/server/internal/module/support/entity/ads"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	entity "github.com/perfect-panel/backend/internal/module/support/entity/ads"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // Service manages the ads for the support facade.

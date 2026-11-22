@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/repository/kernel"
+	"github.com/perfect-panel/backend/internal/repository/kernel"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/task"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

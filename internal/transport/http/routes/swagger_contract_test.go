@@ -10,12 +10,12 @@ import (
 	"strings"
 	"testing"
 
-	httpserver "github.com/perfect-panel/server/internal/transport/http/server"
+	httpserver "github.com/perfect-panel/backend/internal/transport/http/server"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
-	billingHTTP "github.com/perfect-panel/server/internal/module/billing/transport/http"
-	notificationHTTP "github.com/perfect-panel/server/internal/module/notification/transport/http"
-	"github.com/perfect-panel/server/internal/transport/http/routes"
+	billingHTTP "github.com/perfect-panel/backend/internal/module/billing/transport/http"
+	notificationHTTP "github.com/perfect-panel/backend/internal/module/notification/transport/http"
+	"github.com/perfect-panel/backend/internal/transport/http/routes"
 )
 
 type swaggerDocument struct {

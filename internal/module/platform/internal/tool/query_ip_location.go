@@ -4,8 +4,8 @@ import (
 	"context"
 	"net"
 
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // QueryIPLocation looks an IP address up in the local GeoIP database.

@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/internal/module/platform/transport/http/internal/handlertest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/internal/module/platform/transport/http/internal/handlertest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // fakeLogs is the log port: it records every call and answers the

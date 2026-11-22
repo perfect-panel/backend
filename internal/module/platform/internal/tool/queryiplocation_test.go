@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/oschwald/geoip2-golang"
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // Without a loaded database the lookup reports an error; it used to call

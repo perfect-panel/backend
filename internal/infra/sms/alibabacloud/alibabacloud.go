@@ -13,7 +13,7 @@ import (
 	dysmsapi "github.com/alibabacloud-go/dysmsapi-20170525/v2/client"
 	util "github.com/alibabacloud-go/tea-utils/service"
 	"github.com/alibabacloud-go/tea/tea"
-	"github.com/perfect-panel/server/internal/infra/integration"
+	"github.com/perfect-panel/backend/internal/infra/integration"
 )
 
 // defaultEndpoint serves accounts whose configuration names no endpoint.

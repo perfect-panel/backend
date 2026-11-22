@@ -3,7 +3,7 @@ package startup
 import (
 	"context"
 
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // ValidateEmailIdentities fails with EmailIdentityAmbiguous when two email

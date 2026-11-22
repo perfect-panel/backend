@@ -3,8 +3,8 @@ package systemsetting
 import (
 	"errors"
 
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // The admin settings API shows a stored secret as dto.SecretMask and keeps

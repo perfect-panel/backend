@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/identitytest"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/identitytest"
 )
 
 // accountsFixture caches one account with an email binding under its id,

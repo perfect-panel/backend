@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package ppanel.server.v1;
 
-option go_package = "github.com/perfect-panel/server/api/server/v1;serverv1";
+option go_package = "github.com/perfect-panel/backend/api/server/v1;serverv1";
 
 import "google/protobuf/struct.proto";
 

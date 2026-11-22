@@ -6,9 +6,9 @@ package application
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/client"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/client"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // Deps declares the subdomain's dependencies; the module facade forwards

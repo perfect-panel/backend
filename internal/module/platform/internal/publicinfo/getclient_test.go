@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // clientApplications is the subscription module's client list as the

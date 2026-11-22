@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/pkg/httpx"
+	"github.com/perfect-panel/backend/pkg/httpx"
 )
 
 // SettingTelegramBotHandler documents setting telegram bot.

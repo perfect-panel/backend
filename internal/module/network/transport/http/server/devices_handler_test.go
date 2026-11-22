@@ -8,9 +8,9 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/common/ut"
 
-	serverv1 "github.com/perfect-panel/server/api/server/v1"
-	"github.com/perfect-panel/server/internal/module/network"
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
+	serverv1 "github.com/perfect-panel/backend/api/server/v1"
+	"github.com/perfect-panel/backend/internal/module/network"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
 	"google.golang.org/protobuf/proto"
 )
 

@@ -5,10 +5,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/auth/password"
-	"github.com/perfect-panel/server/internal/module/identity/internal/oauthprovider"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/auth/password"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/oauthprovider"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // WarnUnpinnedOAuthRedirects logs an error when a sign-in method that sends

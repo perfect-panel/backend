@@ -11,12 +11,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/perfect-panel/server/internal/infra/integration"
-	"github.com/perfect-panel/server/internal/infra/sms/abosend"
-	"github.com/perfect-panel/server/internal/infra/sms/alibabacloud"
-	"github.com/perfect-panel/server/internal/infra/sms/smsbao"
-	"github.com/perfect-panel/server/internal/infra/sms/twilio"
-	"github.com/perfect-panel/server/pkg/templatex"
+	"github.com/perfect-panel/backend/internal/infra/integration"
+	"github.com/perfect-panel/backend/internal/infra/sms/abosend"
+	"github.com/perfect-panel/backend/internal/infra/sms/alibabacloud"
+	"github.com/perfect-panel/backend/internal/infra/sms/smsbao"
+	"github.com/perfect-panel/backend/internal/infra/sms/twilio"
+	"github.com/perfect-panel/backend/pkg/templatex"
 )
 
 // Message is one text message to a phone number.

@@ -1,6 +1,6 @@
 package taskqueue
 
-import "github.com/perfect-panel/server/pkg/requestmeta"
+import "github.com/perfect-panel/backend/pkg/requestmeta"
 
 const (
 	// ForthwithSendEmail sends one email (SendEmailPayload).

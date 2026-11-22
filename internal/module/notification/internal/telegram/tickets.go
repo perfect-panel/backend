@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/module/notification/entity/telegramtopic"
-	"github.com/perfect-panel/server/internal/module/support/entity/ticket"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/module/notification/entity/telegramtopic"
+	"github.com/perfect-panel/backend/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/pkg/logger"
 	"gorm.io/gorm"
 )
 

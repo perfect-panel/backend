@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
-	"github.com/perfect-panel/server/internal/module/notification"
+	"github.com/perfect-panel/backend/internal/module/notification"
 )
 
 // fakeNotificationService records the webhook payloads it is handed.

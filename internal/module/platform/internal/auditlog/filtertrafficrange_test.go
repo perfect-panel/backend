@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/module/platform/internal/readmodel"
-	"github.com/perfect-panel/server/internal/module/platform/internal/repo"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/module/platform/internal/readmodel"
+	"github.com/perfect-panel/backend/internal/module/platform/internal/repo"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

@@ -5,7 +5,7 @@
 package traffic
 
 import (
-	"github.com/perfect-panel/server/internal/module/network"
+	"github.com/perfect-panel/backend/internal/module/network"
 	"github.com/redis/go-redis/v9"
 )
 

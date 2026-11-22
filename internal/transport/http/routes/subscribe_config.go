@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/cloudwego/hertz/pkg/app/server"
-	subscriptionHTTP "github.com/perfect-panel/server/internal/module/subscription/transport/http"
+	subscriptionHTTP "github.com/perfect-panel/backend/internal/module/subscription/transport/http"
 )
 
 func registerSubscribeConfigRoutes(router *server.Hertz, deps Dependencies) {

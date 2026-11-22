@@ -13,13 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/cache"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/cache"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 
-	trafficEntity "github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
+	trafficEntity "github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

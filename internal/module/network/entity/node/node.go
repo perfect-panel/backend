@@ -7,7 +7,7 @@ package node
 import (
 	"time"
 
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 	"gorm.io/gorm"
 )
 

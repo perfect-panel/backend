@@ -1,7 +1,7 @@
 package kernel
 
 import (
-	"github.com/perfect-panel/server/pkg/cache"
+	"github.com/perfect-panel/backend/pkg/cache"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )

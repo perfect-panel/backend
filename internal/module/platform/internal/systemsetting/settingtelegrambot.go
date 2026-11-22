@@ -3,7 +3,7 @@ package systemsetting
 import (
 	"context"
 
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // SettingTelegramBot reloads the Telegram bot from its stored settings. The

@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 )
 
 func stubAPI(t *testing.T, mux *http.ServeMux) {

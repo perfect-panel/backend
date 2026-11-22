@@ -7,9 +7,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/repository/kernel"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/repository/kernel"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // MultiplierFunc evaluates the current node traffic multiplier.

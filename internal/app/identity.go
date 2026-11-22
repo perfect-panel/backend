@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/module/identity"
-	"github.com/perfect-panel/server/internal/module/notification"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/module/identity"
+	"github.com/perfect-panel/backend/internal/module/notification"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // newIdentityModule wires the identity module against the shared store;

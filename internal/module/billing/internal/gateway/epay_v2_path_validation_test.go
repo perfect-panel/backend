@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/payment"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/payment"
 )
 
 // Saving and opening a configuration must reject paths that would turn decoded

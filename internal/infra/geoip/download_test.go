@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/oschwald/geoip2-golang"
-	"github.com/perfect-panel/server/internal/infra/geoip/geoiptest"
+	"github.com/perfect-panel/backend/internal/infra/geoip/geoiptest"
 )
 
 func TestDownloadGeoIPDatabaseInstallsVerifiedDatabase(t *testing.T) {

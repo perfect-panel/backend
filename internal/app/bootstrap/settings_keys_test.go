@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/config"
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/internal/config"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
 )
 
 // settingsReader describes how one stored settings category is written and

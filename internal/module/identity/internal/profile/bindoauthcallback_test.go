@@ -5,15 +5,15 @@ import (
 	"net/url"
 	"testing"
 
-	dto "github.com/perfect-panel/server/internal/module/identity/contract"
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/authn/registerpolicy"
-	"github.com/perfect-panel/server/internal/module/identity/internal/identitytest"
-	"github.com/perfect-panel/server/internal/module/identity/internal/oauthflow"
-	"github.com/perfect-panel/server/internal/module/identity/internal/oauthprovider"
-	"github.com/perfect-panel/server/internal/module/identity/internal/oauthstate"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/authn/registerpolicy"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/identitytest"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/oauthflow"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/oauthprovider"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/oauthstate"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // fixedProvider vouches for one identity.

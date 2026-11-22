@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // Adapter collects what a client configuration is rendered from.

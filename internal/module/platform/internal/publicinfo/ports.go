@@ -5,9 +5,9 @@ import (
 	"net"
 
 	"github.com/oschwald/geoip2-golang"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/platform/entity/system"
-	"github.com/perfect-panel/server/internal/module/platform/internal/readmodel"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/system"
+	"github.com/perfect-panel/backend/internal/module/platform/internal/readmodel"
 	"github.com/redis/go-redis/v9"
 )
 

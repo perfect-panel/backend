@@ -13,7 +13,7 @@
 # Usage: go build -ldflags "$(VERSION=1.2.3 CHANNEL=stable sh script/ldflags.sh)"
 set -eu
 
-pkg=github.com/perfect-panel/server/internal/app/buildinfo
+pkg=github.com/perfect-panel/backend/internal/app/buildinfo
 version=${VERSION:-unknown version}
 channel=${CHANNEL:-dev}
 build_time=${BUILD_TIME:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}

@@ -13,8 +13,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // Event is the payload handed to subscribers.

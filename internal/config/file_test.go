@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/pkg/conf"
+	"github.com/perfect-panel/backend/pkg/conf"
 	"gopkg.in/yaml.v3"
 )
 

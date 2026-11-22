@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"

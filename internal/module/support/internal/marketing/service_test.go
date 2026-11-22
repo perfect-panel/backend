@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/module/platform/entity/task"
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	"github.com/perfect-panel/server/internal/module/support/internal/supporttest"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/task"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	"github.com/perfect-panel/backend/internal/module/support/internal/supporttest"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // The marketing service runs over the platform's task repository on the

@@ -1,7 +1,7 @@
 package mail
 
 import (
-	"github.com/perfect-panel/server/internal/infra/integration"
+	"github.com/perfect-panel/backend/internal/infra/integration"
 )
 
 // Platform is an email provider, stored in the configuration by its name.

@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/perfect-panel/server/internal/config"
-	httpserver "github.com/perfect-panel/server/internal/transport/http/server"
-	"github.com/perfect-panel/server/pkg/conf"
+	"github.com/perfect-panel/backend/internal/config"
+	httpserver "github.com/perfect-panel/backend/internal/transport/http/server"
+	"github.com/perfect-panel/backend/pkg/conf"
 	"github.com/spf13/cobra"
 )
 

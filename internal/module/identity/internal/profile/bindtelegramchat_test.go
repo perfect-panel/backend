@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // The chat the bot redeemed an account's bind token in becomes the account's

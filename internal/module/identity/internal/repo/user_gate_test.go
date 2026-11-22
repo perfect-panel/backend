@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/identity/entity/user"
-	"github.com/perfect-panel/server/internal/module/identity/internal/identitytest"
-	"github.com/perfect-panel/server/internal/module/identity/internal/repo"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/internal/module/identity/entity/user"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/identitytest"
+	"github.com/perfect-panel/backend/internal/module/identity/internal/repo"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 )
 
 // authGate is the uncached gate read the module's repository adds to the

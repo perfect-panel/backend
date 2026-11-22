@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/cache"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/cache"
 
-	walletEntity "github.com/perfect-panel/server/internal/module/billing/entity/wallet"
+	walletEntity "github.com/perfect-panel/backend/internal/module/billing/entity/wallet"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

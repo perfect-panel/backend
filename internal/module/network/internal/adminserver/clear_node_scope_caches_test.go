@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
 )
 
 // scopeCaches resolves every scope to its nodes and records the lookups and

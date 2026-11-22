@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	dto "github.com/perfect-panel/server/internal/module/network/contract"
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/internal/module/network/internal/geolocation"
-	"github.com/perfect-panel/server/internal/module/network/internal/protocolmap"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	dto "github.com/perfect-panel/backend/internal/module/network/contract"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/internal/geolocation"
+	"github.com/perfect-panel/backend/internal/module/network/internal/protocolmap"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // CreateServer stores a new server with its protocols, generating the keys

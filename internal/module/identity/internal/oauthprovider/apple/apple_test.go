@@ -12,7 +12,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/app/server/render"
 	"github.com/cloudwego/hertz/pkg/common/utils"
-	"github.com/perfect-panel/server/pkg/httpx"
+	"github.com/perfect-panel/backend/pkg/httpx"
 )
 
 const (

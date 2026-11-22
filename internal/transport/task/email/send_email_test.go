@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/infra/taskqueue"
+	"github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/infra/taskqueue"
 )
 
 // The queued literal is only the fallback: an operator-configured subject

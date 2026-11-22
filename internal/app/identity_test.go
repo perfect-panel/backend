@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/notification"
+	"github.com/perfect-panel/backend/internal/module/notification"
 )
 
 // stubNotifier records the Telegram notice sent to a user; the embedded nil

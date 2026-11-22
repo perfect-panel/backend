@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	logEntity "github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/pkg/xerr"
+	logEntity "github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 type recordingLogs struct {

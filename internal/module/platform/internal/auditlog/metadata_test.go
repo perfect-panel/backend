@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	dto "github.com/perfect-panel/server/internal/module/platform/contract"
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/module/platform/internal/repo"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	dto "github.com/perfect-panel/backend/internal/module/platform/contract"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/module/platform/internal/repo"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

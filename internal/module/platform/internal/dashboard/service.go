@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	"github.com/perfect-panel/server/internal/module/platform/internal/readmodel"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	"github.com/perfect-panel/backend/internal/module/platform/internal/readmodel"
 	"github.com/redis/go-redis/v9"
 )
 

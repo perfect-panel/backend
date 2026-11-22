@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 const (

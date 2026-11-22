@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
 )
 
 // legacyShapes is the legacy server-config output for one fully set protocol

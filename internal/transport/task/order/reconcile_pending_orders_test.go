@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/billing"
-	dto "github.com/perfect-panel/server/internal/module/billing/contract"
-	orderEntity "github.com/perfect-panel/server/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
+	orderEntity "github.com/perfect-panel/backend/internal/module/billing/entity/order"
 )
 
 // closingOrders serves billing's order scan and records the closes it is

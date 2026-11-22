@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/outbox"
-	"github.com/perfect-panel/server/internal/repository/kernel"
-	"github.com/perfect-panel/server/pkg/timeutil"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/outbox"
+	"github.com/perfect-panel/backend/internal/repository/kernel"
+	"github.com/perfect-panel/backend/pkg/timeutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"

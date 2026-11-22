@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/billing/entity/order"
+	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
 )
 
 func TestHarnessStoresOrders(t *testing.T) {

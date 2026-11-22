@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perfect-panel/server/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
 )
 
 // The mirror pool runs the ticket events on a fixed number of workers and

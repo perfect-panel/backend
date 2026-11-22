@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app/server"
-	appconfig "github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/xerr"
+	appconfig "github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // envelopeOf serves a request against the registered routes and returns the

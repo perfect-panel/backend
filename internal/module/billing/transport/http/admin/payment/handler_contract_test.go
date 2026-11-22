@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/module/billing"
+	"github.com/perfect-panel/backend/internal/module/billing"
 )
 
 // handlerFactory compiles only for a factory that builds a native Hertz

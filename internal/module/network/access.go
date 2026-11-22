@@ -3,11 +3,11 @@ package network
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	"github.com/perfect-panel/server/internal/module/network/entity/traffic"
-	"github.com/perfect-panel/server/internal/module/network/internal/adminserver"
-	"github.com/perfect-panel/server/internal/module/network/internal/edge"
-	"github.com/perfect-panel/server/internal/module/network/internal/serverapi"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	"github.com/perfect-panel/backend/internal/module/network/entity/traffic"
+	"github.com/perfect-panel/backend/internal/module/network/internal/adminserver"
+	"github.com/perfect-panel/backend/internal/module/network/internal/edge"
+	"github.com/perfect-panel/backend/internal/module/network/internal/serverapi"
 )
 
 // Access is the part of the facade the other modules compose (ADR-001 rule

@@ -3,7 +3,7 @@ package logger
 import (
 	"context"
 
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 var fieldsContextKey contextKey

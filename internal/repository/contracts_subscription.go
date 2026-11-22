@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/client"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/client"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
 )
 
 // SubscribeRepo manages the plans (the subscribe table) and their groups,

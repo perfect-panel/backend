@@ -8,7 +8,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 type (

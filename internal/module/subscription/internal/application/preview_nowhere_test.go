@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/network/entity/node"
-	dto "github.com/perfect-panel/server/internal/module/subscription/contract"
-	"github.com/perfect-panel/server/internal/module/subscription/entity/client"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/network/entity/node"
+	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/client"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 type nowherePreviewClients struct{ repository.ClientRepo }

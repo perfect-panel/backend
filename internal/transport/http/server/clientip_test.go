@@ -12,11 +12,11 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	hertzconfig "github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/cloudwego/hertz/pkg/common/test/mock"
-	appconfig "github.com/perfect-panel/server/internal/config"
-	"github.com/perfect-panel/server/internal/module/platform"
-	"github.com/perfect-panel/server/internal/transport/http/routes"
-	"github.com/perfect-panel/server/pkg/logger/logtest"
-	"github.com/perfect-panel/server/pkg/requestmeta"
+	appconfig "github.com/perfect-panel/backend/internal/config"
+	"github.com/perfect-panel/backend/internal/module/platform"
+	"github.com/perfect-panel/backend/internal/transport/http/routes"
+	"github.com/perfect-panel/backend/pkg/logger/logtest"
+	"github.com/perfect-panel/backend/pkg/requestmeta"
 )
 
 // peerConn is a connection with a fixed peer address, so a request served

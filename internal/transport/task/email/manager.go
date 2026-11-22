@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	"github.com/perfect-panel/server/internal/infra/mail"
-	"github.com/perfect-panel/server/internal/module/platform/entity/task"
-	"github.com/perfect-panel/server/pkg/logger"
+	"github.com/perfect-panel/backend/internal/infra/mail"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // TaskStore is the minimal task repository interface needed by the batch-email worker.

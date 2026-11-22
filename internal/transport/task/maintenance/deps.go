@@ -3,8 +3,8 @@
 package maintenance
 
 import (
-	"github.com/perfect-panel/server/internal/module/billing"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/billing"
+	"github.com/perfect-panel/backend/internal/repository"
 )
 
 // RateDependencies are the exchange-rate refresh's: the currency settings

@@ -4,10 +4,10 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/log"
-	dto "github.com/perfect-panel/server/internal/module/subscription/contract"
-	"github.com/perfect-panel/server/pkg/logger"
-	"github.com/perfect-panel/server/pkg/xerr"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/log"
+	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
+	"github.com/perfect-panel/backend/pkg/logger"
+	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
 // GetUserSubscribeLogs pages the user's subscription fetch log, optionally

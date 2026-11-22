@@ -6,10 +6,10 @@ import (
 	"strconv"
 
 	"github.com/pars-aria-labs/asynq"
-	taskEntity "github.com/perfect-panel/server/internal/module/platform/entity/task"
-	"github.com/perfect-panel/server/internal/module/subscription"
-	"github.com/perfect-panel/server/internal/repository"
-	"github.com/perfect-panel/server/pkg/logger"
+	taskEntity "github.com/perfect-panel/backend/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/internal/module/subscription"
+	"github.com/perfect-panel/backend/internal/repository"
+	"github.com/perfect-panel/backend/pkg/logger"
 )
 
 // QuotaTaskHandler is the queue shell of the quota grants administrators

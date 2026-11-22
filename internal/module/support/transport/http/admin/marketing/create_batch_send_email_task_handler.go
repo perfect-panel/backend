@@ -6,10 +6,10 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/perfect-panel/server/internal/module/support"
-	dto "github.com/perfect-panel/server/internal/module/support/contract"
-	"github.com/perfect-panel/server/internal/transport/http/validation"
-	"github.com/perfect-panel/server/pkg/httpx"
+	"github.com/perfect-panel/backend/internal/module/support"
+	dto "github.com/perfect-panel/backend/internal/module/support/contract"
+	"github.com/perfect-panel/backend/internal/transport/http/validation"
+	"github.com/perfect-panel/backend/pkg/httpx"
 )
 
 // CreateBatchSendEmailTaskHandler documents Create a batch send email task.

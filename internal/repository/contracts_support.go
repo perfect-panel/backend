@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 
-	"github.com/perfect-panel/server/internal/module/support/entity/ads"
-	"github.com/perfect-panel/server/internal/module/support/entity/announcement"
-	"github.com/perfect-panel/server/internal/module/support/entity/document"
-	"github.com/perfect-panel/server/internal/module/support/entity/ticket"
+	"github.com/perfect-panel/backend/internal/module/support/entity/ads"
+	"github.com/perfect-panel/backend/internal/module/support/entity/announcement"
+	"github.com/perfect-panel/backend/internal/module/support/entity/document"
+	"github.com/perfect-panel/backend/internal/module/support/entity/ticket"
 )
 
 // TicketRepo manages the support tickets and their follow-up messages.

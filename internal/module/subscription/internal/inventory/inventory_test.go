@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/subscribe"
-	"github.com/perfect-panel/server/internal/module/subscription/internal/subtest"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
+	"github.com/perfect-panel/backend/internal/module/subscription/internal/subtest"
 )
 
 const inventoryPlan int64 = 9

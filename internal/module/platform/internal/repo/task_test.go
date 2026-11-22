@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perfect-panel/server/internal/module/platform/entity/task"
+	"github.com/perfect-panel/backend/internal/module/platform/entity/task"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )

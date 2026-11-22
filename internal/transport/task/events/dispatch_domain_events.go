@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/pars-aria-labs/asynq"
-	"github.com/perfect-panel/server/internal/infra/eventbus"
+	"github.com/perfect-panel/backend/internal/infra/eventbus"
 )
 
 // dispatchBatchSize bounds the events one tick moves onto the queue; the

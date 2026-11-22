@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/usersub"
-	"github.com/perfect-panel/server/internal/repository/kernel"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/usersub"
+	"github.com/perfect-panel/backend/internal/repository/kernel"
 )
 
 // The store is assembled from per-module repository bundles (ADR-001 step-6

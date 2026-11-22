@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/perfect-panel/server/internal/module/subscription/entity/entitlement"
-	"github.com/perfect-panel/server/internal/repository"
+	"github.com/perfect-panel/backend/internal/module/subscription/entity/entitlement"
+	"github.com/perfect-panel/backend/internal/repository"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
