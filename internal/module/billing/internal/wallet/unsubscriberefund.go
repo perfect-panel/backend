@@ -66,13 +66,14 @@ func (s *Service) refund(ctx context.Context, store repository.BillingStore, use
 	}
 	// A refund never exceeds what was paid, whatever amount an older
 	// cancellation marker recorded.
-	remainingAmount = min(remainingAmount, orderInfo.RefundBasis())
+	paidCash, paidGift := orderInfo.RefundSources()
+	remainingAmount = max(0, min(remainingAmount, paidCash+paidGift))
 	// The gift credit the order consumed returns to the gift balance first,
 	// the rest to the regular balance, whatever method paid the rest: a
 	// gateway-paid order consumed its gift credit at creation just as a
 	// balance-paid one did, and refunding that share as balance would turn
 	// gift credit into money.
-	gift := min(orderInfo.GiftAmount, remainingAmount)
+	gift := min(paidGift, remainingAmount)
 	balance := lockedUser.Balance + (remainingAmount - gift)
 
 	now := timeutil.Now()

@@ -519,3 +519,27 @@ func TestOrderReadsForTheSubscriptionModule(t *testing.T) {
 		t.Fatalf("FindOrderDetails = %+v, %v; want the renewal in a basis of 1800", details, err)
 	}
 }
+
+func TestRefundAllocatesGiftAcrossSettledRenewals(t *testing.T) {
+	for _, tc := range []struct {
+		name                string
+		request, cash, gift int64
+	}{{"partial gift", 300, 0, 300}, {"mixed", 550, 150, 400}, {"capped", 2000, 800, 400}} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFacade(t)
+			buyer := f.h.User()
+			f.wallet(t, buyer.Id, 0, 0, 0)
+			parent := f.h.Order(&order.Order{UserId: buyer.Id, OrderNo: "parent", Type: order.TypeSubscribe, Status: order.StatusFinished, Amount: 500, GiftAmount: 100})
+			f.h.Order(&order.Order{UserId: buyer.Id, ParentId: parent.Id, OrderNo: "renew", Type: order.TypeRenewal, Status: order.StatusPaid, Amount: 300, GiftAmount: 300})
+			f.h.Order(&order.Order{UserId: buyer.Id, ParentId: parent.Id, OrderNo: "pending", Type: order.TypeRenewal, Status: order.StatusPending, GiftAmount: 200})
+			f.h.Order(&order.Order{UserId: buyer.Id, ParentId: parent.Id, OrderNo: "reset", Type: order.TypeResetTraffic, Status: order.StatusFinished, GiftAmount: 200})
+			if err := f.svc.SettleUnsubscribeRefund(t.Context(), buyer.Id, refundSubscription, parent.Id, tc.request); err != nil {
+				t.Fatal(err)
+			}
+			got := f.h.ReloadWallet(buyer.Id)
+			if got.Balance != tc.cash || got.GiftAmount != tc.gift {
+				t.Fatalf("cash/gift = %d/%d, want %d/%d", got.Balance, got.GiftAmount, tc.cash, tc.gift)
+			}
+		})
+	}
+}

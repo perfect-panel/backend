@@ -11,13 +11,21 @@ package order
 // unit, so their sum is the value paid and refunding each to its own
 // balance returns exactly that value.
 func (d *Details) RefundBasis() int64 {
-	basis := d.Amount + d.GiftAmount
+	cash, gift := d.RefundSources()
+	return cash + gift
+}
+
+// RefundSources sums the refundable cash and gift contributions separately so
+// settlement can return each portion to the balance that funded the term.
+func (d *Details) RefundSources() (cash, gift int64) {
+	cash, gift = d.Amount, d.GiftAmount
 	for _, subOrder := range d.SubOrders {
 		if subOrder.IsPaidRenewal() {
-			basis += subOrder.Amount + subOrder.GiftAmount
+			cash += subOrder.Amount
+			gift += subOrder.GiftAmount
 		}
 	}
-	return basis
+	return cash, gift
 }
 
 // IsPaidRenewal reports whether the order renews a subscription and its
