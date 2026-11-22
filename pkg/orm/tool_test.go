@@ -126,7 +126,7 @@ func TestParseMySQLURLDSNAppliesOnlySafeInterpolationDefault(t *testing.T) {
 }
 
 func mysqlDSNQuery(dsn string) (url.Values, error) {
-	rawQuery := mysqlDSNRawQuery(dsn)
+	rawQuery := MySQLDSNRawQuery(dsn)
 	if rawQuery == "" {
 		return nil, nil
 	}

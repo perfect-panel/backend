@@ -106,7 +106,11 @@ func Migrate(ctx context.Context, cfg Config) error {
 		return fmt.Errorf("--location %q is not an IANA time zone; pass the panel's AppLocation", cfg.Location)
 	}
 
-	mysqlDB, err := sql.Open("mysql", normalizeMySQLDSN(cfg.MySQLDSN, location))
+	sourceDSN, err := normalizeMySQLDSN(cfg.MySQLDSN, location)
+	if err != nil {
+		return fmt.Errorf("configure mysql: %w", err)
+	}
+	mysqlDB, err := sql.Open("mysql", sourceDSN)
 	if err != nil {
 		return fmt.Errorf("open mysql: %w", err)
 	}
@@ -208,42 +212,24 @@ func ParseFlags(args []string) (Config, error) {
 // the driver's default is UTC, which labelled every value with the wrong
 // zone and shifted the timestamptz target columns by the panel's offset. A
 // DSN that names loc keeps it.
-func normalizeMySQLDSN(dsn string, location *time.Location) string {
+func normalizeMySQLDSN(dsn string, location *time.Location) (string, error) {
 	cfg, err := mysqlDriver.ParseDSN(dsn)
 	if err != nil {
-		return dsn
+		return "", err
 	}
 	cfg.ParseTime = true
-	if !dsnNamesLocation(dsn) && location != nil {
+	// Read the original options: FormatDSN omits an explicit loc=UTC, and
+	// the driver keeps charset outside cfg.Params.
+	query, _ := url.ParseQuery(orm.MySQLDSNRawQuery(dsn))
+	if !query.Has("loc") && location != nil {
 		cfg.Loc = location
 	}
-	if cfg.Params == nil {
-		cfg.Params = make(map[string]string)
+	if !query.Has("charset") {
+		if err := cfg.Apply(mysqlDriver.Charset("utf8mb4", cfg.Collation)); err != nil {
+			return "", err
+		}
 	}
-	if _, ok := cfg.Params["charset"]; !ok {
-		cfg.Params["charset"] = "utf8mb4"
-	}
-	return cfg.FormatDSN()
-}
-
-// dsnNamesLocation reports whether a MySQL DSN's parameters, the part after
-// the database name, set loc. The database name follows the last slash;
-// searching the whole DSN for the question mark would misread a password.
-func dsnNamesLocation(dsn string) bool {
-	databaseSeparator := strings.LastIndex(dsn, "/")
-	if databaseSeparator < 0 {
-		return false
-	}
-	querySeparator := strings.IndexByte(dsn[databaseSeparator+1:], '?')
-	if querySeparator < 0 {
-		return false
-	}
-	params, err := url.ParseQuery(dsn[databaseSeparator+querySeparator+2:])
-	if err != nil {
-		return false
-	}
-	_, ok := params["loc"]
-	return ok
+	return cfg.FormatDSN(), nil
 }
 
 func buildPlans(ctx context.Context, mysqlDB, postgresDB *sql.DB, cfg Config, location *time.Location) ([]tablePlan, error) {
@@ -553,7 +539,7 @@ func truncateTables(ctx context.Context, db *sql.DB, schema string, plans []tabl
 	for _, plan := range plans {
 		names = append(names, quotePGIdent(schema)+"."+quotePGIdent(plan.Name))
 	}
-	query := "TRUNCATE TABLE " + strings.Join(names, ", ") + " RESTART IDENTITY CASCADE" //nolint:gosec // G202: identifiers quoted by quotePGIdent from the catalog
+	query := "TRUNCATE TABLE " + strings.Join(names, ", ") + " CONTINUE IDENTITY RESTRICT" //nolint:gosec // G202: identifiers quoted by quotePGIdent from the catalog
 	log.Printf("truncate %d target table(s)", len(names))
 	if _, err := db.ExecContext(ctx, query); err != nil {
 		return fmt.Errorf("truncate target tables: %w", err)
@@ -758,9 +744,6 @@ func convertValue(value any, col postgresColumn, location *time.Location) (any, 
 }
 
 func convertString(value string, col postgresColumn, location *time.Location) (any, error) {
-	if isZeroDate(value) {
-		return nil, nil
-	}
 	if isBoolColumn(col) {
 		return stringToBool(value)
 	}
@@ -775,7 +758,7 @@ func convertString(value string, col postgresColumn, location *time.Location) (a
 		return n, nil
 	}
 	if isTimestampColumn(col) {
-		if value == "" {
+		if value == "" || isZeroDate(value) {
 			return nil, nil
 		}
 		// A value none of the known layouts parses is copied as text, for

@@ -25,12 +25,12 @@ func ParseDSNIn(dsn, location string) *Config {
 		return nil
 	}
 	query := DefaultMySQLQuery(location)
-	if formattedQuery := mysqlDSNRawQuery(cfg.FormatDSN()); formattedQuery != "" {
+	if formattedQuery := MySQLDSNRawQuery(cfg.FormatDSN()); formattedQuery != "" {
 		query = withDefaultMySQLParams(formattedQuery)
 	}
 	// FormatDSN omits false-valued booleans, so preserve an explicit caller
 	// override before this parsed configuration is written into YAML.
-	if originalQuery := mysqlDSNRawQuery(dsn); originalQuery != "" {
+	if originalQuery := MySQLDSNRawQuery(dsn); originalQuery != "" {
 		if original, parseErr := url.ParseQuery(originalQuery); parseErr == nil {
 			if values, configured := original["interpolateParams"]; configured {
 				parsed, parseErr := url.ParseQuery(query)
@@ -56,10 +56,10 @@ func ParseDSNIn(dsn, location string) *Config {
 	}
 }
 
-// mysqlDSNRawQuery extracts only the parameters following the database name.
+// MySQLDSNRawQuery extracts only the parameters following the database name.
 // Looking for the first or last question mark in the full DSN is incorrect
 // because MySQL passwords may contain one without escaping.
-func mysqlDSNRawQuery(dsn string) string {
+func MySQLDSNRawQuery(dsn string) string {
 	databaseSeparator := strings.LastIndex(dsn, "/")
 	if databaseSeparator < 0 {
 		return ""

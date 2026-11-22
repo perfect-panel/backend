@@ -79,3 +79,45 @@ func TestResetSequencesOnlyTouchesCopiedColumns(t *testing.T) {
 		}
 	}
 }
+
+// A table filter must also bound what TRUNCATE can clear through foreign keys.
+func TestTruncateTablesRespectsForeignKeysAndSequences(t *testing.T) {
+	dsn := os.Getenv("PPANEL_TEST_POSTGRES_DSN")
+	if dsn == "" {
+		t.Skip("set PPANEL_TEST_POSTGRES_DSN for truncate scope coverage")
+	}
+	ctx := t.Context()
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { closeDatabase("postgres", db) })
+	schema := postgresTestSchema(t, db)
+	parent := quotePGIdent(schema) + ".parent"
+	child := quotePGIdent(schema) + ".child"
+	exec := func(query string) {
+		t.Helper()
+		if _, err := db.ExecContext(ctx, query); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec("CREATE TABLE " + parent + " (id integer PRIMARY KEY, target_only bigserial)")
+	exec("CREATE TABLE " + child + " (parent_id integer REFERENCES " + parent + " (id))")
+	exec("INSERT INTO " + parent + " (id) VALUES (42)")
+	exec("INSERT INTO " + child + " VALUES (42)")
+	plans := []tablePlan{{Name: "parent"}}
+	if err := truncateTables(ctx, db, schema, plans); err == nil {
+		t.Fatal("truncating the parent succeeded despite a foreign key from an excluded table")
+	}
+	var count int
+	if err := db.QueryRowContext(ctx, "SELECT count(*) FROM "+child+" JOIN "+parent+" ON parent_id = id").Scan(&count); err != nil || count != 1 {
+		t.Fatalf("rows after rejected truncate = %d, %v", count, err)
+	}
+	if err := truncateTables(ctx, db, schema, append(plans, tablePlan{Name: "child"})); err != nil {
+		t.Fatal(err)
+	}
+	var generated int
+	if err := db.QueryRowContext(ctx, "INSERT INTO "+parent+" (id) VALUES (42) RETURNING target_only").Scan(&generated); err != nil || generated != 2 {
+		t.Fatalf("target-only sequence after truncate = %d, %v; want 2", generated, err)
+	}
+}

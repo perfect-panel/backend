@@ -19,13 +19,33 @@ func TestQuoteIdentifiers(t *testing.T) {
 	}
 }
 
+func normalizedSourceDSN(t *testing.T, dsn string, location *time.Location) string {
+	t.Helper()
+	got, err := normalizeMySQLDSN(dsn, location)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
 func TestNormalizeMySQLDSN(t *testing.T) {
-	got := normalizeMySQLDSN("user:pass@tcp(127.0.0.1:3306)/ppanel", time.UTC)
+	got := normalizedSourceDSN(t, "user:pass@tcp(127.0.0.1:3306)/ppanel", time.UTC)
 	if got == "user:pass@tcp(127.0.0.1:3306)/ppanel" {
 		t.Fatalf("normalizeMySQLDSN() did not add params")
 	}
 	if !containsAll(got, []string{"parseTime=true", "charset=utf8mb4"}) {
 		t.Fatalf("normalizeMySQLDSN() = %q, want parseTime and charset", got)
+	}
+}
+
+// The driver stores charset separately from its generic Params map.
+func TestNormalizeMySQLDSNPreservesCharset(t *testing.T) {
+	for _, charset := range []string{"latin1", "utf8mb4,utf8"} {
+		dsn := "reader:p?charset=other@tcp(localhost:3306)/ppanel?charset=" + charset
+		got := normalizedSourceDSN(t, dsn, time.UTC)
+		if strings.Count(got[strings.LastIndex(got, "/")+1:], "charset=") != 1 || !strings.Contains(got, "charset="+charset) {
+			t.Errorf("charset %q was overwritten or duplicated: %q", charset, got)
+		}
 	}
 }
 
@@ -49,7 +69,7 @@ func TestNormalizeMySQLDSNReadsTimesInTheConfiguredZone(t *testing.T) {
 		"explicit local":    {"user:pass@tcp(127.0.0.1:3306)/ppanel?parseTime=true&loc=Local", time.Local.String()},
 	} {
 		t.Run(name, func(t *testing.T) {
-			cfg, err := mysqlDriver.ParseDSN(normalizeMySQLDSN(tc.dsn, paris))
+			cfg, err := mysqlDriver.ParseDSN(normalizedSourceDSN(t, tc.dsn, paris))
 			if err != nil {
 				t.Fatalf("normalized DSN does not parse: %v", err)
 			}
@@ -133,6 +153,16 @@ func TestConvertValueTimestamp(t *testing.T) {
 	}
 	if got != nil {
 		t.Fatalf("convertValue() zero date = %#v, want nil", got)
+	}
+}
+
+func TestConvertValueKeepsZeroDatePrefixInText(t *testing.T) {
+	const note = "0000-00-00 was the original date"
+	for _, raw := range []any{note, []byte(note)} {
+		got, err := convertValue(raw, postgresColumn{DataType: "text"}, time.UTC)
+		if got != note || err != nil {
+			t.Fatalf("copied text = %v, %v", got, err)
+		}
 	}
 }
 

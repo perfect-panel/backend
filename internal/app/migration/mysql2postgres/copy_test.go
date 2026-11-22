@@ -62,7 +62,7 @@ func TestMigrateCopiesRowsIntoPostgres(t *testing.T) {
 	ctx := context.Background()
 	table := fmt.Sprintf("m2p_copy_%d", time.Now().UnixNano())
 
-	mysqlDB, err := sql.Open("mysql", normalizeMySQLDSN(mysqlDSN, time.UTC))
+	mysqlDB, err := sql.Open("mysql", normalizedSourceDSN(t, mysqlDSN, time.UTC))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestMigrateCopiesRowsIntoPostgres(t *testing.T) {
 	exec(postgresDB, "CREATE TABLE "+target+" (id bigint PRIMARY KEY, note text, flag boolean NOT NULL, amount numeric(10,2) NOT NULL, at timestamp(3))")
 
 	at := time.Date(2026, 9, 28, 10, 30, 0, 123000000, time.UTC)
-	notes := []any{"tab\tnew\nline \\ backslash", nil, "plain"}
+	notes := []any{"tab\tnew\nline \\ backslash", nil, "0000-00-00 was the original date"}
 	for i, note := range notes {
 		var stamp any = at.Add(time.Duration(i) * time.Hour)
 		if i == 1 {
@@ -163,7 +163,7 @@ func TestCopyTableIntoPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer closeDatabase("postgres", postgresDB)
+	t.Cleanup(func() { closeDatabase("postgres", postgresDB) })
 
 	if _, err := source.ExecContext(ctx, "CREATE TABLE "+quoteMySQLIdent(table)+" (id INTEGER, note TEXT, flag INTEGER, amount TEXT, at TEXT)"); err != nil {
 		t.Fatal(err)
@@ -181,7 +181,11 @@ func TestCopyTableIntoPostgres(t *testing.T) {
 	if _, err := postgresDB.ExecContext(ctx, "CREATE TABLE public."+quotePGIdent(table)+" (id bigint, note text, flag boolean NOT NULL, amount numeric(10,2) NOT NULL, at timestamp(3))"); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _, _ = postgresDB.ExecContext(ctx, "DROP TABLE IF EXISTS public."+quotePGIdent(table)) })
+	t.Cleanup(func() {
+		if _, err := postgresDB.ExecContext(ctx, "DROP TABLE IF EXISTS public."+quotePGIdent(table)); err != nil {
+			t.Error(err)
+		}
+	})
 
 	plan := tablePlan{Name: table, RowCount: int64(len(notes)), OrderColumns: []string{"id"}, Columns: []postgresColumn{
 		{Name: "id", DataType: "bigint", UDTName: "int8"},
@@ -256,7 +260,7 @@ func TestCopyTableReportsTheRejectedRow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer closeDatabase("postgres", postgresDB)
+	t.Cleanup(func() { closeDatabase("postgres", postgresDB) })
 
 	// Enough rows behind the rejected fifth one that the writer is still
 	// streaming when PostgreSQL reports it.
@@ -271,7 +275,11 @@ func TestCopyTableReportsTheRejectedRow(t *testing.T) {
 	if _, err := postgresDB.ExecContext(ctx, "CREATE TABLE public."+quotePGIdent(table)+" (id bigint, note text NOT NULL)"); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _, _ = postgresDB.ExecContext(ctx, "DROP TABLE IF EXISTS public."+quotePGIdent(table)) })
+	t.Cleanup(func() {
+		if _, err := postgresDB.ExecContext(ctx, "DROP TABLE IF EXISTS public."+quotePGIdent(table)); err != nil {
+			t.Error(err)
+		}
+	})
 
 	plan := tablePlan{Name: table, RowCount: rows, OrderColumns: []string{"id"}, Columns: []postgresColumn{
 		{Name: "id", DataType: "bigint", UDTName: "int8"},
