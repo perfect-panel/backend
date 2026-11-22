@@ -2,6 +2,8 @@ package plan
 
 import (
 	"context"
+	"encoding/json"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -77,7 +79,7 @@ func TestUpdateSubscribeReplacesNodesWithTagsAndNotifies(t *testing.T) {
 	f.Plan(t, subscribe.Subscribe{Id: 1, Name: "gold", UnitTime: "Month", Nodes: "1,2"})
 	show := true
 	err := f.svc.UpdateSubscribe(ctx, &dto.UpdateSubscribeRequest{
-		Id: 1, Name: "gold+", UnitTime: "Year", Inventory: -1, Nodes: dto.StringInt64Slice{3}, NodeTags: []string{"edge"},
+		Id: 1, Name: "gold+", UnitTime: "Year", Inventory: -1, Nodes: dto.StringInt64Slice{3}, NodeTags: []string{"", " edge ", "edge"},
 		Discount: []dto.SubscribeDiscount{{Quantity: 12, Discount: 80}}, Show: &show, Sell: &show,
 	})
 	if err != nil {
@@ -264,5 +266,62 @@ func TestSubscribeGroups(t *testing.T) {
 	}
 	if resp, err := f.svc.GetSubscribeGroupList(ctx); err != nil || resp.Total != 0 {
 		t.Fatalf("groups after batch delete = %+v, %v", resp, err)
+	}
+}
+
+func TestPlanNodeSelectionRoundTrip(t *testing.T) {
+	f := newPlanFixture(t)
+	ctx := t.Context()
+	create := validCreate("gold")
+	create.Nodes = dto.StringInt64Slice{4, 7}
+	create.NodeTags = []string{" ", ""}
+	if err := f.svc.CreateSubscribe(ctx, create); err != nil {
+		t.Fatal(err)
+	}
+	details, err := f.svc.GetSubscribeDetails(ctx, &dto.GetSubscribeDetailsRequest{Id: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := f.svc.GetSubscribeList(ctx, &dto.GetSubscribeListRequest{Page: 1, Size: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.List) != 1 {
+		t.Fatalf("plans = %d", len(list.List))
+	}
+	for _, tags := range [][]string{details.NodeTags, list.List[0].NodeTags} {
+		if tags == nil || len(tags) != 0 {
+			t.Fatalf("empty node tags = %#v, want []", tags)
+		}
+	}
+	raw, err := json.Marshal(details)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var edit dto.UpdateSubscribeRequest
+	if err := json.Unmarshal(raw, &edit); err != nil {
+		t.Fatal(err)
+	}
+	edit.Description = "updated"
+	for _, tags := range [][]string{edit.NodeTags, {"", " "}} {
+		edit.NodeTags = tags
+		if err := f.svc.UpdateSubscribe(ctx, &edit); err != nil {
+			t.Fatal(err)
+		}
+		if got := f.plan(t, 1); got.Nodes != "4,7" || got.NodeTags != "" {
+			t.Fatalf("node selection = %q, %q", got.Nodes, got.NodeTags)
+		}
+	}
+	create.Name = "by-tag"
+	create.NodeTags = []string{" edge ", "", "edge"}
+	if err := f.svc.CreateSubscribe(ctx, create); err != nil {
+		t.Fatal(err)
+	}
+	byTag, err := f.svc.GetSubscribeDetails(ctx, &dto.GetSubscribeDetailsRequest{Id: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(byTag.Nodes, create.Nodes) || !slices.Equal(byTag.NodeTags, []string{"edge"}) {
+		t.Fatalf("created node selection = %v, %v", byTag.Nodes, byTag.NodeTags)
 	}
 }

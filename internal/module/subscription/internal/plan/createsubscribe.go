@@ -37,7 +37,7 @@ func (s *Service) CreateSubscribe(ctx context.Context, req *dto.CreateSubscribeR
 		DeviceLimit:       req.DeviceLimit,
 		Quota:             req.Quota,
 		Nodes:             slicesx.Int64SliceToString(req.Nodes.Int64s()),
-		NodeTags:          slicesx.StringSliceToString(req.NodeTags),
+		NodeTags:          storedNodeTags(req.NodeTags),
 		Show:              req.Show,
 		Sell:              req.Sell,
 		Sort:              0,

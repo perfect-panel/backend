@@ -53,10 +53,21 @@ func (s *Subscribe) NodeScope() (nodeIDs []int64, tags []string, err error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("plan %d node list: %w", s.Id, err)
 	}
-	for _, tag := range strings.Split(s.NodeTags, ",") {
-		tags = append(tags, strings.TrimSpace(tag))
+	return nodeIDs, ParseNodeTags(s.NodeTags), nil
+}
+
+// ParseNodeTags returns the distinct nonblank selectors in their stored order.
+// An empty selection is an empty JSON array in the administrator API.
+func ParseNodeTags(csv string) []string {
+	tags := strings.Split(csv, ",")
+	for i := range tags {
+		tags[i] = strings.TrimSpace(tags[i])
 	}
-	return nodeIDs, slicesx.RemoveDuplicateElements(tags...), nil
+	unique := slicesx.RemoveDuplicateElements(tags...)
+	if unique == nil {
+		return []string{}
+	}
+	return unique
 }
 
 func (s *Subscribe) BeforeCreate(tx *gorm.DB) error {

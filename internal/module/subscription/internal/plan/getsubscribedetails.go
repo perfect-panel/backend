@@ -3,12 +3,10 @@ package plan
 import (
 	"context"
 	"encoding/json"
-	"strings"
 
 	"github.com/perfect-panel/backend/internal/infra/mapping"
 	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
 	"github.com/perfect-panel/backend/pkg/logger"
-	"github.com/perfect-panel/backend/pkg/slicesx"
 	"github.com/perfect-panel/backend/pkg/xerr"
 )
 
@@ -30,11 +28,11 @@ func (s *Service) GetSubscribeDetails(ctx context.Context, req *dto.GetSubscribe
 			log.Error("[GetSubscribeDetailsLogic] JSON unmarshal failed: ", logger.Field("error", err.Error()), logger.Field("discount", sub.Discount))
 		}
 	}
-	nodes, err := slicesx.ParseInt64CSV(sub.Nodes)
+	nodes, tags, err := sub.NodeScope()
 	if err != nil {
 		return nil, xerr.Wrapf(err, xerr.ERROR, "plan %d nodes: %v", sub.Id, err)
 	}
 	resp.Nodes = dto.StringInt64Slice(nodes)
-	resp.NodeTags = strings.Split(sub.NodeTags, ",")
+	resp.NodeTags = tags
 	return resp, nil
 }

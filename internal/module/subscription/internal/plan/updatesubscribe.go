@@ -3,6 +3,7 @@ package plan
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	dto "github.com/perfect-panel/backend/internal/module/subscription/contract"
 	"github.com/perfect-panel/backend/internal/module/subscription/entity/subscribe"
@@ -30,9 +31,9 @@ func (s *Service) UpdateSubscribe(ctx context.Context, req *dto.UpdateSubscribeR
 		val, _ := json.Marshal(req.Discount)
 		discount = string(val)
 	}
-	// When NodeTags is set, clear Nodes to avoid AND-combined query returning wrong results (#94)
+	tags := storedNodeTags(req.NodeTags)
 	nodes := slicesx.Int64SliceToString(req.Nodes.Int64s())
-	if len(req.NodeTags) > 0 {
+	if tags != "" {
 		nodes = ""
 	}
 	sub := &subscribe.Subscribe{
@@ -50,7 +51,7 @@ func (s *Service) UpdateSubscribe(ctx context.Context, req *dto.UpdateSubscribeR
 		DeviceLimit:       req.DeviceLimit,
 		Quota:             req.Quota,
 		Nodes:             nodes,
-		NodeTags:          slicesx.StringSliceToString(req.NodeTags),
+		NodeTags:          tags,
 		Show:              keepIfOmitted(req.Show, stored.Show),
 		Sell:              keepIfOmitted(req.Sell, stored.Sell),
 		Sort:              req.Sort,
@@ -75,4 +76,9 @@ func keepIfOmitted(requested, stored *bool) *bool {
 		return stored
 	}
 	return requested
+}
+
+// storedNodeTags uses the same normalization as reads of older CSV values.
+func storedNodeTags(tags []string) string {
+	return strings.Join(subscribe.ParseNodeTags(strings.Join(tags, ",")), ",")
 }
