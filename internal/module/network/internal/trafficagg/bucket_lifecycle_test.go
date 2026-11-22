@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/perfect-panel/backend/internal/infra/rediskeys"
+
 	"github.com/alicebob/miniredis/v2"
 	"github.com/perfect-panel/backend/pkg/timeutil"
 	"github.com/redis/go-redis/v9"
@@ -129,8 +131,7 @@ func TestFlushReissuesAReportThatLandsAfterItsMinuteWasFlushed(t *testing.T) {
 
 // A report whose write lands while the flush is between taking the bucket
 // over and cleaning up re-creates and re-indexes the aggregate, and the
-// cleanup then unindexes it. Nothing would ever flush that orphan; the
-// flush now checks for it after the cleanup and reissues it.
+// cleanup must keep it discoverable until it is reissued.
 func TestFlushReissuesAnAggregateRecreatedBeforeTheCleanup(t *testing.T) {
 	aggregator, store, client := newLifecycleAggregator(t)
 	now := time.Date(2026, 9, 28, 12, 0, 30, 0, time.UTC)
@@ -392,5 +393,92 @@ func TestFlushDueBucketsReplaysDeadLetters(t *testing.T) {
 	}
 	if store.upload != 5 || store.download != 7 {
 		t.Fatalf("the flush did not replay the dead letter: %d/%d", store.upload, store.download)
+	}
+}
+
+// Interrupt the handoff either before Redis changes anything or after Redis
+// committed it but the caller lost the reply.
+type handoffFailure struct {
+	afterCommit bool
+	failed      bool
+}
+
+func (h *handoffFailure) DialHook(next redis.DialHook) redis.DialHook { return next }
+func (h *handoffFailure) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return next
+}
+func (h *handoffFailure) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
+	return func(ctx context.Context, cmd redis.Cmder) error {
+		args := cmd.Args()
+		// The handoff script declares the bucket index as its third key.
+		script := cmd.Name() == "eval" || cmd.Name() == "evalsha"
+		if h.failed || !script || len(args) < 6 || args[5] != "panel:"+bucketIndexKey {
+			return next(ctx, cmd)
+		}
+		if h.afterCommit {
+			if err := next(ctx, cmd); err != nil {
+				return err
+			}
+		}
+		h.failed = true
+		return errors.New("interrupted bucket handoff")
+	}
+}
+
+func TestLateTrafficRemainsIndexedAcrossRedisFailures(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		after bool
+	}{{"before commit", false}, {"lost reply", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			a, store, client := newLifecycleAggregator(t)
+			rediskeys.New("panel").Install(client)
+			ctx := t.Context()
+			now := time.Date(2026, 9, 28, 12, 0, 30, 0, time.UTC)
+			report(t, a, now, 5, 7)
+			if err := a.FlushDueBuckets(ctx, now.Add(time.Minute)); err != nil {
+				t.Fatal(err)
+			}
+			report(t, a, now, 100, 200)
+			fail := &handoffFailure{afterCommit: tc.after}
+			client.AddHook(fail)
+			if err := a.FlushDueBuckets(ctx, now.Add(2*time.Minute)); err == nil || !fail.failed {
+				t.Fatalf("handoff failure = %v", err)
+			}
+			if n := indexed(t, client); n != 1 {
+				t.Fatalf("buckets discoverable after interrupted handoff = %d, want 1", n)
+			}
+			for i := 3; i <= 5; i++ {
+				if err := a.FlushDueBuckets(ctx, now.Add(time.Duration(i)*time.Minute)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if store.upload != 105 || store.download != 207 || store.logs != 2 || indexed(t, client) != 0 {
+				t.Fatalf("after retries accounted %d/%d in %d logs", store.upload, store.download, store.logs)
+			}
+		})
+	}
+}
+
+// Parking an older batch under its original inbox ID must leave late reports
+// discoverable and bill them under a separate ID from the pending replay.
+func TestParkedBucketKeepsLateReportIndexed(t *testing.T) {
+	a, store, client := newLifecycleAggregator(t)
+	rediskeys.New("panel").Install(client)
+	ctx := t.Context()
+	now := timeutil.Now().Add(-time.Minute)
+	suffix := bucketSuffix(bucketMinute(now))
+	report(t, a, now, 100, 200)
+	deadLetter(t, a, client, suffix, 5, 7)
+	if indexed(t, client) != 1 {
+		t.Fatal("late report lost its index during dead-letter transfer")
+	}
+	for range 2 {
+		if err := a.FlushDueBuckets(ctx, timeutil.Now().Add(2*deadLetterReplayBaseWait)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if store.upload != 105 || store.download != 207 || store.logs != 2 || indexed(t, client) != 0 {
+		t.Fatalf("accounted %d/%d with %d logs", store.upload, store.download, store.logs)
 	}
 }

@@ -59,6 +59,60 @@ const (
 	droppedSIDLogLimit       = 20
 )
 
+// Claim an aggregate or drop a stale index entry atomically with respect to report writes.
+var claimBucket = redis.NewScript(`
+	if redis.call("EXISTS", KEYS[3]) == 1 then return 2 end
+	if redis.call("EXISTS", KEYS[2]) == 1 then return 1 end
+	if redis.call("EXISTS", KEYS[1]) == 0 then
+		redis.call("ZREM", KEYS[4], ARGV[1])
+		return 0
+	end
+	redis.call("RENAMENX", KEYS[1], KEYS[2])
+	return 1
+`)
+
+// A late report re-created the aggregate and needs the old index entry until
+// it can be handed off. AddReportAt re-indexes writes that arrive after this check.
+var unindexIfEmpty = redis.NewScript(`
+	if redis.call("EXISTS", KEYS[1]) == 0 then
+		return redis.call("ZREM", KEYS[2], ARGV[1])
+	end
+	return 0
+`)
+
+// Register the destination before moving the data. If the client loses the
+// reply, the next flush finds the fresh suffix and uses its durable inbox ID.
+var reindexStraggler = redis.NewScript(`
+	if redis.call("EXISTS", KEYS[1]) == 0 then return 0 end
+	if redis.call("EXISTS", KEYS[2]) == 1 then
+		return redis.error_reply("reissued processing bucket already exists")
+	end
+	redis.call("ZADD", KEYS[3], ARGV[1], ARGV[2])
+	redis.call("RENAMENX", KEYS[1], KEYS[2])
+	redis.call("ZREM", KEYS[3], ARGV[3])
+	return 1
+`)
+
+// Park the processing hash, its replay metadata, and its index together. The
+// index stores the logical destination name; Redis commands operate on KEYS.
+// ARGV after the two TTLs contains the remaining metadata field/value pairs.
+var parkBucket = redis.NewScript(`
+	local fields = redis.call("HLEN", KEYS[1])
+	if fields == 0 then return 0 end
+	if redis.call("EXISTS", KEYS[2], KEYS[3]) > 0 then return -1 end
+	redis.call("ZADD", KEYS[4], ARGV[3], ARGV[2])
+	redis.call("HSET", KEYS[3], "bucket", ARGV[1], "deadletter_key", ARGV[2],
+		"field_count", fields, "replay_attempts", 0, unpack(ARGV, 6))
+	redis.call("RENAMENX", KEYS[1], KEYS[2])
+	redis.call("EXPIRE", KEYS[2], ARGV[4])
+	redis.call("EXPIRE", KEYS[3], ARGV[4])
+	redis.call("EXPIRE", KEYS[4], ARGV[4])
+	redis.call("SET", KEYS[5], "1", "EX", ARGV[5])
+	redis.call("DEL", KEYS[6])
+	if redis.call("EXISTS", KEYS[7]) == 0 then redis.call("ZREM", KEYS[8], ARGV[1]) end
+	return fields
+`)
+
 // MaxReportedTraffic bounds the bytes (upload plus download) one traffic
 // report may attribute to one subscription. No node carries that much for a
 // single user between two reports (10 TiB is about 15 minutes at a sustained
@@ -404,33 +458,18 @@ func (a *Aggregator) flushBucket(ctx context.Context, suffix string) error {
 	aggregateKey := bucketPrefix + suffix
 	processingKey := processingBucketPrefix + suffix
 	processedKey := processedBucketPrefix + suffix
-	processed, err := a.deps.Redis.Exists(ctx, processedKey).Result()
+	state, err := claimBucket.Run(ctx, a.deps.Redis, []string{aggregateKey, processingKey, processedKey, bucketIndexKey}, suffix).Int()
 	if err != nil {
 		return err
 	}
-	if processed > 0 {
+	switch state {
+	case 0: // empty
+		return nil
+	case 2: // already billed or parked
 		if err := a.cleanupBucket(ctx, suffix, processingKey); err != nil {
 			return err
 		}
 		return a.reissueStraggler(ctx, suffix)
-	}
-
-	exists, err := a.deps.Redis.Exists(ctx, processingKey).Result()
-	if err != nil {
-		return err
-	}
-	if exists == 0 {
-		renamed, err := a.deps.Redis.RenameNX(ctx, aggregateKey, processingKey).Result()
-		if err != nil {
-			if isNoSuchKey(err) {
-				_ = a.deps.Redis.ZRem(ctx, bucketIndexKey, suffix).Err()
-				return nil
-			}
-			return err
-		}
-		if !renamed {
-			return nil
-		}
 	}
 
 	values, err := a.deps.Redis.HGetAll(ctx, processingKey).Result()
@@ -456,7 +495,7 @@ func (a *Aggregator) flushBucket(ctx context.Context, suffix string) error {
 
 // reissueStraggler flushes, under a fresh suffix, an aggregate re-created
 // after its minute's flush took the original: a report whose write landed
-// between the take-over and the cleanup (which unindexed it), or after the
+// between the take-over and the cleanup, or after the
 // minute was spent. Under its own suffix the reissued bucket is a new key to
 // the idempotent inboxes, which know the original suffix as consumed, so
 // its traffic is billed rather than skipped as a replay.
@@ -476,18 +515,10 @@ func (a *Aggregator) reissueStraggler(ctx context.Context, suffix string) error 
 		return err
 	}
 	fresh := origin + reissueSeparator + strconv.FormatInt(sequence, 10)
-	renamed, err := a.deps.Redis.RenameNX(ctx, aggregateKey, processingBucketPrefix+fresh).Result()
-	if err != nil {
-		if isNoSuchKey(err) {
-			// Another replica reissued it first.
-			return nil
-		}
-		return err
-	}
-	if !renamed {
-		return fmt.Errorf("reissued bucket %s already exists", fresh)
-	}
-	if err := a.deps.Redis.ZAdd(ctx, bucketIndexKey, redis.Z{Score: bucketScore(origin), Member: fresh}).Err(); err != nil {
+	moved, err := reindexStraggler.Run(ctx, a.deps.Redis,
+		[]string{aggregateKey, processingBucketPrefix + fresh, bucketIndexKey},
+		bucketScore(origin), fresh, suffix).Bool()
+	if err != nil || !moved {
 		return err
 	}
 	logger.WithContext(ctx).Infow("[TrafficAggregator] Reissued a bucket re-created after its flush",
@@ -497,14 +528,10 @@ func (a *Aggregator) reissueStraggler(ctx context.Context, suffix string) error 
 	return a.flushBucket(ctx, fresh)
 }
 
-func isNoSuchKey(err error) bool {
-	return errors.Is(err, redis.Nil) || strings.Contains(err.Error(), "no such key")
-}
-
 func (a *Aggregator) cleanupBucket(ctx context.Context, suffix, processingKey string) error {
 	pipe := a.deps.Redis.TxPipeline()
 	pipe.Del(ctx, processingKey)
-	pipe.ZRem(ctx, bucketIndexKey, suffix)
+	unindexIfEmpty.Eval(ctx, pipe, []string{bucketPrefix + suffix, bucketIndexKey}, suffix)
 	pipe.Del(ctx, bucketFailureKey(suffix))
 	_, err := pipe.Exec(ctx)
 	return err
@@ -514,7 +541,7 @@ func (a *Aggregator) markBucketProcessedAndCleanup(ctx context.Context, suffix, 
 	pipe := a.deps.Redis.TxPipeline()
 	pipe.Set(ctx, processedKey, "1", bucketTTL)
 	pipe.Del(ctx, processingKey)
-	pipe.ZRem(ctx, bucketIndexKey, suffix)
+	unindexIfEmpty.Eval(ctx, pipe, []string{bucketPrefix + suffix, bucketIndexKey}, suffix)
 	pipe.Del(ctx, bucketFailureKey(suffix))
 	_, err := pipe.Exec(ctx)
 	return err
@@ -550,75 +577,34 @@ func (a *Aggregator) recordBucketFlushFailure(ctx context.Context, suffix string
 // suffix skips through the inboxes. Its first replay is due after the base
 // wait.
 func (a *Aggregator) moveBucketToDeadLetter(ctx context.Context, suffix, processingKey string, failures int64, cause error) error {
-	fieldCount, _ := a.deps.Redis.HLen(ctx, processingKey).Result()
-	deadLetterKey, err := a.renameProcessingBucketToDeadLetter(ctx, suffix, processingKey)
-	if err != nil {
-		return err
-	}
-
 	now := timeutil.Now()
 	causeText := ""
 	if cause != nil {
 		causeText = cause.Error()
 	}
-	metaKey := deadLetterMetaKey(deadLetterKey)
-	pipe := a.deps.Redis.TxPipeline()
-	pipe.HSet(ctx, metaKey, map[string]any{
-		"bucket":          suffix,
-		"source_key":      processingKey,
-		"deadletter_key":  deadLetterKey,
-		"failure_count":   failures,
-		"field_count":     fieldCount,
-		"last_error":      causeText,
-		"moved_at":        now.Format(time.RFC3339Nano),
-		"replay_attempts": 0,
-		"next_retry_at":   now.Add(deadLetterReplayBaseWait).Format(time.RFC3339Nano),
-	})
-	pipe.Expire(ctx, metaKey, deadLetterTTL)
-	pipe.Expire(ctx, deadLetterKey, deadLetterTTL)
-	pipe.ZAdd(ctx, deadLetterIndexKey, redis.Z{
-		Score:  bucketScore(suffix),
-		Member: deadLetterKey,
-	})
-	pipe.Expire(ctx, deadLetterIndexKey, deadLetterTTL)
-	pipe.Set(ctx, processedBucketPrefix+suffix, "1", bucketTTL)
-	pipe.ZRem(ctx, bucketIndexKey, suffix)
-	pipe.Del(ctx, bucketFailureKey(suffix))
-	if _, err := pipe.Exec(ctx); err != nil {
-		return err
-	}
-
-	logger.WithContext(ctx).Error("[TrafficAggregator] Bucket moved to deadletter",
-		logger.Field("bucket", suffix),
-		logger.Field("failures", failures),
-		logger.Field("deadletter_key", deadLetterKey),
-		logger.Field("field_count", fieldCount),
-		logger.Field("error", causeText),
-	)
-	return nil
-}
-
-func (a *Aggregator) renameProcessingBucketToDeadLetter(ctx context.Context, suffix, processingKey string) (string, error) {
-	deadLetterKey := deadLetterBucketKey(suffix)
-	renamed, err := a.deps.Redis.RenameNX(ctx, processingKey, deadLetterKey).Result()
-	if err != nil {
-		return "", err
-	}
-	if renamed {
-		return deadLetterKey, nil
-	}
-
-	for i := 0; i < 3; i++ {
-		candidate := fmt.Sprintf("%s:%d:%d", deadLetterKey, timeutil.Now().UnixNano(), i)
-		renamed, err = a.deps.Redis.RenameNX(ctx, processingKey, candidate).Result()
-		if err != nil {
-			return "", err
+	base := deadLetterBucketKey(suffix)
+	dest := base
+	for attempt := 0; attempt < 4; attempt++ {
+		fields, err := parkBucket.Run(ctx, a.deps.Redis, []string{
+			processingKey, dest, deadLetterMetaKey(dest), deadLetterIndexKey,
+			processedBucketPrefix + suffix, bucketFailureKey(suffix), bucketPrefix + suffix, bucketIndexKey,
+		}, suffix, dest, bucketScore(suffix), int64(deadLetterTTL/time.Second), int64(bucketTTL/time.Second),
+			"source_key", processingKey, "failure_count", failures, "last_error", causeText,
+			"moved_at", now.Format(time.RFC3339Nano), "next_retry_at", now.Add(deadLetterReplayBaseWait).Format(time.RFC3339Nano)).Int64()
+		switch {
+		case err != nil:
+			return err
+		case fields == 0:
+			return nil // another flush already moved it
+		case fields > 0:
+			logger.WithContext(ctx).Error("[TrafficAggregator] Bucket moved to deadletter",
+				logger.Field("bucket", suffix), logger.Field("failures", failures),
+				logger.Field("deadletter_key", dest), logger.Field("field_count", fields), logger.Field("error", causeText))
+			return nil
 		}
-		if renamed {
-			return candidate, nil
-		}
+		dest = fmt.Sprintf("%s:%d:%d", base, now.UnixNano(), attempt)
 	}
-	return "", fmt.Errorf("deadletter key already exists for bucket %s", suffix)
+	return fmt.Errorf("deadletter key already exists for bucket %s", suffix)
 }
 
 // ReplayDeadLetters re-applies up to deadLetterReplayLimit dead-lettered
