@@ -1,7 +1,7 @@
 name: Checks
 
 # The gate every other workflow reuses: ci.yml runs it for pull requests and
-# LTS/feature pushes, nightly.yml before publishing, release.yml before
+# branch pushes, nightly.yml before publishing, release.yml before
 # releasing. Tool versions live in the Makefile; the jobs call its targets.
 on:
   workflow_call:
@@ -78,6 +78,9 @@ jobs:
             echo "$unformatted"
             exit 1
           fi
+
+      - name: Test release channel and image tags
+        run: bash script/test-image-release.sh
 
       - name: Build
         run: go build ./...

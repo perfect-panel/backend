@@ -25,12 +25,12 @@ def require(pattern: str, message: str, *, flags: int = 0) -> re.Match[str]:
     return cast(re.Match[str], match)
 
 
-# PRs and all long-lived branches should generate/verify, but only master syncs cross-repo.
-require(r"pull_request:[\s\S]*branches:\s*\[master, dev, main\]", "pull_request must run verification for master, dev, and main")
-require(r"push:[\s\S]*branches:\s*\[master, dev, main\]", "push must run verification for master, dev, and main")
+# PRs and all long-lived branches should generate/verify, but only main syncs cross-repo.
+require(r"pull_request:[\s\S]*branches:\s*\[main, dev\]", "pull_request must run verification for main and dev")
+require(r"push:[\s\S]*branches:\s*\[main, dev\]", "push must run verification for main and dev")
 
-# The backend workflow must sync only from non-PR master runs.
-require(r"if:\s*github\.event_name\s*!=\s*'pull_request'\s*&&\s*github\.ref\s*==\s*'refs/heads/master'", "sync steps must be gated to non-PR master runs")
+# The backend workflow must sync only from non-PR main runs.
+require(r"if:\s*github\.event_name\s*!=\s*'pull_request'\s*&&\s*github\.ref\s*==\s*'refs/heads/main'", "sync steps must be gated to non-PR main runs")
 
 # The target repository is frontend main checked out under ./frontend.
 require(r"repository:\s*perfect-panel/frontend\b", "workflow must checkout perfect-panel/frontend")

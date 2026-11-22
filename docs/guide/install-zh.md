@@ -15,7 +15,7 @@
 `SHA256SUMS` 校验，安装到 `/opt/ppanel-server`，创建系统用户 `ppanel` 和 systemd 服务，并启动服务：
 
 ```shell
-curl -fsSL https://raw.githubusercontent.com/perfect-panel/backend/master/script/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/perfect-panel/backend/main/script/install.sh -o install.sh
 less install.sh    # 以 root 运行之前先阅读脚本内容
 sudo bash install.sh
 ```
@@ -81,7 +81,7 @@ sudo chmod 0600 /opt/ppanel-server/etc/ppanel.yaml
 sudo tee /etc/systemd/system/ppanel.service > /dev/null <<'EOF'
 [Unit]
 Description=PPanel Server
-Documentation=https://github.com/perfect-panel/backend/blob/master/docs/guide/install-zh.md
+Documentation=https://github.com/perfect-panel/backend/blob/main/docs/guide/install-zh.md
 After=network-online.target
 Wants=network-online.target
 

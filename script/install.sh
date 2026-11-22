@@ -110,7 +110,7 @@ msg "Writing ${UNIT_FILE} / 写入 systemd 服务文件 ..."
 cat > "$UNIT_FILE" <<EOF
 [Unit]
 Description=PPanel Server
-Documentation=https://github.com/${REPO}/blob/master/docs/guide/install.md
+Documentation=https://github.com/${REPO}/blob/main/docs/guide/install.md
 After=network-online.target
 Wants=network-online.target
 
@@ -183,6 +183,6 @@ Finish the installation in ONE of two ways / 请用以下两种方式之一完�
      systemctl restart ${SERVICE_NAME} && journalctl -u ${SERVICE_NAME} -f
    PostgreSQL: PPANEL_DB=postgres://user:password@127.0.0.1:5432/ppanel?sslmode=require
 
-Documentation / 文档: https://github.com/${REPO}/blob/master/docs/guide/install.md
+Documentation / 文档: https://github.com/${REPO}/blob/main/docs/guide/install.md
 EOF
 fi

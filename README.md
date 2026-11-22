@@ -152,10 +152,19 @@ one of two ways:
    `stop_grace_period` gives the graceful shutdown (HTTP first, then the scheduler, the task worker and the trace
    exporter, up to about 18 s) the time it needs; with plain `docker run`, stop with `docker stop --time 20`.
 
-4. **Pull a published image**: `ppanel/ppanel-server:lts` follows the LTS line (`master`), `:latest` the feature
-   line, `:beta` the prereleases, and `ghcr.io/perfect-panel/ppanel-server:nightly` is the nightly build of `dev`:
+4. **Pull a published image** from Docker Hub or GHCR. New releases publish the same manifest to both registries under these tags.
+
+   | Trigger | Image tags in both registries |
+   |---|---|
+   | Push to `dev` | `nightly`, `nightly-<short-sha>` |
+   | Push a beta tag such as `v2.0.0-beta.1` | `beta`, `2.0.0-beta.1` |
+   | Push a stable tag such as `v2.0.0` on a commit in `main` | `latest`, `2.0.0`, `2.0`, `2.0.0-<short-sha>` |
+
+   CI runs on pushes to `main`. The `lts` tag stays pinned to 1.21.7. Stable and beta images support Linux amd64 and arm64. Nightly images support Linux amd64, with Linux arm64 binaries available in the rolling GitHub prerelease.
+
    ```bash
-   docker pull ppanel/ppanel-server:lts
+   docker pull ppanel/ppanel-server:latest
+   docker pull ghcr.io/perfect-panel/ppanel-server:latest
    ```
 
 The server answers `GET /healthz` (liveness) and `GET /readyz` (readiness: database and Redis reachable) for
@@ -174,7 +183,7 @@ After changing a route, request DTO, or response DTO, run:
 go test ./internal/transport/http/routes -run '^TestSwagger' -count=1
 ```
 
-GitHub Actions on `master` generates the full document plus the `admin.json`, `user.json`, `common.json`, and `node.json` scopes, then syncs them to `docs/public/swagger` in [`perfect-panel/frontend`](https://github.com/perfect-panel/frontend). The `GH_TOKEN` secret needs Contents write access to that repository.
+GitHub Actions on `main` generates the full document plus the `admin.json`, `user.json`, `common.json`, and `node.json` scopes, then syncs them to `docs/public/swagger` in [`perfect-panel/frontend`](https://github.com/perfect-panel/frontend). The `GH_TOKEN` secret needs Contents write access to that repository.
 
 ## 🔗 Related Projects
 
