@@ -154,7 +154,8 @@ PPanel 服务端 ${VERSION} 已安装到 ${INSTALL_DIR}，以 ${SERVICE_USER} �
 
 EOF
 
-if grep -q 'AccessSecret' "${INSTALL_DIR}/etc/ppanel.yaml" 2>/dev/null; then
+# The shipped template includes an empty JWT secret before setup runs.
+if grep -Eq "^[^#]*AccessSecret:[[:space:]]*(\"[^\"]+\"|'[^']+'|[^[:space:]\"'#,}])" "${INSTALL_DIR}/etc/ppanel.yaml" 2>/dev/null; then
 	cat <<EOF
 The configuration is complete; the API listens on the Host:Port of etc/ppanel.yaml (0.0.0.0:8080 by default).
 配置已完成，API 监听 etc/ppanel.yaml 中的 Host:Port（默认 0.0.0.0:8080）。

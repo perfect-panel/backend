@@ -1,0 +1,92 @@
+# PPanel 后端启动配置。完整说明见 docs/guide/config-zh.md。
+# 首次启动：Database.Addr 留空，打开 http://127.0.0.1:8080/init 完成安装。
+# 无人值守安装：首次启动前同时设置 PPANEL_DB 和 PPANEL_REDIS。
+# 手动配置：填写数据库和 Redis 连接，并为 JwtAuth.AccessSecret 生成独立随机密钥。
+
+Host: "0.0.0.0"
+Port: 8080
+AppLocation: "Asia/Shanghai"
+Debug: false
+TrustedProxies: []  # 空列表信任回环和私有网段；["none"] 忽略代理转发的客户端 IP。
+AllowedOrigins: []  # 可填写前端的完整来源地址，例如 ["https://panel.example.com"]。
+
+Database:
+  Driver: "postgres"
+  Addr: ""         # 手动配置示例：127.0.0.1:5432。
+  Dbname: ""
+  Username: ""
+  Password: ""
+  Config: "sslmode=prefer"  # 优先使用 TLS；需要验证服务端证书和主机名时使用 verify-full。
+  MaxIdleConns: 10
+  MaxOpenConns: 10
+  ConnMaxLifetime: 1800  # 秒
+  ConnMaxIdleTime: 300   # 秒
+  SlowThreshold: 1000    # 慢查询阈值，毫秒
+
+Redis:
+  Host: "localhost:6379"
+  Username: ""   # ACL 用户名；留空使用 default 用户。
+  Pass: ""
+  KeyPrefix: ""  # 例如 panel-a，将业务键、Asynq 队列和 Pub/Sub 频道统一置于 panel-a: 下。
+  DB: 0          # 缓存、会话和限流
+  QueueDB: 5     # Asynq 任务队列
+  # 现有部署留空 KeyPrefix 可沿用原有键名。切换前缀前应排空旧队列或迁移数据。
+
+JwtAuth:
+  AccessSecret: ""      # 安装向导或环境变量安装会自动生成；手动配置时可用 openssl rand -hex 32。
+  AccessExpire: 604800  # 秒（7 天）
+
+Administrator:
+  Email: "admin@ppanel.dev"
+  Password: ""  # 手动或无人值守安装时留空，首次创建管理员会生成密码并输出到日志。
+
+Transport:
+  Driver: "hertz"
+HTTP:
+  ReadTimeoutSeconds: 180
+  WriteTimeoutSeconds: 0  # SSE 和 WebSocket 长连接使用无限写超时。
+  IdleTimeoutSeconds: 180
+  MaxRequestBodyMB: 4
+TLS:
+  Enable: false
+  CertFile: ""
+  KeyFile: ""
+
+Logger:
+  ServiceName: "PPanel"
+  Mode: "file"  # console、file 或 volume
+  Level: "info"
+  Encoding: "json"
+  TimeFormat: "2006-01-02 15:04:05.000"
+  Path: "logs"
+  MaxContentLength: 16384
+  StackCooldownMillis: 100
+  Rotation: "daily"
+  KeepDays: 30
+  Compress: false
+  MaxBackups: 30
+  MaxSize: 100  # 按大小轮转时，每个日志文件的上限（MB）。
+  FileTimeFormat: "2006-01-02T15:04:05.000Z07:00"
+
+Trace:
+  Name: ""
+  Endpoint: ""  # 留空关闭导出。
+  Batcher: "jaeger"
+  Sampler: 0.1
+  OtlpHeaders: {}
+  OtlpHttpPath: ""
+  OtlpHttpSecure: false
+  OtlpGrpcSecure: false
+  Disabled: false
+
+GeoIP:
+  Path: "./cache/GeoLite2-City.mmdb"
+  Download: true
+  DownloadURL: ""  # 留空使用内置镜像。
+  SHA256: ""
+  Required: false
+
+EdgeSubscribe:
+  Enabled: false
+  MaxClockSkewSeconds: 300
+  Keys: []  # 启用时为每个订阅 Worker 配置一组 ID 和 Secret。
