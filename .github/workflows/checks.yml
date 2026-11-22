@@ -19,6 +19,13 @@ jobs:
     name: Build, vet and test
     runs-on: ubuntu-latest
     services:
+      dragonfly:
+        image: ghcr.io/dragonflydb/dragonfly:v2.1.0@sha256:94891bb22ce2fb0f7a5a3ff1bb3b2fbbc5830e2523293e47723d87fa3e5b1184
+        env:
+          DFLY_cluster_mode: emulated
+          DFLY_lock_on_hashtags: "true"
+        ports:
+          - 6379:6379
       mysql:
         image: mysql:8.0
         env:
@@ -90,8 +97,9 @@ jobs:
 
       # The DSNs switch on the database-backed tests, including the MySQL and
       # PostgreSQL (pgx) migration runs in internal/app/migration/schema.
-      - name: Test with MySQL 8 and PostgreSQL
+      - name: Test with MySQL 8, PostgreSQL and Dragonfly
         env:
+          PPANEL_TEST_DRAGONFLY_ADDR: 127.0.0.1:6379
           PPANEL_TEST_MYSQL_DSN: "root:mysql@tcp(127.0.0.1:3306)/ppanel?charset=utf8mb4&parseTime=true&loc=UTC&interpolateParams=true"
           PPANEL_TEST_POSTGRES_DSN: postgres://postgres:postgres@127.0.0.1:5432/ppanel?sslmode=disable
           PPANEL_TEST_EPAY_POSTGRES_DSN: postgres://postgres:postgres@127.0.0.1:5432/ppanel?sslmode=disable

@@ -253,6 +253,8 @@ MaxMind GeoLite2 城市库为登录与审计日志中的地址标注位置。没
 - **`KeyPrefix`** 为缓存、会话、限流、任务队列、worker 元数据及 Pub/Sub 频道统一添加项目前缀。填 `panel-a` 或 `panel-a:` 都会生成 `panel-a:` 开头的名称，例如 `panel-a:asynq:queues`。相应的 ACL 键规则为 `~panel-a:*`，频道规则为 `&panel-a:*`。
   留空时沿用原有名称。启用或更换前缀会切换到新的键空间，现有会话和待处理任务仍在旧键下。使用队列检查工具时也要指定同一前缀，PPanel 所用的 [Asynq 分支](https://github.com/pars-aria-labs/asynq/tree/v1.2.0) 提供带 `--prefix` 的 CLI。切换前应先处理完待执行任务或迁移数据，并同步更新生产者和消费者。
 
+单实例 Dragonfly v2.1 可沿用上述 Redis 配置。启动 Dragonfly 时加上 `--cluster_mode=emulated --lock_on_hashtags` 即可，节点缓存清理无需 Lua 脚本白名单。滚动升级时，等所有旧版后端实例退出后，再移除旧清理脚本的白名单。
+
 ### 3.8 管理员登录 (`Administrator`)
 
 用来创建首位管理员：每次启动时，只要数据库中还没有管理员，就按这里的值创建一个。安装向导会把安装者的邮箱写入这里，绝不会写入密码。

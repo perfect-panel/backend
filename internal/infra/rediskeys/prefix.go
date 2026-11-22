@@ -23,11 +23,11 @@ func New(prefix string) Prefix {
 
 func (p Prefix) Key(key string) string { return string(p) + key }
 
-// Argument marks a logical key passed through Lua ARGV rather than KEYS.
-// Without a prefix hook go-redis writes its original bytes.
-type Argument string
+// PhysicalKey is a key name returned by Redis (for example, by SCAN).
+// It already includes the project prefix. Only use it for discovered keys.
+type PhysicalKey string
 
-func (k Argument) MarshalBinary() ([]byte, error) { return []byte(k), nil }
+func (k PhysicalKey) MarshalBinary() ([]byte, error) { return []byte(k), nil }
 
 // Install applies a prefix to business commands, including Lua and pipelines.
 // Subscriptions use a dedicated connection and construct channel names with Key.
@@ -98,11 +98,6 @@ func (p Prefix) scope(cmd redis.Cmder) error {
 			return fmt.Errorf("invalid Redis script key count")
 		}
 		keys = args[3 : 3+n]
-		for i := 3 + n; i < len(args); i++ {
-			if k, ok := args[i].(Argument); ok {
-				args[i] = p.Key(string(k))
-			}
-		}
 	case "scan":
 		for i := 2; i+1 < len(args); i += 2 {
 			if strings.EqualFold(fmt.Sprint(args[i]), "match") {
@@ -115,11 +110,17 @@ func (p Prefix) scope(cmd redis.Cmder) error {
 		return fmt.Errorf("unsupported project-scoped Redis command %q", cmd.Name())
 	}
 	for i, arg := range keys {
-		key, ok := arg.(string)
-		if !ok {
+		switch key := arg.(type) {
+		case string:
+			keys[i] = p.Key(key)
+		case PhysicalKey:
+			if !strings.HasPrefix(string(key), string(p)) {
+				return fmt.Errorf("discovered Redis key outside project prefix")
+			}
+			keys[i] = string(key)
+		default:
 			return fmt.Errorf("invalid key in Redis command %q", cmd.Name())
 		}
-		keys[i] = p.Key(key)
 	}
 	return nil
 }

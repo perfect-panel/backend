@@ -299,6 +299,8 @@ server runs normally and records the addresses alone.
 - **`KeyPrefix`** scopes cache, session, rate-limit and queue keys, worker metadata and Pub/Sub channels. With `panel-a` or `panel-a:`, keys start with `panel-a:`, including `panel-a:asynq:queues`. ACL patterns for this project are `~panel-a:*` for keys and `&panel-a:*` for channels.
   An empty prefix keeps existing names. Enabling or changing it selects a new keyspace. Drain outstanding jobs or migrate the old data before switching all producers and workers together. Existing sessions and pending jobs stay under the old names. Use the same prefix for queue inspection. The [Asynq fork used by PPanel](https://github.com/pars-aria-labs/asynq/tree/v1.2.0) provides a CLI with a `--prefix` option.
 
+For a single Dragonfly v2.1 instance, use the Redis settings above and start Dragonfly with `--cluster_mode=emulated --lock_on_hashtags`. Node cache invalidation works with the default Lua key checks. During a rolling upgrade, keep any existing allowlist entry for the old invalidation script until all older backend instances have stopped.
+
 ### 3.8 Admin Login (`Administrator`)
 
 Seeds the first administrator: at every start, when the database has no administrator, one is created from these

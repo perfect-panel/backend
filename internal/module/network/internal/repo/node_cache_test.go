@@ -3,7 +3,9 @@ package repo
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/perfect-panel/backend/internal/config"
@@ -110,5 +112,116 @@ func TestClearServerCacheScopesIndexedAndLegacyKeys(t *testing.T) {
 		if server.Exists(prefix+":"+key) || server.Exists(prefix+":"+variant) || !server.Exists(other) || !server.Exists(key) {
 			t.Fatalf("indexed=%v left incorrect keys %v", indexed, server.Keys())
 		}
+	}
+}
+
+// beforeCacheClear runs a second writer after discovery and before EVAL.
+type beforeCacheClear struct{ fill func(context.Context) error }
+
+func (h *beforeCacheClear) DialHook(next redis.DialHook) redis.DialHook { return next }
+func (h *beforeCacheClear) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return next
+}
+func (h *beforeCacheClear) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
+	return func(ctx context.Context, cmd redis.Cmder) error {
+		if cmd.Name() == "eval" && h.fill != nil {
+			fill := h.fill
+			h.fill = nil
+			if err := fill(ctx); err != nil {
+				return err
+			}
+		}
+		return next(ctx, cmd)
+	}
+}
+
+func TestClearServerCacheIncludesConcurrentFill(t *testing.T) {
+	addr := os.Getenv("PPANEL_TEST_DRAGONFLY_ADDR")
+	if addr == "" {
+		addr = miniredis.RunT(t).Addr()
+	}
+	for _, tc := range []struct{ prefixed, legacy bool }{
+		{false, false}, {true, false}, {false, true}, {true, true},
+	} {
+		t.Run(fmt.Sprintf("prefix=%t/legacy=%t", tc.prefixed, tc.legacy), func(t *testing.T) {
+			id := time.Now().UnixNano()
+			cfg := config.RedisConfig{Host: addr}
+			if tc.prefixed {
+				cfg.KeyPrefix = "cache-test*"
+			}
+			client, writer := cfg.NewClient(), cfg.NewClient()
+			t.Cleanup(func() { _ = client.Close() })
+			t.Cleanup(func() { _ = writer.Close() })
+			ctx := t.Context()
+			r, w := NewNodeRepo(nil, client), NewNodeRepo(nil, writer)
+			userKey := fmt.Sprintf("%s%d:vless", node.ServerUserListCacheKey, id)
+			configKey := fmt.Sprintf("%s%d:trojan", node.ServerConfigCacheKey, id)
+			genKey := fmt.Sprintf(node.ServerCacheGenerationKey, id)
+			idxKey := fmt.Sprintf(node.ServerCacheIndexKey, id)
+			t.Cleanup(func() { _ = writer.Del(context.Background(), genKey, idxKey, userKey, configKey).Err() })
+			var err error
+			if tc.legacy {
+				err = writer.Set(ctx, userKey, "old", time.Minute).Err()
+			} else {
+				err = r.SetServerCache(ctx, id, userKey, "old", 0)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			hook := &beforeCacheClear{fill: func(ctx context.Context) error {
+				return w.SetServerCache(ctx, id, configKey, "concurrent", 0)
+			}}
+			client.AddHook(hook)
+			if err := r.ClearServerCache(ctx, id); err != nil {
+				t.Fatal(err)
+			}
+			if hook.fill != nil {
+				t.Fatal("concurrent fill did not run")
+			}
+			if generation, err := w.ServerCacheGeneration(ctx, id); err != nil || generation != 1 {
+				t.Fatalf("generation = %d, %v; want 1", generation, err)
+			}
+			if err := w.SetServerCache(ctx, id, configKey, "stale refill", 0); err != nil {
+				t.Fatal(err)
+			}
+			if n, err := writer.Exists(ctx, userKey, configKey, idxKey).Result(); err != nil || n != 0 {
+				t.Fatalf("remaining cache keys = %d, %v", n, err)
+			}
+			if err := w.SetServerCache(ctx, id, configKey, "fresh", 1); err != nil {
+				t.Fatal(err)
+			}
+			if got, err := writer.Get(ctx, configKey).Result(); err != nil || got != "fresh" {
+				t.Fatalf("fresh cache = %q, %v", got, err)
+			}
+		})
+	}
+}
+
+func TestClearServerCacheRejectsForeignIndexMember(t *testing.T) {
+	server := miniredis.RunT(t)
+	client := (config.RedisConfig{Host: server.Addr(), KeyPrefix: "panel"}).NewClient()
+	t.Cleanup(func() { _ = client.Close() })
+	r := NewNodeRepo(nil, client)
+	const id = 42
+	const variant = "server:user:42:trojan"
+	const foreignKey = "other:" + variant
+	if err := r.SetServerCache(t.Context(), id, variant, "own", 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.Set(foreignKey, "other"); err != nil {
+		t.Fatal(err)
+	}
+	indexKey := fmt.Sprintf("panel:"+node.ServerCacheIndexKey, id)
+	if _, err := server.SAdd(indexKey, foreignKey); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.ClearServerCache(t.Context(), id); err == nil {
+		t.Fatal("accepted an index member outside the project")
+	}
+	if !server.Exists(foreignKey) || !server.Exists("panel:"+variant) || !server.Exists(indexKey) {
+		t.Fatalf("clear changed keys despite the invalid index member: %v", server.Keys())
+	}
+	if gen, err := r.ServerCacheGeneration(t.Context(), id); gen != 0 || err != nil {
+		t.Fatalf("generation = %d, %v; want 0", gen, err)
 	}
 }

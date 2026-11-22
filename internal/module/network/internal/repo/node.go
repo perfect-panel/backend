@@ -33,8 +33,7 @@ type nodeRepo struct {
 	cacheRetrier *ServerCacheInvalidationRetrier
 }
 
-var (
-	setServerCacheIfGenerationScript = redis.NewScript(`
+var setServerCacheIfGenerationScript = redis.NewScript(`
 local current = redis.call('GET', KEYS[1])
 if not current then current = '0' end
 if current ~= ARGV[1] then return 0 end
@@ -43,15 +42,23 @@ redis.call('SADD', KEYS[3], KEYS[2])
 redis.call('PEXPIRE', KEYS[3], ARGV[3])
 return 1
 `)
-	clearServerCacheScript = redis.NewScript(`
+
+// KEYS are the generation, the index, the legacy user list, then the keys
+// discovered by SMEMBERS or SCAN. A fill registering a new variant between
+// discovery and EVAL forces a retry before any mutation. Refreshing the same
+// variant can proceed without a retry because its key is already declared.
+const clearServerCacheLua = `
+local declared = {}
+for i = 3, #KEYS do declared[KEYS[i]] = true end
+local missing = {}
+for _, member in ipairs(redis.call('SMEMBERS', KEYS[2])) do
+  if not declared[member] then table.insert(missing, member) end
+end
+if #missing > 0 then return missing end
 redis.call('INCR', KEYS[1])
-local keys = redis.call('SMEMBERS', KEYS[2])
-for _, key in ipairs(keys) do redis.call('DEL', key) end
-redis.call('DEL', KEYS[2])
-for _, key in ipairs(ARGV) do redis.call('DEL', key) end
-return #keys
-`)
-)
+for i = 2, #KEYS do redis.call('DEL', KEYS[i]) end
+return {}
+`
 
 // NewNodeRepo builds the module-owned implementation.
 func NewNodeRepo(db *gorm.DB, cache *redis.Client, retriers ...*ServerCacheInvalidationRetrier) repository.NodeRepo {
@@ -607,44 +614,48 @@ func (m *nodeRepo) ClearServerCache(ctx context.Context, serverId int64) error {
 }
 
 func clearServerCache(ctx context.Context, client *redis.Client, serverId int64) error {
+	generationKey := fmt.Sprintf(node.ServerCacheGenerationKey, serverId)
 	indexKey := fmt.Sprintf(node.ServerCacheIndexKey, serverId)
-	cacheKeys, err := client.SMembers(ctx, indexKey).Result()
+	legacyKey := fmt.Sprintf("%s%d", node.ServerUserListCacheKey, serverId)
+	keys, err := discoverServerCacheKeys(ctx, client, serverId, indexKey)
 	if err != nil {
 		return err
 	}
-	// Entries created before the exact-key index was introduced are short-lived
-	// (five minutes). Scan only when no index exists, preserving immediate
-	// invalidation during a rolling upgrade without penalizing steady state.
-	if len(cacheKeys) == 0 {
-		patterns := []string{
-			fmt.Sprintf("%s%d:*", node.ServerUserListCacheKey, serverId),
-			fmt.Sprintf("%s%d:*", node.ServerConfigCacheKey, serverId),
+	args := []any{"eval", clearServerCacheLua, 0, generationKey, indexKey, legacyKey}
+	for ctx.Err() == nil {
+		// Retain legacy keys from SCAN when a concurrent fill adds index members.
+		for _, key := range keys {
+			args = append(args, rediskeys.PhysicalKey(key))
 		}
-		for _, pattern := range patterns {
-			var cursor uint64
-			for {
-				keys, newCursor, err := client.Scan(ctx, cursor, pattern, 100).Result()
-				if err != nil {
-					return err
-				}
-				if len(keys) > 0 {
-					cacheKeys = append(cacheKeys, keys...)
-				}
-				cursor = newCursor
-				if cursor == 0 {
-					break
-				}
+		args[2] = len(args) - 3
+		keys, err = client.Do(ctx, args...).StringSlice()
+		if err != nil || len(keys) == 0 {
+			return err
+		}
+	}
+	return ctx.Err()
+}
+
+func discoverServerCacheKeys(ctx context.Context, client *redis.Client, serverId int64, indexKey string) ([]string, error) {
+	keys, err := client.SMembers(ctx, indexKey).Result()
+	if err != nil || len(keys) != 0 {
+		return keys, err
+	}
+	// Old deployments wrote five-minute cache entries without an index.
+	for _, prefix := range []string{node.ServerUserListCacheKey, node.ServerConfigCacheKey} {
+		pattern := fmt.Sprintf("%s%d:*", prefix, serverId)
+		var cursor uint64
+		for {
+			page, next, err := client.Scan(ctx, cursor, pattern, 100).Result()
+			if err != nil {
+				return nil, err
+			}
+			keys = append(keys, page...)
+			cursor = next
+			if cursor == 0 {
+				break
 			}
 		}
 	}
-	// SMEMBERS and SCAN return physical names. Only the legacy key built here
-	// still needs the project prefix when passed through Lua ARGV.
-	args := make([]any, len(cacheKeys), len(cacheKeys)+1)
-	for i, key := range cacheKeys {
-		args[i] = key
-	}
-	args = append(args, rediskeys.Argument(fmt.Sprintf("%s%d", node.ServerUserListCacheKey, serverId)))
-	_, err = clearServerCacheScript.Run(ctx, client,
-		[]string{fmt.Sprintf(node.ServerCacheGenerationKey, serverId), indexKey}, args...).Result()
-	return err
+	return keys, nil
 }
