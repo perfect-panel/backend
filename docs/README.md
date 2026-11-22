@@ -10,6 +10,7 @@
 | [guide/install.md](guide/install.md) / [install-zh.md](guide/install-zh.md) | 安装与部署（英文 / 中文） |
 | [guide/config.md](guide/config.md) / [config-zh.md](guide/config-zh.md) | 配置项说明（英文 / 中文） |
 | [guide/epay.md](guide/epay.md) / [epay-zh.md](guide/epay-zh.md) | EPay V1/V2 配置、收款、协议能力及升级说明（英文 / 中文） |
+| [guide/gmpay.md](guide/gmpay.md) / [gmpay-zh.md](guide/gmpay-zh.md) | GMPay 收银台配置、回调和订单对账（英文 / 中文） |
 | [guide/api-changes-2026-09.md](guide/api-changes-2026-09.md) / [api-changes-2026-09-zh.md](guide/api-changes-2026-09-zh.md) | 2026 年 9 月审计修复带来的 API 变化清单（英文 / 中文），供前端与客户端维护者查阅 |
 
 ## 贡献指南

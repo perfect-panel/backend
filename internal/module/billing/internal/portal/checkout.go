@@ -170,7 +170,8 @@ func (s *Service) expectedCharge(ctx context.Context, gw gateway.Gateway, orderI
 	if latest.PaymentCurrency == "" {
 		return gateway.Charge{}, xerr.Errorf(xerr.OrderStatusError, "payment checkout is being initialized; retry")
 	}
-	orderInfo.PaymentAmount, orderInfo.PaymentCurrency, orderInfo.TradeNo = latest.PaymentAmount, latest.PaymentCurrency, latest.TradeNo
+	orderInfo.PaymentAmount, orderInfo.PaymentCurrency = latest.PaymentAmount, latest.PaymentCurrency
+	orderInfo.TradeNo, orderInfo.PaymentSession = latest.TradeNo, latest.PaymentSession
 	return s.recordedCharge(gw, orderInfo)
 }
 

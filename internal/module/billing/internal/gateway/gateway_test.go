@@ -150,6 +150,7 @@ func TestRegistryDescribesThePlatforms(t *testing.T) {
 		"AlipayF2F": {TextReply: true},
 		"Stripe":    {Body: true, StatusFailure: true},
 		"Cryptomus": {Body: true, TextReply: true, TextFailure: true},
+		"GMPay":     {Body: true, TextReply: true, StatusFailure: true},
 	} {
 		style, ok := registry.CallbackStyle(platform)
 		if !ok || style != want || !registry.Handles(platform) {
@@ -167,7 +168,7 @@ func TestRegistryDescribesThePlatforms(t *testing.T) {
 	// Every gateway records the payment expectation before it creates the
 	// payment, so a close of an order whose checkout "never started" must
 	// find it still not started when it commits, whatever the platform.
-	for _, platform := range []string{"EPay", "AlipayF2F", "Stripe", "Cryptomus"} {
+	for _, platform := range []string{"EPay", "AlipayF2F", "Stripe", "Cryptomus", "GMPay"} {
 		if !registry.CloseWithoutCheckout(platform).RequireStableCheckout {
 			t.Fatalf("%s: a close before the checkout started does not require a stable checkout", platform)
 		}
@@ -181,6 +182,7 @@ func TestRegistryValidatesConfigurations(t *testing.T) {
 		"Stripe":    map[string]any{"secret_key": "sk", "public_key": "pk", "webhook_secret": "wh", "payment": "card"},
 		"AlipayF2F": map[string]any{"app_id": "app", "private_key": "pk", "public_key": "pub", "sandbox": "true"},
 		"Cryptomus": map[string]any{"merchant_id": " m ", "api_key": " k "},
+		"GMPay":     map[string]any{"pid": "1000", "secret_key": "key", "url": "https://gateway.example"},
 	}
 	for platform, config := range valid {
 		if normalized, err := registry.NormalizeConfig(platform, config); err != nil || normalized == "" {
@@ -250,7 +252,7 @@ func TestReconcileWithoutCheckoutRequiresStableCheckoutForEveryGateway(t *testin
 // gateways, never a payment a provider such as an app store settles.
 func TestCollectsNamesBillingsOwnPaymentMethods(t *testing.T) {
 	for method, want := range map[string]bool{
-		"EPay": true, "AlipayF2F": true, "Stripe": true, "Cryptomus": true, "balance": true,
+		"EPay": true, "AlipayF2F": true, "Stripe": true, "Cryptomus": true, "GMPay": true, "balance": true,
 		"AppleIAP": false, "CryptoSaaS": false, "": false,
 	} {
 		if got := Collects(method); got != want {

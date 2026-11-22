@@ -250,3 +250,24 @@ func assertPaymentNotifyError(t *testing.T, ctx *app.RequestContext, wantStatus 
 		t.Fatalf("expected message %q, got %q", wantMessage, response.Msg)
 	}
 }
+
+func TestGMPayAcknowledgement(t *testing.T) {
+	style, ok := billing.New(billing.Deps{}).PaymentCallbackStyle("GMPay")
+	if !ok || !style.Body {
+		t.Fatal("GMPay requires the signed JSON body")
+	}
+	ctx := serveNotify(t, notifyService{style: style}, "GMPay")
+	if ctx.Response.StatusCode() != http.StatusOK || string(ctx.Response.Body()) != "success" {
+		t.Fatalf("acknowledgement = %d %q", ctx.Response.StatusCode(), ctx.Response.Body())
+	}
+	for _, tt := range []struct {
+		err    error
+		status int
+	}{
+		{billing.ErrInvalidPaymentCallback, http.StatusBadRequest},
+		{errors.New("activation queue unavailable"), http.StatusInternalServerError},
+	} {
+		ctx := serveNotify(t, notifyService{style: style, err: tt.err}, "GMPay")
+		assertPaymentNotifyError(t, ctx, tt.status)
+	}
+}

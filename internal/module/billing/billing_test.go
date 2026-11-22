@@ -183,3 +183,22 @@ func TestPaymentCallbackStyles(t *testing.T) {
 		}
 	}
 }
+
+func TestGMPayMethodAvailableAfterCreation(t *testing.T) {
+	f := newFacade(t)
+	enabled := true
+	created, err := f.svc.CreatePaymentMethod(adminContext, &dto.CreatePaymentMethodRequest{Name: "Crypto cashier", Platform: "GMPay", Config: map[string]string{"url": "https://gateway.example", "pid": "1000", "secret_key": "sample"}, Enable: &enabled})
+	if err != nil {
+		t.Fatal(err)
+	}
+	methods, err := f.svc.GetAvailablePaymentMethods(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, method := range methods.List {
+		if method.Id == created.Id && method.Platform == "GMPay" {
+			return
+		}
+	}
+	t.Fatal("enabled GMPay method is missing from public checkout")
+}

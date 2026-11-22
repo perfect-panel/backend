@@ -15,6 +15,7 @@ const (
 	EPay
 	Balance
 	Cryptomus
+	GMPay
 	UNSUPPORTED Platform = -1
 )
 
@@ -24,6 +25,7 @@ var platformNames = map[string]Platform{
 	"EPay":        EPay,
 	"balance":     Balance,
 	"Cryptomus":   Cryptomus,
+	"GMPay":       GMPay,
 	"unsupported": UNSUPPORTED,
 }
 
@@ -48,7 +50,7 @@ func ParsePlatform(s string) Platform {
 // an internal checkout method rather than an administrator-configurable
 // gateway.
 func SupportedPlatformNames() []string {
-	return []string{Stripe.String(), AlipayF2F.String(), EPay.String(), Balance.String(), Cryptomus.String()}
+	return []string{Stripe.String(), AlipayF2F.String(), EPay.String(), Balance.String(), Cryptomus.String(), GMPay.String()}
 }
 
 func GetSupportedPlatforms() []integration.Info {
@@ -86,6 +88,15 @@ func GetSupportedPlatforms() []integration.Info {
 				"checkout_mode": "Checkout: page (default) or api",
 				"private_key":   "V2 merchant RSA private key",
 				"public_key":    "V2 platform RSA public key",
+			},
+		},
+		{
+			Platform:    GMPay.String(),
+			PlatformURL: "https://github.com/GMWalletApp/epusdt",
+			PlatformFieldDescription: map[string]string{
+				"url":        "HTTPS base URL of the GMPay gateway",
+				"pid":        "Merchant PID",
+				"secret_key": "Merchant key",
 			},
 		},
 		{
