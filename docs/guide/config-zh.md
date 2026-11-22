@@ -266,9 +266,19 @@ MaxMind GeoLite2 城市库为登录与审计日志中的地址标注位置。没
     填写了则按填写的值使用。
   - 管理员创建之后请把它删掉：管理员已存在而文件里仍留有 `Password` 时，每次启动都会在日志中提示，因为文件中保存着一份无人需要的凭据。
 
-### 3.9 邮件发送（SMTP）
+### 3.9 邮件发送
 
-SMTP 中继不在本文件中配置：管理员在面板的系统设置（邮件）里填写，配置保存在数据库中。字段如下：
+在后台的**系统 → 认证控制 → 邮箱设置 → 邮件发送**中选择发信服务。面板将 `platform` 和对应的 `platform_config` 保存在数据库中。验证码、通知和批量邮件共用这个服务。保存配置后即可发送测试邮件。
+
+| 平台 | 服务凭据 |
+|---|---|
+| `smtp`（默认） | 中继配置见下表。 |
+| `resend` | 填写对发信域名有发送权限的 `api_key`。[Resend API](https://resend.com/docs/api-reference/emails/send-email) |
+| `cloudflare` | 填写 `account_id` 和对该账户有 **Email Sending Write** 权限的 `api_token`。[Cloudflare Email Service](https://developers.cloudflare.com/email-service/api/send-emails/rest-api/) |
+
+两种 API 服务都需要填写已验证发信域名下的 `from` 地址。发件人显示名称取站点名称。如需将回复送到其他邮箱，可填写 `reply_to`。
+
+SMTP 中继字段如下。
 
 | 字段 | 含义 |
 |---|---|

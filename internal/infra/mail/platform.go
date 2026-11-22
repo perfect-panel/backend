@@ -10,11 +10,15 @@ type Platform int
 const (
 	// SMTP delivers through an SMTP relay.
 	SMTP Platform = iota
+	Resend
+	Cloudflare
 	unsupported
 )
 
 var platforms = integration.NewPlatforms(unsupported, map[string]Platform{
-	"smtp": SMTP,
+	"smtp":       SMTP,
+	"resend":     Resend,
+	"cloudflare": Cloudflare,
 })
 
 // String returns the name the configuration stores p under.
@@ -47,6 +51,25 @@ func GetSupportedPlatforms() []integration.Info {
 				"ssl":                  "ssl",
 				"implicit_tls":         "implicit_tls",
 				"insecure_skip_verify": "insecure_skip_verify",
+			},
+		},
+		{
+			Platform:    Resend.String(),
+			PlatformURL: "https://resend.com/docs/api-reference/emails/send-email",
+			PlatformFieldDescription: map[string]string{
+				"api_key":  "Resend API key with sending access",
+				"from":     "Sender address",
+				"reply_to": "Optional reply address",
+			},
+		},
+		{
+			Platform:    Cloudflare.String(),
+			PlatformURL: "https://developers.cloudflare.com/email-service/api/send-emails/rest-api/",
+			PlatformFieldDescription: map[string]string{ //nolint:gosec // G101: provider field labels shown in the admin panel
+				"account_id": "Cloudflare account ID",
+				"api_token":  "Email Sending Write",
+				"from":       "Sender address",
+				"reply_to":   "Optional reply address",
 			},
 		},
 	}

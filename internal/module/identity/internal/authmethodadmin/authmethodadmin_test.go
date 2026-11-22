@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 
 	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
@@ -303,5 +304,37 @@ func TestTestSendReportsTheSenderFailure(t *testing.T) {
 	err = f.svc.TestSmsSend(context.Background(), &dto.TestSmsSendRequest{AreaCode: "86", Telephone: "13800138000"})
 	if err == nil {
 		t.Fatal("TestSmsSend() with an unknown platform succeeded")
+	}
+}
+
+func TestUpdateEmailAPIProvider(t *testing.T) {
+	f := newFixture(t)
+	for _, tc := range []struct {
+		platform   string
+		settings   map[string]any
+		credential string
+	}{
+		{"resend", map[string]any{"api_key": "test-key", "from": "sender@example.com"}, "api_key"},
+		{"cloudflare", map[string]any{"api_token": "test-token", "account_id": "abc123", "from": "sender@example.com", "reply_to": "help@example.com"}, "api_token"},
+	} {
+		config := map[string]any{"platform": tc.platform, "platform_config": tc.settings, "verify_email_subject": "Test subject"}
+		_, err := f.svc.UpdateAuthMethodConfig(t.Context(), f.request(t, "email", config))
+		if err != nil {
+			t.Fatal(err)
+		}
+		stored := f.stored(t, "email")
+		var saved auth.EmailAuthConfig
+		if err := saved.Unmarshal(stored); err != nil || saved.Platform != tc.platform || saved.VerifyEmailSubject != "Test subject" || !reflect.DeepEqual(saved.PlatformConfig, tc.settings) {
+			t.Fatal("saved settings did not round-trip")
+		}
+		delete(tc.settings, tc.credential)
+		_, err = f.svc.UpdateAuthMethodConfig(t.Context(), f.request(t, "email", config))
+		assertCode(t, err, xerr.InvalidParams)
+		if f.stored(t, "email") != stored {
+			t.Fatal("invalid settings replaced the saved provider")
+		}
+	}
+	if !reflect.DeepEqual(f.reloaded, []string{"email", "email"}) {
+		t.Fatalf("unexpected reloads: %v", f.reloaded)
 	}
 }

@@ -83,7 +83,8 @@ func (h *SendEmailHandler) ProcessTask(ctx context.Context, task *asynq.Task) er
 	}
 	ctx = requestmeta.With(ctx, payload.Metadata)
 	ctx = logger.ContextWithRequestMetadata(ctx, payload.Metadata)
-	sender, err := h.senders.Get(h.deps.Email().Platform, h.deps.Email().PlatformConfig, h.deps.SiteName())
+	emailConfig := h.deps.Email()
+	sender, err := h.senders.Get(emailConfig.Platform, emailConfig.PlatformConfig, h.deps.SiteName())
 	if err != nil {
 		logger.WithContext(ctx).Error("[SendEmail] NewSender failed", logger.Field("error", err.Error()))
 		return nil
@@ -105,17 +106,17 @@ func (h *SendEmailHandler) ProcessTask(ctx context.Context, task *asynq.Task) er
 			return nil
 		}
 		payload.Content["Type"] = uint8(purpose)
-		bodyTemplate = h.deps.Email().VerifyEmailTemplate
-		subjectTemplate = h.deps.Email().VerifyEmailSubject
+		bodyTemplate = emailConfig.VerifyEmailTemplate
+		subjectTemplate = emailConfig.VerifyEmailSubject
 	case taskqueue.EmailTypeMaintenance:
-		bodyTemplate = h.deps.Email().MaintenanceEmailTemplate
-		subjectTemplate = h.deps.Email().MaintenanceEmailSubject
+		bodyTemplate = emailConfig.MaintenanceEmailTemplate
+		subjectTemplate = emailConfig.MaintenanceEmailSubject
 	case taskqueue.EmailTypeExpiration:
-		bodyTemplate = h.deps.Email().ExpirationEmailTemplate
-		subjectTemplate = h.deps.Email().ExpirationEmailSubject
+		bodyTemplate = emailConfig.ExpirationEmailTemplate
+		subjectTemplate = emailConfig.ExpirationEmailSubject
 	case taskqueue.EmailTypeTrafficExceed:
-		bodyTemplate = h.deps.Email().TrafficExceedEmailTemplate
-		subjectTemplate = h.deps.Email().TrafficExceedEmailSubject
+		bodyTemplate = emailConfig.TrafficExceedEmailTemplate
+		subjectTemplate = emailConfig.TrafficExceedEmailSubject
 	case taskqueue.EmailTypeCustom:
 		if payload.Content == nil {
 			logger.WithContext(ctx).Error("[SendEmail] Custom email content is empty")
@@ -146,7 +147,7 @@ func (h *SendEmailHandler) ProcessTask(ctx context.Context, task *asynq.Task) er
 	subject := resolveSubject(ctx, subjectTemplate, payload.Subject, payload.Content)
 	messageLog := log.Message{
 		Metadata: payload.Metadata,
-		Platform: h.deps.Email().Platform,
+		Platform: emailConfig.Platform,
 		To:       logger.RedactedValue,
 		// Subjects are operator-controlled templates and may interpolate names,
 		// addresses or one-time credentials. Keep only the notification type in

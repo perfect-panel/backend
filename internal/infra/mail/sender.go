@@ -1,7 +1,6 @@
 // Package mail sends the application's email through the provider the
-// administrators configure; SMTP is the one provider. It also holds the
-// default subjects and HTML templates of the notification emails, which
-// the stored configuration falls back to.
+// administrators configure. It also supplies default subjects and HTML
+// templates for notifications.
 package mail
 
 import (
@@ -24,7 +23,8 @@ type Sender interface {
 // config carries the provider credentials and must never be logged. Callers
 // that send repeatedly keep their sender in a Senders cache.
 func NewSender(platform, config, siteName string) (Sender, error) {
-	switch parsePlatform(platform) {
+	provider := parsePlatform(platform)
+	switch provider {
 	case SMTP:
 		cfg := SMTPConfig{}
 		if err := json.Unmarshal([]byte(config), &cfg); err != nil {
@@ -32,6 +32,8 @@ func NewSender(platform, config, siteName string) (Sender, error) {
 		}
 		cfg.SiteName = siteName
 		return NewSMTPClient(&cfg), nil
+	case Resend, Cloudflare:
+		return newAPISender(provider, config, siteName)
 	default:
 		return nil, fmt.Errorf("unsupported platform: %s", platform)
 	}

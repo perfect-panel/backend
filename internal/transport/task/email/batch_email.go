@@ -75,7 +75,8 @@ func (h *BatchEmailHandler) ProcessTask(ctx context.Context, task *asynq.Task) e
 	if h.deps.Email == nil || h.deps.SiteName == nil {
 		return h.handleFailure(ctx, taskID, errors.New("batch email runtime configuration is unavailable"))
 	}
-	sender, err := h.newSender(h.deps.Email().Platform, h.deps.Email().PlatformConfig, h.deps.SiteName())
+	emailConfig := h.deps.Email()
+	sender, err := h.newSender(emailConfig.Platform, emailConfig.PlatformConfig, h.deps.SiteName())
 	if err != nil {
 		logger.WithContext(ctx).Error("[BatchEmail] NewSender failed", logger.Field("error", err.Error()))
 		return h.handleFailure(ctx, taskID, err)
@@ -87,7 +88,7 @@ func (h *BatchEmailHandler) ProcessTask(ctx context.Context, task *asynq.Task) e
 	}
 
 	err = manager.RunWorker(ctx, taskID, h.deps.Tasks, sender,
-		WithMessageLogs(h.deps.Logs, h.deps.Email().Platform),
+		WithMessageLogs(h.deps.Logs, emailConfig.Platform),
 		WithRecipientResolver(h.deps.Recipients))
 	var (
 		dailyLimit *DailyLimitReached

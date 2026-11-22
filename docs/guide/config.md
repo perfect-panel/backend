@@ -314,10 +314,19 @@ values. The setup wizard writes the installer's email here and never the passwor
   - Remove it once the administrator exists: a `Password` still in the file at that point is reported in the log
     at every start, since the file then holds a credential nothing needs.
 
-### 3.9 Email Delivery (SMTP)
+### 3.9 Email Delivery
 
-The SMTP relay is not part of this file: administrators configure it in the panel (system settings, email),
-and the settings are stored in the database. The fields are:
+Choose the delivery provider under **System → Auth Control → Email Settings → Email delivery**. The panel stores the selected `platform` and its `platform_config` in the database. Verification codes, notifications, and bulk mail use the same provider. Save the settings before sending a test email.
+
+| Platform | Provider credentials |
+|---|---|
+| `smtp` (default) | Relay settings are described below. |
+| `resend` | Set `api_key` to a key with sending access for the sender domain. [Resend API](https://resend.com/docs/api-reference/emails/send-email) |
+| `cloudflare` | Set `account_id` and an `api_token` with **Email Sending Write** permission for that account. [Cloudflare Email Service](https://developers.cloudflare.com/email-service/api/send-emails/rest-api/) |
+
+Both API providers require a `from` address on a verified sending domain. The site name is the sender display name. Set `reply_to` if replies should go to another mailbox.
+
+**SMTP relay settings**
 
 | Field | Meaning |
 |---|---|

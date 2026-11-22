@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/perfect-panel/backend/internal/infra/mail"
 	dto "github.com/perfect-panel/backend/internal/module/identity/contract"
 	"github.com/perfect-panel/backend/internal/module/identity/entity/auth"
 	"github.com/perfect-panel/backend/pkg/xerr"
@@ -76,6 +77,15 @@ func decodeMethodConfig(method string, config any) (any, error) {
 		emailConfig := new(auth.EmailAuthConfig)
 		if err := emailConfig.Unmarshal(string(raw)); err != nil {
 			return nil, xerr.Wrapf(err, xerr.InvalidParams, "invalid email config")
+		}
+		if emailConfig.Platform == mail.Resend.String() || emailConfig.Platform == mail.Cloudflare.String() {
+			settings, err := json.Marshal(emailConfig.PlatformConfig)
+			if err != nil {
+				return nil, xerr.Wrapf(err, xerr.InvalidParams, "encode email provider settings")
+			}
+			if _, err := mail.NewSender(emailConfig.Platform, string(settings), ""); err != nil {
+				return nil, xerr.Wrapf(err, xerr.InvalidParams, "invalid email provider settings")
+			}
 		}
 		return emailConfig, nil
 	case "mobile":
