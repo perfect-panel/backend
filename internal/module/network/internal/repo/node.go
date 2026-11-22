@@ -461,7 +461,7 @@ func (m *nodeRepo) nodeListQuery(ctx context.Context, params *node.FilterNodePar
 		query = query.Scopes(nodeInSet("tags", params.Tag))
 	}
 	if params.Protocol != "" {
-		query = query.Where("protocol = ?", params.Protocol)
+		query = query.Where("protocol IN ?", node.ProtocolMatchValues(params.Protocol))
 	}
 
 	if params.Enabled != nil {

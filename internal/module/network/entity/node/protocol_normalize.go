@@ -69,6 +69,31 @@ func normalizeProtocolType(raw string) string {
 	}
 }
 
+// NormalizeProtocolType maps a protocol spelling to its canonical stored form
+// (for example hysteria2 -> hysteria, ssr -> shadowsocksr). It is the exported
+// form of the normalization the storage and node-distribution paths apply.
+func NormalizeProtocolType(raw string) string {
+	return normalizeProtocolType(raw)
+}
+
+// ProtocolMatchValues returns every stored protocol spelling equivalent to
+// raw: all spellings that normalize to the same canonical type. Callers that
+// match the nodes.protocol column must use this instead of an exact compare.
+// Node distribution hands nodes the canonical name (e.g. hysteria), while an
+// admin-created row may still hold an alias (hysteria2); a bare equality then
+// drops those nodes from the served user list and the node falls back to the
+// placeholder user, so every real client fails authentication.
+func ProtocolMatchValues(raw string) []string {
+	switch normalizeProtocolType(raw) {
+	case "hysteria":
+		return []string{"hysteria", "hysteria2"}
+	case "shadowsocksr":
+		return []string{"shadowsocksr", "ssr", "shadowsocks-r"}
+	default:
+		return []string{normalizeProtocolType(raw)}
+	}
+}
+
 func supportedRuntimeProtocol(protocol string) bool {
 	switch protocol {
 	case "shadowsocks", "shadowsocksr", "mieru", "hysteria", "anytls", "trojan", "vless", "vmess", "naive", "snell", "tuic", "nowhere":
