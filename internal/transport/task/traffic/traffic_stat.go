@@ -3,7 +3,7 @@ package traffic
 import (
 	"context"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 )
 
 // StatRecorder is the network module's daily traffic statistics.

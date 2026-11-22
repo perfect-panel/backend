@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/module/network/entity/node"
 	"github.com/redis/go-redis/v9"
 )
@@ -67,5 +68,47 @@ func TestSetServerCacheRejectsStaleGeneration(t *testing.T) {
 	}
 	if !server.Exists(key) {
 		t.Fatalf("current generation did not populate %q", key)
+	}
+}
+
+func TestClearServerCacheScopesIndexedAndLegacyKeys(t *testing.T) {
+	server := miniredis.RunT(t)
+	prefix := "panel*"
+	client := (config.RedisConfig{Host: server.Addr(), KeyPrefix: prefix}).NewClient()
+	t.Cleanup(func() { _ = client.Close() })
+	ctx := t.Context()
+	r := NewNodeRepo(nil, client)
+	const key = "server:user:42"
+	const variant = key + ":trojan"
+	const other = "panel-b:" + variant
+	if err := server.Set(other, "other"); err != nil {
+		t.Fatal(err)
+	}
+	if err := server.Set(key, "unprefixed"); err != nil {
+		t.Fatal(err)
+	}
+	for _, indexed := range []bool{false, true} {
+		if err := server.Set(prefix+":"+key, "legacy"); err != nil {
+			t.Fatal(err)
+		}
+		if indexed {
+			generation, err := r.ServerCacheGeneration(ctx, 42)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := r.SetServerCache(ctx, 42, variant, "list", generation); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if err := server.Set(prefix+":"+variant, "legacy variant"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if err := r.ClearServerCache(ctx, 42); err != nil {
+			t.Fatal(err)
+		}
+		if server.Exists(prefix+":"+key) || server.Exists(prefix+":"+variant) || !server.Exists(other) || !server.Exists(key) {
+			t.Fatalf("indexed=%v left incorrect keys %v", indexed, server.Keys())
+		}
 	}
 }

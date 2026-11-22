@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	"github.com/perfect-panel/server/internal/infra/taskqueue"
 	"github.com/perfect-panel/server/internal/module/billing"
 	orderEntity "github.com/perfect-panel/server/internal/module/billing/entity/order"

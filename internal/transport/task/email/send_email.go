@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"text/template"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	"github.com/perfect-panel/server/internal/infra/mail"
 	"github.com/perfect-panel/server/internal/infra/taskqueue"
 	"github.com/perfect-panel/server/internal/module/platform/entity/log"

@@ -9,9 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/perfect-panel/server/internal/auth/token"
+	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/infra/rediskeys"
 	dto "github.com/perfect-panel/server/internal/module/billing/contract"
 	"github.com/perfect-panel/server/internal/module/billing/entity/order"
+	"github.com/perfect-panel/server/internal/module/billing/internal/orderevents"
 	"github.com/perfect-panel/server/pkg/xerr"
 )
 
@@ -348,5 +352,30 @@ func TestStreamEndsWhenItsTicketExpires(t *testing.T) {
 	got := sink.names()
 	if len(got) == 0 || got[len(got)-1] != "stream.expiring" {
 		t.Fatalf("stream delivered %v, want it to end with stream.expiring", got)
+	}
+}
+
+// The subscriber has a dedicated Redis connection while Publish uses the
+// command hook. Both must resolve the same physical channel.
+func TestOrderStreamUsesProjectChannel(t *testing.T) {
+	server := miniredis.RunT(t)
+	cfg := config.RedisConfig{Host: server.Addr(), KeyPrefix: "shop"}
+	client := cfg.NewClient()
+	t.Cleanup(func() { _ = client.Close() })
+	broker := RedisBroker{Client: client, Prefix: rediskeys.New(cfg.KeyPrefix)}
+	ctx := t.Context()
+	sub, err := broker.Subscribe(ctx, "order-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = sub.Close() })
+	b := orderevents.RedisBroadcaster{Client: client}
+	if err := b.Broadcast(ctx, &order.Event{OrderNo: "order-1", ID: 1}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-sub.Wake():
+	case <-time.After(2 * time.Second):
+		t.Fatal("project-scoped order stream missed the broadcast")
 	}
 }

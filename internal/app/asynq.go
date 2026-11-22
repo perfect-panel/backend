@@ -1,19 +1,18 @@
 package app
 
 import (
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	"github.com/perfect-panel/server/internal/config"
 	"github.com/perfect-panel/server/internal/infra/taskqueue"
 )
 
-// QueueRedisOpt is the task queue's Redis connection, shared by the task
-// client, the consumer and the periodic scheduler. The queue lives in the
-// Redis database Redis.QueueDB names (5 unless the file says otherwise), so
-// two deployments sharing one Redis keep their queues apart by giving each
-// its own value; the producer, the consumer and the scheduler read it from
-// here only.
+// QueueRedisOpt is shared by producers, workers and inspectors. Asynq scopes
+// its internal keys and Pub/Sub channels with the same prefix as the panel.
 func QueueRedisOpt(c config.Config) asynq.RedisClientOpt {
-	return asynq.RedisClientOpt{Addr: c.Redis.Host, Password: c.Redis.Pass, DB: c.Redis.QueueDB}
+	return asynq.RedisClientOpt{
+		Addr: c.Redis.Host, Username: c.Redis.Username, Password: c.Redis.Pass,
+		DB: c.Redis.QueueDB, Prefix: c.Redis.KeyPrefix,
+	}
 }
 
 // NewAsynqClient returns the tracing asynq client: EnqueueContext stamps the

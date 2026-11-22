@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	"github.com/perfect-panel/server/internal/infra/taskqueue"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/robfig/cron/v3"

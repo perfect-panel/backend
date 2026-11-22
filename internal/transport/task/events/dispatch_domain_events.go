@@ -6,7 +6,7 @@ package events
 import (
 	"context"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	"github.com/perfect-panel/server/internal/infra/eventbus"
 )
 

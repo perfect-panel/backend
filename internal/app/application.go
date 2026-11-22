@@ -10,7 +10,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	"github.com/perfect-panel/server/internal/app/state"
 	"github.com/perfect-panel/server/internal/auth/ratelimit"
 	"github.com/perfect-panel/server/internal/config"
@@ -29,6 +29,7 @@ import (
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/perfect-panel/server/pkg/orm"
 	"github.com/redis/go-redis/v9"
+
 	"gorm.io/gorm"
 )
 
@@ -83,11 +84,7 @@ func NewApplication(c config.Config) *Application {
 
 	geoIP := openGeoIP(c.GeoIP)
 
-	rds := redis.NewClient(&redis.Options{
-		Addr:     c.Redis.Host,
-		Password: c.Redis.Pass,
-		DB:       c.Redis.DB,
-	})
+	rds := c.Redis.NewClient()
 	if err := rds.Ping(context.Background()).Err(); err != nil {
 		panic(err.Error())
 	}

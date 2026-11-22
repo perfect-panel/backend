@@ -3,7 +3,7 @@ package order
 import (
 	"context"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 )
 
 // orderEventPublisher is billing's order-event outbox publication.

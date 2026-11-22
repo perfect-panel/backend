@@ -140,8 +140,16 @@
                             <span id="redisPortError" class="text-red-500 text-sm mt-1 hidden">Please enter a valid port number.</span>
                         </div>
                         <div>
+                            <label for="redisUsername" id="labelRedisUsername" class="text-sm font-medium">ACL username (optional)</label>
+                            <input type="text" id="redisUsername" name="redisUsername" class="input-field mt-1 block w-full rounded-md border px-3 py-2">
+                        </div>
+                        <div>
                             <label for="redisPassword" id="labelRedisPassword" class="text-sm font-medium">Redis Password</label>
                             <input type="password" id="redisPassword" name="redisPassword" class="input-field mt-1 block w-full rounded-md border px-3 py-2" placeholder="Enter Redis password (optional)" data-placeholder-en="Enter Redis password (optional)" data-placeholder-zh="请输入 Redis 密码（可选）">
+                        </div>
+                        <div>
+                            <label for="redisKeyPrefix" id="labelRedisKeyPrefix" class="text-sm font-medium">Project key prefix (optional)</label>
+                            <input type="text" id="redisKeyPrefix" name="redisKeyPrefix" class="input-field mt-1 block w-full rounded-md border px-3 py-2">
                         </div>
                     </div>
                 </div>
@@ -216,6 +224,8 @@
             redisHost: 'Redis Host',
             redisPort: 'Redis Port',
             redisPassword: 'Redis Password',
+            redisUsername: 'ACL username (optional)',
+            redisKeyPrefix: 'Project key prefix (optional)',
             submit: 'Start Initialization',
             switchLang: '中文',
             testMySQLConnection: 'Test Database Connection',
@@ -256,6 +266,8 @@
             redisHost: 'Redis 主机',
             redisPort: 'Redis 端口',
             redisPassword: 'Redis 密码',
+            redisUsername: 'ACL 用户名（可选）',
+            redisKeyPrefix: '项目键前缀（可选）',
             submit: '开始初始化',
             switchLang: 'English',
             testMySQLConnection: '测试数据库连接',
@@ -303,6 +315,8 @@
         document.getElementById('labelRedisHost').textContent = t.redisHost;
         document.getElementById('labelRedisPort').textContent = t.redisPort;
         document.getElementById('labelRedisPassword').textContent = t.redisPassword;
+        document.getElementById('labelRedisUsername').textContent = t.redisUsername;
+        document.getElementById('labelRedisKeyPrefix').textContent = t.redisKeyPrefix;
         document.getElementById('submitButton').textContent = t.submit;
         document.getElementById('langSwitch').textContent = t.switchLang;
         document.getElementById('testMySQLButton').textContent = t.testMySQLConnection;
@@ -350,6 +364,7 @@
             data = {
                 host: document.getElementById('redisHost').value,
                 port: document.getElementById('redisPort').value,
+                username: document.getElementById('redisUsername').value,
                 password: document.getElementById('redisPassword').value,
             };
             url = '/init/redis/test';

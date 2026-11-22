@@ -3,7 +3,7 @@ package traffic
 import (
 	"context"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 )
 
 // LogCleaner is the platform module's log retention, which also prunes the

@@ -3,7 +3,7 @@ package subscription
 import (
 	"context"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	module "github.com/perfect-panel/server/internal/module/subscription"
 )
 

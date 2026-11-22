@@ -27,7 +27,7 @@ func TestInitConfigInstallsFromTheEnvironment(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("PPANEL_DB", "root:db-secret@tcp(127.0.0.1:3306)/ppanel")
-	t.Setenv("PPANEL_REDIS", "redis://:redis-secret@127.0.0.1:6379/2")
+	t.Setenv("PPANEL_REDIS", "redis://panel:redis-secret@127.0.0.1:6379/2?prefix=prod")
 
 	var c config.Config
 	if initConfig(&c) {
@@ -51,7 +51,7 @@ func TestInitConfigInstallsFromTheEnvironment(t *testing.T) {
 	if written.Database.Addr != "127.0.0.1:3306" || written.Database.Dbname != "ppanel" || written.Database.Username != "root" || written.Database.Password != "db-secret" {
 		t.Fatalf("database = %+v, want the PPANEL_DB connection", written.Database)
 	}
-	if written.Redis.Host != "127.0.0.1:6379" || written.Redis.Pass != "redis-secret" || written.Redis.DB != 2 {
+	if written.Redis.Host != "127.0.0.1:6379" || written.Redis.Pass != "redis-secret" || written.Redis.DB != 2 || written.Redis.Username != "panel" || written.Redis.KeyPrefix != "prod" {
 		t.Fatalf("redis = %+v, want the PPANEL_REDIS connection", written.Redis)
 	}
 	if written.JwtAuth.AccessSecret == "" {

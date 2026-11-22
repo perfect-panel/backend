@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	"github.com/perfect-panel/server/internal/module/billing"
 	"github.com/perfect-panel/server/internal/module/notification"
 	"github.com/perfect-panel/server/pkg/logger"

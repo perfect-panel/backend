@@ -149,9 +149,11 @@ type initRequest struct {
 	MysqlUser      string `json:"mysqlUser"`
 	MysqlPassword  string `json:"mysqlPassword"`
 
-	RedisHost     string `json:"redisHost"`
-	RedisPort     string `json:"redisPort"`
-	RedisPassword string `json:"redisPassword"`
+	RedisHost      string `json:"redisHost"`
+	RedisPort      string `json:"redisPort"`
+	RedisPassword  string `json:"redisPassword"`
+	RedisUsername  string `json:"redisUsername"`
+	RedisKeyPrefix string `json:"redisKeyPrefix"`
 }
 
 // validate checks the administrator account the page also validates — the
@@ -164,6 +166,9 @@ func (r initRequest) validate() (email, complaint string) {
 	}
 	if utf8.RuneCountInString(r.AdminPassword) < MinAdminPasswordLength {
 		return "", fmt.Sprintf("Password must be at least %d characters", MinAdminPasswordLength)
+	}
+	if err := (config.RedisConfig{KeyPrefix: r.RedisKeyPrefix}).Validate(); err != nil {
+		return "", err.Error()
 	}
 	return email, ""
 }
@@ -247,8 +252,10 @@ func (w *wizard) handleInitConfig(_ context.Context, ctx *app.RequestContext) {
 	}
 	cfg.SetDatabaseConfig(dbConfig)
 	// redis
-	cfg.Redis.Host = fmt.Sprintf("%s:%s", request.RedisHost, request.RedisPort)
+	cfg.Redis.Host = net.JoinHostPort(request.RedisHost, request.RedisPort)
 	cfg.Redis.Pass = request.RedisPassword
+	cfg.Redis.Username = request.RedisUsername
+	cfg.Redis.KeyPrefix = request.RedisKeyPrefix
 	// The administrator the start seeds when the wizard's own seed below
 	// does not run to completion; the password is not written anywhere.
 	cfg.Administrator.Email = adminEmail
@@ -450,6 +457,7 @@ func HandleRedisTest(ctx context.Context, requestCtx *app.RequestContext) {
 		Host     string `json:"host"`
 		Port     string `json:"port"`
 		Password string `json:"password"`
+		Username string `json:"username"`
 	}
 	if err := requestCtx.BindJSON(&request); err != nil {
 		reply(requestCtx, http.StatusBadRequest, "Invalid request")
@@ -457,7 +465,8 @@ func HandleRedisTest(ctx context.Context, requestCtx *app.RequestContext) {
 	}
 	pingCtx, cancel := context.WithTimeout(ctx, redisTestTimeout)
 	defer cancel()
-	if err := config.RedisPing(pingCtx, fmt.Sprintf("%s:%s", request.Host, request.Port), request.Password, 0); err != nil {
+	rds := config.RedisConfig{Host: net.JoinHostPort(request.Host, request.Port), Username: request.Username, Pass: request.Password}
+	if err := rds.Ping(pingCtx); err != nil {
 		requestCtx.JSON(http.StatusOK, utils.H{
 			"code":   200,
 			"msg":    nil,

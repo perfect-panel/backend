@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/perfect-panel/server/internal/infra/rediskeys"
 	dto "github.com/perfect-panel/server/internal/module/billing/contract"
 	"github.com/perfect-panel/server/internal/module/billing/entity/order"
 	"github.com/perfect-panel/server/pkg/logger"
@@ -257,6 +258,7 @@ func (e *eventStream) replay(ctx context.Context) error {
 // publisher broadcasts on.
 type RedisBroker struct {
 	Client *redis.Client
+	Prefix rediskeys.Prefix
 }
 
 // Subscribe confirms the subscription before returning it, so a stream
@@ -265,7 +267,7 @@ func (b RedisBroker) Subscribe(ctx context.Context, orderNo string) (Subscriptio
 	if b.Client == nil {
 		return nil, errors.New("redis is not configured")
 	}
-	pubsub := b.Client.Subscribe(ctx, order.EventChannel(orderNo))
+	pubsub := b.Client.Subscribe(ctx, b.Prefix.Key(order.EventChannel(orderNo)))
 	confirmCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	if _, err := pubsub.Receive(confirmCtx); err != nil {

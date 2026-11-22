@@ -21,13 +21,13 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/gorilla/websocket v1.5.3
-	github.com/hibiken/asynq v0.26.0
 	github.com/jackc/pgx/v5 v5.12.0
 	github.com/jinzhu/copier v0.4.0
 	github.com/klauspost/compress v1.20.3
 	github.com/mattn/go-sqlite3 v1.14.53
 	github.com/nyaruka/phonenumbers v1.8.1
 	github.com/oschwald/geoip2-golang v1.13.0
+	github.com/pars-aria-labs/asynq v1.0.1
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/smartwalle/alipay/v3 v3.2.31

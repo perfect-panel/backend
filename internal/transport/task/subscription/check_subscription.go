@@ -7,7 +7,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	"github.com/perfect-panel/server/internal/transport/task/tasklock"
 	"github.com/perfect-panel/server/pkg/logger"
 	"github.com/redis/go-redis/v9"

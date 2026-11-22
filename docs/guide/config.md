@@ -78,7 +78,9 @@ GeoIP: # MaxMind GeoLite2 city database, locates the addresses in the audit logs
   Required: false                   # true = refuse to start without a valid database
 Redis: # Redis configuration
   Host: "localhost:6379"            # Redis address
+  Username: ""                      # Optional ACL user (empty uses default)
   Pass: ""                          # Redis password
+  KeyPrefix: ""                     # Example: panel-a gives panel-a:...
   DB: 0                             # Redis database of the cache and sessions
   QueueDB: 5                        # Redis database of the task queue
 Administrator: # First administrator, created on the first start
@@ -285,14 +287,17 @@ server runs normally and records the addresses alone.
 
 - **`Host`**: Redis server address.
   - Default: `localhost:6379`.
+- **`Username`** selects the ACL user for both application and queue connections. An empty value uses the default user.
 - **`Pass`**: Redis password.
   - Default: `""` (no password).
 - **`DB`**: Redis database index of the cache, the sessions and the rate limits.
   - Default: `0`.
 - **`QueueDB`**: Redis database index of the task queue (asynq), shared by the producer, the consumer and the
   scheduler.
-  - Default: `5`, the database the queue always used, so an upgrade keeps its queued tasks. Deployments that share
-    one Redis server need distinct values here (and in `DB`), or one panel would consume the other's tasks.
+  - Default: `5`, the database the queue always used, so an upgrade keeps its queued tasks. Deployments sharing the same databases should use distinct project prefixes.
+
+- **`KeyPrefix`** scopes cache, session, rate-limit and queue keys, worker metadata and Pub/Sub channels. With `panel-a` or `panel-a:`, keys start with `panel-a:`, including `panel-a:asynq:queues`. ACL patterns for this project are `~panel-a:*` for keys and `&panel-a:*` for channels.
+  An empty prefix keeps existing names. Enabling or changing it selects a new keyspace. Drain outstanding jobs or migrate the old data before switching all producers and workers together. Existing sessions and pending jobs stay under the old names. Use the same prefix for queue inspection. The [Asynq fork used by PPanel](https://github.com/pars-aria-labs/asynq/tree/v1.0.1) provides a CLI with a `--prefix` option.
 
 ### 3.8 Admin Login (`Administrator`)
 
@@ -338,7 +343,7 @@ installations, where the setup wizard (which listens on `127.0.0.1` only) is out
 | Environment Variable | Configuration Section | Format | Example |
 |----------------------|-----------------------|--------|---------|
 | `PPANEL_DB` | `Database` | MySQL DSN `user:password@tcp(host:port)/dbname[?params]`, or a URL: `mysql://user:password@host:3306/dbname`, `postgres://user:password@host:5432/dbname[?sslmode=require]` | `ppanel:secret@tcp(127.0.0.1:3306)/ppanel` |
-| `PPANEL_REDIS` | `Redis` | `redis://[:password@]host[:port][/db]` (port `6379` and database `0` when omitted) | `redis://:secret@127.0.0.1:6379/0` |
+| `PPANEL_REDIS` | `Redis` | `redis://[username:password@]host[:port][/db][?prefix=project]` (port `6379` and database `0` when omitted) | `redis://panel:secret@127.0.0.1:6379/0?prefix=panel-a` |
 
 - Both are needed, and they are read only while the configuration file (the default `etc/ppanel.yaml` or the one
   given with `--config`) has no `JwtAuth.AccessSecret`; once the file has a secret they are ignored, so they may

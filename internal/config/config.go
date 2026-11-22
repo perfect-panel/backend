@@ -87,13 +87,14 @@ type Runtime struct {
 }
 
 type RedisConfig struct {
-	Host string `yaml:"Host" default:"localhost:6379"`
-	Pass string `yaml:"Pass" default:""`
-	DB   int    `yaml:"DB" default:"0"`
+	Host      string `yaml:"Host" default:"localhost:6379"`
+	Username  string `yaml:"Username,omitempty"`
+	KeyPrefix string `yaml:"KeyPrefix,omitempty"`
+	Pass      string `yaml:"Pass" default:""`
+	DB        int    `yaml:"DB" default:"0"`
 	// QueueDB is the Redis database of the asynq task queue, shared by the
 	// producer, the consumer and the scheduler. It defaults to the database
-	// the server always used, so an upgrade keeps its queued tasks; give
-	// every deployment sharing one Redis its own value.
+	// the server always used, so an upgrade with no prefix keeps its queued tasks.
 	QueueDB int `yaml:"QueueDB" default:"5"`
 }
 

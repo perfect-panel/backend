@@ -76,7 +76,9 @@ GeoIP: # MaxMind GeoLite2 城市库，为审计日志中的地址标注位置（
   Required: false                   # true = 没有可用的库则拒绝启动
 Redis: # Redis 配置
   Host: "localhost:6379"            # Redis 地址
+  Username: ""                      # ACL 用户名，留空使用 default
   Pass: ""                          # Redis 密码
+  KeyPrefix: ""                     # 例如 panel-a，生成 panel-a: 开头的键
   DB: 0                             # 缓存与会话使用的 Redis 数据库
   QueueDB: 5                        # 任务队列使用的 Redis 数据库
 Administrator: # 首位管理员，仅在首次启动时创建
@@ -240,12 +242,16 @@ MaxMind GeoLite2 城市库为登录与审计日志中的地址标注位置。没
 
 - **`Host`**：Redis 服务器地址。
   - 默认：`localhost:6379`。
+- **`Username`** 用于业务和队列连接的 ACL 认证，留空时使用默认用户。
 - **`Pass`**：Redis 密码。
   - 默认：`""`（无密码）。
 - **`DB`**：缓存、会话与限流使用的 Redis 数据库索引。
   - 默认：`0`。
 - **`QueueDB`**：任务队列（asynq）使用的 Redis 数据库索引，生产者、消费者与调度器共用。
-  - 默认：`5`，即队列一直使用的数据库，升级后已排队的任务得以保留。多个部署共用一台 Redis 时，这里（以及 `DB`）必须各不相同，否则一个面板会消费掉另一个面板的任务。
+  - 默认：`5`，即队列一直使用的数据库，升级后已排队的任务得以保留。多个部署共用相同数据库时应使用互不重叠的项目前缀。
+
+- **`KeyPrefix`** 为缓存、会话、限流、任务队列、worker 元数据及 Pub/Sub 频道统一添加项目前缀。填 `panel-a` 或 `panel-a:` 都会生成 `panel-a:` 开头的名称，例如 `panel-a:asynq:queues`。相应的 ACL 键规则为 `~panel-a:*`，频道规则为 `&panel-a:*`。
+  留空时沿用原有名称。启用或更换前缀会切换到新的键空间，现有会话和待处理任务仍在旧键下。使用队列检查工具时也要指定同一前缀，PPanel 所用的 [Asynq 分支](https://github.com/pars-aria-labs/asynq/tree/v1.0.1) 提供带 `--prefix` 的 CLI。切换前应先处理完待执行任务或迁移数据，并同步更新生产者和消费者。
 
 ### 3.8 管理员登录 (`Administrator`)
 
@@ -282,7 +288,7 @@ SMTP 中继不在本文件中配置：管理员在面板的系统设置（邮件
 | 环境变量 | 配置项 | 格式 | 示例 |
 |----------------|----------|------|------|
 | `PPANEL_DB` | `Database` | MySQL DSN `user:password@tcp(host:port)/dbname[?params]`，或 URL：`mysql://user:password@host:3306/dbname`、`postgres://user:password@host:5432/dbname[?sslmode=require]` | `ppanel:secret@tcp(127.0.0.1:3306)/ppanel` |
-| `PPANEL_REDIS` | `Redis` | `redis://[:password@]host[:port][/db]`（省略时端口为 `6379`、数据库为 `0`） | `redis://:secret@127.0.0.1:6379/0` |
+| `PPANEL_REDIS` | `Redis` | `redis://[username:password@]host[:port][/db][?prefix=project]`（省略时端口为 `6379`、数据库为 `0`） | `redis://panel:secret@127.0.0.1:6379/0?prefix=panel-a` |
 
 - 两者都必须设置，且只在配置文件（默认的 `etc/ppanel.yaml` 或 `--config` 指定的文件）还没有 `JwtAuth.AccessSecret`
   时读取；文件一旦有了密钥就会忽略它们，因此可以一直留在环境中。

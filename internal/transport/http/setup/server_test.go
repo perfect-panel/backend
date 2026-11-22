@@ -190,7 +190,7 @@ func (inst *installation) submit(t *testing.T, body string) (int, initResponse) 
 	return ctx.Response.StatusCode(), response
 }
 
-const validForm = `{"adminEmail":"Admin@Example.com","adminPassword":"correct horse","databaseDriver":"mysql","mysqlHost":"127.0.0.1","mysqlPort":"3306","mysqlDatabase":"ppanel","mysqlUser":"root","mysqlPassword":"secret","redisHost":"127.0.0.1","redisPort":"6379","redisPassword":"r"}`
+const validForm = `{"adminEmail":"Admin@Example.com","adminPassword":"correct horse","databaseDriver":"mysql","mysqlHost":"127.0.0.1","mysqlPort":"3306","mysqlDatabase":"ppanel","mysqlUser":"root","mysqlPassword":"secret","redisHost":"127.0.0.1","redisPort":"6379","redisPassword":"r","redisUsername":"panel","redisKeyPrefix":"prod"}`
 
 func (inst *installation) file(t *testing.T) config.File {
 	t.Helper()
@@ -217,7 +217,7 @@ func TestHandleInitConfigInstalls(t *testing.T) {
 		t.Fatalf("submit = %d %+v, want 200 installed", status, response)
 	}
 	written := inst.file(t)
-	if written.Database.Addr != "127.0.0.1:3306" || written.Database.Password != "secret" || written.Redis.Host != "127.0.0.1:6379" || written.JwtAuth.AccessSecret == "" {
+	if written.Database.Addr != "127.0.0.1:3306" || written.Database.Password != "secret" || written.Redis.Host != "127.0.0.1:6379" || written.Redis.Username != "panel" || written.Redis.KeyPrefix != "prod" || written.JwtAuth.AccessSecret == "" {
 		t.Fatalf("written file %+v, want the connections and a secret", written)
 	}
 	if written.Administrator.Email != "admin@example.com" || written.Administrator.Password != "" {

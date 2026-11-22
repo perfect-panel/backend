@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	taskEntity "github.com/perfect-panel/server/internal/module/platform/entity/task"
 	"github.com/perfect-panel/server/internal/module/subscription"
 	"github.com/perfect-panel/server/internal/repository"

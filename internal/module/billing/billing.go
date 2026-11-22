@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/perfect-panel/server/internal/auth/ratelimit"
+	"github.com/perfect-panel/server/internal/infra/rediskeys"
 	dto "github.com/perfect-panel/server/internal/module/billing/contract"
 	"github.com/perfect-panel/server/internal/module/billing/entity/order"
 	paymentEntity "github.com/perfect-panel/server/internal/module/billing/entity/payment"
@@ -325,7 +326,8 @@ type Deps struct {
 	Queue     OrderQueue
 	// Redis carries the outbox's wake-ups to the order event streams and
 	// bounds the streams' concurrency.
-	Redis *redis.Client
+	Redis       *redis.Client
+	RedisPrefix rediskeys.Prefix
 	// SingleModel forbids holding more than one blocking subscription;
 	// runtime-mutable, read per request.
 	SingleModel func() bool
@@ -446,7 +448,7 @@ func New(deps Deps) Service {
 			GuestReplays: guestReplayLimits(deps.Redis),
 			Stream: v2orch.StreamDeps{
 				Events:  deps.OrderEvents,
-				Broker:  v2orch.RedisBroker{Client: deps.Redis},
+				Broker:  v2orch.RedisBroker{Client: deps.Redis, Prefix: deps.RedisPrefix},
 				Limiter: v2orch.RedisLimiter{Client: deps.Redis},
 			},
 		}),

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 )
 
 // publishingOutbox counts billing's outbox publications, failing them with

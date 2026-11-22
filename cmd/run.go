@@ -70,6 +70,9 @@ func getServers(ctx context.Context) *lifecycle.Group {
 		}
 	}
 	conf.MustLoad(startConfigPath, &c)
+	if err := c.Redis.Validate(); err != nil {
+		log.Fatal(err)
+	}
 	// Sessions, order event tickets and guest-checkout HMACs are all keyed by
 	// this secret; an empty one lets anyone forge them.
 	if c.JwtAuth.AccessSecret == "" {
@@ -147,14 +150,12 @@ func initConfig(c *config.Config) bool {
 	if uri == "" {
 		return true
 	}
-	addr, pass, db, err := config.ParseRedisURI(uri)
+	rds, err := c.Redis.WithURI(uri)
 	if err != nil {
 		log.Printf("PPANEL_REDIS is not a redis:// URI (%v); starting the setup wizard instead", err)
 		return true
 	}
-	c.Redis.Host = addr
-	c.Redis.Pass = pass
-	c.Redis.DB = db
+	c.Redis = rds
 
 	// Every boot setting the file already had is written back with the
 	// generated secret and the connections.

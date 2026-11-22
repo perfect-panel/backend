@@ -15,6 +15,7 @@ import (
 
 	"github.com/perfect-panel/server/internal/repository"
 
+	"github.com/perfect-panel/server/internal/infra/rediskeys"
 	"github.com/perfect-panel/server/internal/module/network/entity/node"
 	"github.com/perfect-panel/server/internal/module/network/internal/onlinecache"
 	"github.com/perfect-panel/server/pkg/orm"
@@ -636,11 +637,13 @@ func clearServerCache(ctx context.Context, client *redis.Client, serverId int64)
 			}
 		}
 	}
-	cacheKeys = append(cacheKeys, fmt.Sprintf("%s%d", node.ServerUserListCacheKey, serverId))
-	args := make([]any, len(cacheKeys))
+	// SMEMBERS and SCAN return physical names. Only the legacy key built here
+	// still needs the project prefix when passed through Lua ARGV.
+	args := make([]any, len(cacheKeys), len(cacheKeys)+1)
 	for i, key := range cacheKeys {
 		args[i] = key
 	}
+	args = append(args, rediskeys.Argument(fmt.Sprintf("%s%d", node.ServerUserListCacheKey, serverId)))
 	_, err = clearServerCacheScript.Run(ctx, client,
 		[]string{fmt.Sprintf(node.ServerCacheGenerationKey, serverId), indexKey}, args...).Result()
 	return err

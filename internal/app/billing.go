@@ -6,8 +6,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/hibiken/asynq"
+	"github.com/pars-aria-labs/asynq"
 	"github.com/perfect-panel/server/internal/config"
+	"github.com/perfect-panel/server/internal/infra/rediskeys"
 	"github.com/perfect-panel/server/internal/infra/taskqueue"
 	"github.com/perfect-panel/server/internal/module/billing"
 	"github.com/perfect-panel/server/internal/module/identity"
@@ -42,6 +43,7 @@ func newBillingModule(c config.Config, store repository.Store, queue *taskqueue.
 		Tx:           store,
 		Queue:        activationQueue{client: queue},
 		Redis:        rds,
+		RedisPrefix:  rediskeys.New(c.Redis.KeyPrefix),
 		SingleModel:  func() bool { return srv.Runtime.Config().Subscribe.SingleModel },
 		CurrencyUnit: func() string { return srv.Runtime.Config().Currency.Unit },
 

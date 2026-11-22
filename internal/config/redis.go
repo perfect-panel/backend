@@ -3,53 +3,65 @@ package config
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/url"
+	"strconv"
+	"strings"
 
+	"github.com/perfect-panel/server/internal/infra/rediskeys"
 	"github.com/redis/go-redis/v9"
 )
 
-// ParseRedisURI splits a redis:// URI, the form of the PPANEL_REDIS
-// environment variable, into the address (port 6379 when it names none), the
-// password and the database number of its path (0 without one). A path that
-// is not a number is an error.
-func ParseRedisURI(uri string) (addr, password string, database int, err error) {
-	parsedURI, err := url.Parse(uri)
-
-	if err != nil {
-		return "", "", 0, err
+// WithURI applies a first-install connection URI to the file's Redis settings.
+// QueueDB and a prefix supplied in the file survive a URI without ?prefix=.
+func (c RedisConfig) WithURI(uri string) (RedisConfig, error) {
+	u, err := url.Parse(uri)
+	if err != nil || u.Scheme != "redis" || u.Hostname() == "" {
+		return c, fmt.Errorf("invalid Redis URI")
 	}
-	host := parsedURI.Hostname()
-	port := parsedURI.Port()
+	port := u.Port()
 	if port == "" {
 		port = "6379"
 	}
-	addr = fmt.Sprintf("%s:%s", host, port)
-
-	// password
-	if parsedURI.User != nil {
-		password, _ = parsedURI.User.Password()
-	}
-	if len(parsedURI.Path) > 1 { // Path: "/0"
-		var dbIndex int
-		_, err = fmt.Sscanf(parsedURI.Path, "/%d", &dbIndex)
-		if err == nil {
-			database = dbIndex
+	db := 0
+	if path := strings.TrimPrefix(u.Path, "/"); path != "" {
+		db, err = strconv.Atoi(path)
+		if err != nil || db < 0 {
+			return c, fmt.Errorf("invalid Redis database index")
 		}
 	}
-	return
+	q, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		return c, fmt.Errorf("invalid Redis URI query")
+	}
+	c.Host = net.JoinHostPort(u.Hostname(), port)
+	c.Username = u.User.Username()
+	c.Pass, _ = u.User.Password()
+	c.DB = db
+	if q.Has("prefix") {
+		c.KeyPrefix = q.Get("prefix")
+	}
+	return c, c.Validate()
 }
 
-// RedisPing reports whether the Redis server at addr answers a PING with the
-// given password and database. It opens a client for this one ping and closes
-// it afterwards; ctx bounds the whole attempt, the client's dial retries
-// included.
-func RedisPing(ctx context.Context, addr, password string, database int) error {
-	rds := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: password,
-		DB:       database,
-	})
-	// The client did nothing but ping; a failed close has nothing to report.
-	defer func() { _ = rds.Close() }()
-	return rds.Ping(ctx).Err()
+// Validate checks the hash-tag constraint of Asynq's Redis key builder.
+func (c RedisConfig) Validate() error {
+	if i := strings.IndexByte(c.KeyPrefix, '{'); i >= 0 && strings.HasPrefix(c.KeyPrefix[i:], "{}") {
+		return fmt.Errorf("Redis.KeyPrefix cannot start its first hash tag with {}")
+	}
+	return nil
+}
+
+// NewClient builds the application Redis connection. Queue clients select
+// QueueDB and let Asynq apply the same project prefix to its own keyspace.
+func (c RedisConfig) NewClient() *redis.Client {
+	client := redis.NewClient(&redis.Options{Addr: c.Host, Username: c.Username, Password: c.Pass, DB: c.DB})
+	rediskeys.New(c.KeyPrefix).Install(client)
+	return client
+}
+
+func (c RedisConfig) Ping(ctx context.Context) error {
+	client := c.NewClient()
+	defer func() { _ = client.Close() }()
+	return client.Ping(ctx).Err()
 }

@@ -7,35 +7,28 @@ import (
 	"github.com/alicebob/miniredis/v2"
 )
 
-func TestParseRedisURI(t *testing.T) {
-	uri := "redis://localhost:6379"
-	addr, password, database, err := ParseRedisURI(uri)
-	if err != nil {
-		t.Fatal(err)
+func TestRedisURI(t *testing.T) {
+	base := RedisConfig{QueueDB: 7, KeyPrefix: "from-file"}
+	got, err := base.WithURI("redis://panel:p%40ss@[::1]/3?prefix=tenant%3A")
+	if err != nil || got.Host != "[::1]:6379" || got.Username != "panel" || got.Pass != "p@ss" || got.DB != 3 || got.QueueDB != 7 || got.KeyPrefix != "tenant:" {
+		t.Fatal("ACL URI did not preserve the configured credentials, databases and prefix", err)
 	}
-	t.Log(addr, password, database)
+	got, err = base.WithURI("redis://:secret@localhost")
+	if err != nil || got.Username != "" || got.Pass != "secret" || got.DB != 0 || got.KeyPrefix != base.KeyPrefix {
+		t.Fatal("password-only URI did not preserve file options", err)
+	}
 }
 
 func TestRedisPing(t *testing.T) {
 	server := miniredis.RunT(t)
-	uri := "redis://" + server.Addr()
-	addr, password, database, err := ParseRedisURI(uri)
-	if err != nil {
+	server.RequireUserAuth("panel", "pw")
+	c := RedisConfig{Host: server.Addr(), Username: "panel", Pass: "pw", KeyPrefix: "test"}
+	if err := c.Ping(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	err = RedisPing(t.Context(), addr, password, database)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-// The setup wizard bounds its connection test with the request context; a
-// ping must give up once that context ends.
-func TestRedisPingStopsWithItsContext(t *testing.T) {
-	server := miniredis.RunT(t)
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	if err := RedisPing(ctx, server.Addr(), "", 0); err == nil {
+	if err := c.Ping(ctx); err == nil {
 		t.Fatal("a ping with an ended context succeeded")
 	}
 }
