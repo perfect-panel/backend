@@ -1,5 +1,5 @@
 # Use a smaller base image for the build stage
-FROM golang:1.27.3-alpine AS builder
+FROM golang:1.27.4-alpine AS builder
 
 LABEL stage=gobuilder
 
