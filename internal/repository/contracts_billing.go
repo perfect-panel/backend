@@ -22,6 +22,7 @@ type OrderRepo interface {
 	UpdateOrderStatusFrom(ctx context.Context, orderNo string, from, status uint8) (bool, error)
 	UpdatePaymentExpectation(ctx context.Context, orderNo string, amount int64, currency string) (bool, error)
 	SetPaymentTradeNoIfEmpty(ctx context.Context, orderNo, tradeNo string) (bool, error)
+	ReservePaymentCapture(ctx context.Context, orderNo, tradeNo string) (bool, error)
 	BeginPaymentSession(ctx context.Context, orderNo string) (bool, error)
 	CompletePaymentSession(ctx context.Context, orderNo, tradeNo, session string) (bool, error)
 	MarkOrderPaid(ctx context.Context, orderNo, tradeNo string) (bool, error)

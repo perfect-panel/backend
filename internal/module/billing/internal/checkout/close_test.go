@@ -223,6 +223,10 @@ func (unavailableOrders) FindOneByOrderNo(context.Context, string) (*order.Order
 	return nil, errConnectionReset
 }
 
+func (unavailableOrders) ReservePaymentCapture(context.Context, string, string) (bool, error) {
+	return false, errConnectionReset
+}
+
 func (unavailableOrders) MarkOrderPaid(context.Context, string, string) (bool, error) {
 	return false, errConnectionReset
 }

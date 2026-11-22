@@ -58,6 +58,16 @@ func (s *Service) siteHost() string {
 	return s.deps.SiteHost()
 }
 
+// A disabled PayPal draft gives the administrator its unique notification
+// URL before PayPal issues the webhook ID needed to enable checkout.
+func (s *Service) normalizeMethod(platform string, raw any, enable *bool) (string, error) {
+	config, err := s.deps.Gateways.NormalizeConfig(platform, raw)
+	if err == nil && platform == payment.PayPal.String() && enable != nil && *enable {
+		_, err = s.deps.Gateways.Open(&paymentModel.Payment{Platform: platform, Config: config})
+	}
+	return config, err
+}
+
 func (s *Service) Create(ctx context.Context, req *dto.CreatePaymentMethodRequest) (*dto.PaymentConfig, error) {
 	if payment.ParsePlatform(req.Platform) == payment.UNSUPPORTED {
 		return nil, xerr.Errorf(xerr.UnsupportedPaymentPlatform, "unsupported payment platform: %s", req.Platform)
@@ -65,7 +75,7 @@ func (s *Service) Create(ctx context.Context, req *dto.CreatePaymentMethodReques
 	if err := validatePaymentFee(req.FeeMode, req.FeePercent, req.FeeAmount); err != nil {
 		return nil, err
 	}
-	config, err := s.deps.Gateways.NormalizeConfig(req.Platform, req.Config)
+	config, err := s.normalizeMethod(req.Platform, req.Config, req.Enable)
 	if err != nil {
 		return nil, xerr.Wrapf(err, xerr.InvalidPaymentConfig, "invalid payment config")
 	}
@@ -241,7 +251,7 @@ func (s *Service) Update(ctx context.Context, req *dto.UpdatePaymentMethodReques
 	config := method.Config
 	var stripe *stripeUpdate
 	if payment.ParsePlatform(req.Platform) != payment.Balance {
-		if config, err = s.deps.Gateways.NormalizeConfig(req.Platform, req.Config); err != nil {
+		if config, err = s.normalizeMethod(req.Platform, req.Config, req.Enable); err != nil {
 			return nil, xerr.Wrapf(err, xerr.InvalidPaymentConfig, "invalid payment config")
 		}
 		if method.Config != config || method.Domain != req.Domain {

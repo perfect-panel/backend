@@ -64,6 +64,14 @@ func PaymentNotifyHandler(service billing.Service) app.HandlerFunc {
 			}
 			notification.Body = payload
 			notification.Signature = string(ctx.GetHeader("Stripe-Signature"))
+			if platform == "PayPal" {
+				h := &notification.PayPalTransmission
+				h.ID = string(ctx.GetHeader("PAYPAL-TRANSMISSION-ID"))
+				h.Time = string(ctx.GetHeader("PAYPAL-TRANSMISSION-TIME"))
+				h.Signature = string(ctx.GetHeader("PAYPAL-TRANSMISSION-SIG"))
+				h.CertURL = string(ctx.GetHeader("PAYPAL-CERT-URL"))
+				h.Algorithm = string(ctx.GetHeader("PAYPAL-AUTH-ALGO"))
+			}
 		} else {
 			notification.Form = nativeFormValues(ctx)
 			if style.UniqueParams {

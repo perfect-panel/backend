@@ -3,6 +3,7 @@ package billing_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/perfect-panel/backend/internal/module/billing"
@@ -201,4 +202,39 @@ func TestGMPayMethodAvailableAfterCreation(t *testing.T) {
 		}
 	}
 	t.Fatal("enabled GMPay method is missing from public checkout")
+}
+
+func TestPayPalWebhookSetup(t *testing.T) {
+	f := newFacade(t)
+	enabled, disabled := true, false
+	cfg := map[string]string{"client_id": "client", "client_secret": "secret", "environment": "sandbox"}
+	req := &dto.CreatePaymentMethodRequest{Name: "PayPal", Platform: "PayPal", Config: cfg, Domain: "https://panel.example", Enable: &enabled}
+	_, err := f.svc.CreatePaymentMethod(adminContext, req)
+	assertCode(t, err, xerr.InvalidPaymentConfig)
+	req.Enable = &disabled
+	draft, err := f.svc.CreatePaymentMethod(adminContext, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := f.svc.GetPaymentMethodList(adminContext, &dto.GetPaymentMethodListRequest{Page: 1, Size: 10, Platform: "PayPal"})
+	if err != nil || len(list.List) != 1 || !strings.HasPrefix(list.List[0].NotifyURL, "https://panel.example/v1/notify/PayPal/") {
+		t.Fatalf("missing webhook setup URL: %v", err)
+	}
+	update := &dto.UpdatePaymentMethodRequest{Id: draft.Id, Name: "PayPal", Platform: "PayPal", Domain: req.Domain, Enable: &enabled, Config: cfg}
+	_, err = f.svc.UpdatePaymentMethod(adminContext, update)
+	assertCode(t, err, xerr.InvalidPaymentConfig)
+	cfg["webhook_id"] = "WH-1"
+	if _, err := f.svc.UpdatePaymentMethod(adminContext, update); err != nil {
+		t.Fatal(err)
+	}
+	available, err := f.svc.GetAvailablePaymentMethods(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, m := range available.List {
+		if m.Id == draft.Id && m.Platform == "PayPal" {
+			return
+		}
+	}
+	t.Fatal("enabled PayPal checkout not available")
 }

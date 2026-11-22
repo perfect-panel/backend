@@ -11,6 +11,8 @@ import (
 	"errors"
 	"net/url"
 
+	"github.com/perfect-panel/backend/internal/module/billing/internal/payment/paypal"
+
 	dto "github.com/perfect-panel/backend/internal/module/billing/contract"
 	"github.com/perfect-panel/backend/internal/module/billing/entity/order"
 	"github.com/perfect-panel/backend/internal/module/billing/internal/payment"
@@ -62,6 +64,7 @@ type Checkout struct {
 	Charge    Charge
 	NotifyURL string
 	ReturnURL string
+	SiteHost  string
 	// Subject names the purchase on the gateway's payment page.
 	Subject string
 	Payer   Payer
@@ -87,6 +90,8 @@ type CloseRequest struct {
 	// SystemCurrency is the site currency, the charge currency of orders
 	// checked out before payment expectations were recorded.
 	SystemCurrency string
+	// ReserveCapture serializes outbound capture with closing the same pending order.
+	ReserveCapture func(context.Context, string, string) (bool, error)
 }
 
 // Reconciliation is a gateway's verdict on a pending order that is about to
@@ -103,7 +108,8 @@ type Reconciliation struct {
 
 // Notification is a gateway callback as delivered to the notify URL.
 type Notification struct {
-	HTTPMethod string
+	HTTPMethod         string
+	PayPalTransmission paypal.Transmission
 	// Params holds the form and query parameters when each occurs exactly
 	// once; Form holds all of them.
 	Params map[string]string
@@ -124,6 +130,8 @@ type Notice struct {
 	// that is not paid is a lifecycle event: it is checked against the order
 	// and acknowledged without settling.
 	Paid bool
+	// Approved asks the server to capture a buyer-approved payment before settlement.
+	Approved bool
 	// Ignore marks a callback that concerns no order payment at all; it is
 	// acknowledged without looking the order up.
 	Ignore bool

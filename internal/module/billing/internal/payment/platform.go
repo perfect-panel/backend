@@ -16,6 +16,7 @@ const (
 	Balance
 	Cryptomus
 	GMPay
+	PayPal
 	UNSUPPORTED Platform = -1
 )
 
@@ -26,6 +27,7 @@ var platformNames = map[string]Platform{
 	"balance":     Balance,
 	"Cryptomus":   Cryptomus,
 	"GMPay":       GMPay,
+	"PayPal":      PayPal,
 	"unsupported": UNSUPPORTED,
 }
 
@@ -50,7 +52,7 @@ func ParsePlatform(s string) Platform {
 // an internal checkout method rather than an administrator-configurable
 // gateway.
 func SupportedPlatformNames() []string {
-	return []string{Stripe.String(), AlipayF2F.String(), EPay.String(), Balance.String(), Cryptomus.String(), GMPay.String()}
+	return []string{Stripe.String(), AlipayF2F.String(), EPay.String(), Balance.String(), Cryptomus.String(), GMPay.String(), PayPal.String()}
 }
 
 func GetSupportedPlatforms() []integration.Info {
@@ -88,6 +90,17 @@ func GetSupportedPlatforms() []integration.Info {
 				"checkout_mode": "Checkout: page (default) or api",
 				"private_key":   "V2 merchant RSA private key",
 				"public_key":    "V2 platform RSA public key",
+			},
+		},
+		{
+			Platform:    PayPal.String(),
+			PlatformURL: "https://developer.paypal.com/",
+			PlatformFieldDescription: map[string]string{
+				"client_id":     "REST app client ID",
+				"client_secret": "REST app secret",
+				"webhook_id":    "Webhook ID from the same app and environment",
+				"environment":   "live (default) or sandbox",
+				"locale":        "Optional checkout language, e.g. zh-CN or en-US",
 			},
 		},
 		{

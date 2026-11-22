@@ -45,6 +45,10 @@ func (r *callbackOrders) FindOneByOrderNo(_ context.Context, orderNo string) (*o
 	return &copy, nil
 }
 
+func (*callbackOrders) ReservePaymentCapture(context.Context, string, string) (bool, error) {
+	panic("unexpected outbound capture")
+}
+
 func (r *callbackOrders) MarkOrderPaid(_ context.Context, orderNo, tradeNo string) (bool, error) {
 	if r.order.OrderNo != orderNo || r.order.Status != order.StatusPending {
 		return false, nil

@@ -60,6 +60,7 @@ type UserSubscriptionReader interface {
 // settlement marks orders paid through it.
 type Orders interface {
 	FindOneByOrderNo(ctx context.Context, orderNo string) (*orderEntity.Order, error)
+	ReservePaymentCapture(ctx context.Context, orderNo, tradeNo string) (bool, error)
 	MarkOrderPaid(ctx context.Context, orderNo, tradeNo string) (bool, error)
 	CountUserCouponUsage(ctx context.Context, userID int64, coupon string) (int64, error)
 	IsUserEligibleForNewOrder(ctx context.Context, userID int64) (bool, error)

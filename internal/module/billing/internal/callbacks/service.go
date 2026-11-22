@@ -45,8 +45,13 @@ func WithUnmatchedPaymentLog(logs UnmatchedPaymentLog) Option {
 	return func(s *Service) { s.unmatched = logs }
 }
 
+type Orders interface {
+	settle.Orders
+	ReservePaymentCapture(ctx context.Context, orderNo, tradeNo string) (bool, error)
+}
+
 type Service struct {
-	orders    settle.Orders
+	orders    Orders
 	queue     settle.Queue
 	gateways  *gateway.Registry
 	unmatched UnmatchedPaymentLog
@@ -54,7 +59,7 @@ type Service struct {
 
 // NewService builds the callback flow; a nil registry selects the production
 // gateways.
-func NewService(orders settle.Orders, queue settle.Queue, gateways *gateway.Registry, opts ...Option) *Service {
+func NewService(orders Orders, queue settle.Queue, gateways *gateway.Registry, opts ...Option) *Service {
 	if gateways == nil {
 		gateways = gateway.NewRegistry()
 	}
@@ -96,6 +101,9 @@ func (s *Service) notify(ctx context.Context, method *payment.Payment, n gateway
 	}
 	notice, err := gw.ParseCallback(ctx, n)
 	if err != nil {
+		if errors.Is(err, gateway.ErrUnconfirmed) {
+			return nil, err
+		}
 		return nil, gateway.InvalidCallback(err)
 	}
 	if notice.Ignore {
@@ -113,6 +121,9 @@ func (s *Service) notify(ctx context.Context, method *payment.Payment, n gateway
 	}
 	if err := gw.CheckOrder(orderInfo, notice); err != nil {
 		return notice, gateway.InvalidCallback(err)
+	}
+	if notice.Approved {
+		return notice, s.captureApproved(ctx, gw, orderInfo, notice)
 	}
 	if !notice.Paid {
 		return notice, s.acknowledgeLifecycle(ctx, method, orderInfo, notice)
@@ -148,6 +159,25 @@ func (s *Service) notify(ctx context.Context, method *payment.Payment, n gateway
 	}
 	logger.WithContext(ctx).Infow("[PaymentNotify] Notify processed", logger.Field("platform", method.Platform), logger.Field("orderNo", orderInfo.OrderNo))
 	return notice, nil
+}
+
+// A buyer approval is a request to capture. An approval delivered after a
+// cancellation must never debit the buyer.
+func (s *Service) captureApproved(ctx context.Context, gw gateway.Gateway, o *order.Order, n *gateway.Notice) error {
+	if !order.CanSettle(o.Status) {
+		return nil
+	}
+	if err := validatePaymentExpectation(o, n.Amount, n.Currency); err != nil {
+		return gateway.InvalidCallback(err)
+	}
+	verdict, err := gw.Reconcile(ctx, gateway.CloseRequest{Order: o, ReserveCapture: s.orders.ReservePaymentCapture})
+	if err != nil {
+		return err
+	}
+	if verdict.TradeNo == "" || verdict.TradeNo != n.TradeNo {
+		return gateway.ErrUnconfirmed
+	}
+	return settle.VerifiedPayment(ctx, s.orders, s.queue, o, verdict.TradeNo)
 }
 
 // acknowledgeLifecycle accepts a valid lifecycle event that does not

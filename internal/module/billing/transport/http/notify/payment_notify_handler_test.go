@@ -271,3 +271,32 @@ func TestGMPayAcknowledgement(t *testing.T) {
 		assertPaymentNotifyError(t, ctx, tt.status)
 	}
 }
+
+type paypalNotifyProbe struct {
+	notifyService
+	received billing.PaymentNotification
+}
+
+func (p *paypalNotifyProbe) PaymentNotify(_ context.Context, n billing.PaymentNotification) error {
+	p.received = n
+	return p.err
+}
+func TestPayPalWebhookDeliveryHeaders(t *testing.T) {
+	style, ok := billing.New(billing.Deps{}).PaymentCallbackStyle("PayPal")
+	if !ok || !style.StatusFailure {
+		t.Fatal("missing PayPal status-based webhook")
+	}
+	probe := &paypalNotifyProbe{notifyService: notifyService{style: style}}
+	ctx := server.Default().NewContext()
+	ctx.Request.Header.SetMethod(http.MethodPost)
+	for k, v := range map[string]string{"PAYPAL-TRANSMISSION-ID": "id", "PAYPAL-TRANSMISSION-TIME": "time", "PAYPAL-TRANSMISSION-SIG": "sig", "PAYPAL-CERT-URL": "cert", "PAYPAL-AUTH-ALGO": "algo"} {
+		ctx.Request.Header.Set(k, v)
+	}
+	const body = `{ "event_type": "CHECKOUT.ORDER.APPROVED" }`
+	ctx.Request.SetBodyString(body)
+	PaymentNotifyHandler(probe)(context.WithValue(t.Context(), requestctx.CtxKeyPlatform, "PayPal"), ctx)
+	h := probe.received.PayPalTransmission
+	if h.ID != "id" || h.Time != "time" || h.Signature != "sig" || h.CertURL != "cert" || h.Algorithm != "algo" || string(probe.received.Body) != body {
+		t.Fatal("lost signed delivery metadata")
+	}
+}

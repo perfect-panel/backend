@@ -23,7 +23,7 @@ func (m *orderRepo) CompletePaymentSession(ctx context.Context, orderNo, tradeNo
 	if err := settle.ValidateTradeNo(tradeNo); err != nil {
 		return false, err
 	}
-	if session == "" || session == order.PaymentSessionStarting || len(session) > 64<<10 || !json.Valid([]byte(session)) {
+	if session == "" || session == order.PaymentSessionStarting || session == order.PaymentSessionCapturing || len(session) > 64<<10 || !json.Valid([]byte(session)) {
 		return false, errors.New("invalid payment session")
 	}
 	return m.changePaymentSession(ctx, orderNo, func(conn *gorm.DB) *gorm.DB {
@@ -31,6 +31,17 @@ func (m *orderRepo) CompletePaymentSession(ctx context.Context, orderNo, tradeNo
 			Where("order_no = ? AND status = ? AND payment_session = ?", orderNo, order.StatusPending, order.PaymentSessionStarting).
 			Where("trade_no IS NULL OR trade_no = '' OR trade_no = ?", tradeNo).
 			Updates(map[string]any{"trade_no": tradeNo, "payment_session": session})
+	})
+}
+
+// ReservePaymentCapture must win against a local close before a gateway can debit
+// the payer. The close transaction rechecks the session under the order row lock.
+func (m *orderRepo) ReservePaymentCapture(ctx context.Context, orderNo, tradeNo string) (bool, error) {
+	return m.changePaymentSession(ctx, orderNo, func(conn *gorm.DB) *gorm.DB {
+		return conn.Model(&order.Order{}).
+			Where("order_no = ? AND status = ? AND trade_no = ?", orderNo, order.StatusPending, tradeNo).
+			Where("payment_session <> ? AND payment_session <> ''", order.PaymentSessionCapturing).
+			Update("payment_session", order.PaymentSessionCapturing)
 	})
 }
 

@@ -63,6 +63,7 @@ var platforms = map[payment.Platform]platformSpec{
 	payment.EPay:      {open: openEPay, normalize: normalizeEPay, style: CallbackStyle{UniqueParams: true, TextReply: true, TextFailure: true}},
 	payment.AlipayF2F: {open: openAlipay, normalize: normalizeAlipay, style: CallbackStyle{TextReply: true}},
 	payment.Stripe:    {open: openStripe, normalize: normalizeStripe, style: CallbackStyle{Body: true, StatusFailure: true}},
+	payment.PayPal:    {open: openPayPal, normalize: normalizePayPal, style: CallbackStyle{Body: true, StatusFailure: true}},
 	payment.GMPay:     {open: openGMPay, normalize: normalizeGMPay, style: CallbackStyle{Body: true, TextReply: true, StatusFailure: true}},
 	payment.Cryptomus: {open: openCryptomus, normalize: normalizeCryptomus, style: CallbackStyle{Body: true, TextReply: true, TextFailure: true}},
 }

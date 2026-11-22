@@ -148,6 +148,7 @@ func (s *Service) reconcileGateway(ctx context.Context, orderInfo *order.Order, 
 	}
 	return gw.Reconcile(ctx, gateway.CloseRequest{
 		Order: orderInfo, Explicit: explicit, SystemCurrency: s.systemCurrency(),
+		ReserveCapture: s.deps.Orders.ReservePaymentCapture,
 	})
 }
 
