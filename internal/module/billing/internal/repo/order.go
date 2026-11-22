@@ -599,8 +599,8 @@ func (m *orderRepo) QueryMonthlyUserCounts(ctx context.Context, date time.Time) 
 }
 
 func (m *orderRepo) QueryDateUserCounts(ctx context.Context, date time.Time) (int64, int64, error) {
-	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
-	nextDay := start.Add(24 * time.Hour)
+	start := appDayStart(date)
+	nextDay := start.AddDate(0, 0, 1)
 
 	var counts order.UserCounts
 
