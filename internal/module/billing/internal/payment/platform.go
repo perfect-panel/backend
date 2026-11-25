@@ -17,6 +17,7 @@ const (
 	Cryptomus
 	GMPay
 	PayPal
+	Nano
 	UNSUPPORTED Platform = -1
 )
 
@@ -28,6 +29,7 @@ var platformNames = map[string]Platform{
 	"Cryptomus":   Cryptomus,
 	"GMPay":       GMPay,
 	"PayPal":      PayPal,
+	"Nano":        Nano,
 	"unsupported": UNSUPPORTED,
 }
 
@@ -52,7 +54,7 @@ func ParsePlatform(s string) Platform {
 // an internal checkout method rather than an administrator-configurable
 // gateway.
 func SupportedPlatformNames() []string {
-	return []string{Stripe.String(), AlipayF2F.String(), EPay.String(), Balance.String(), Cryptomus.String(), GMPay.String(), PayPal.String()}
+	return []string{Stripe.String(), AlipayF2F.String(), EPay.String(), Balance.String(), Cryptomus.String(), GMPay.String(), PayPal.String(), Nano.String()}
 }
 
 func GetSupportedPlatforms() []integration.Info {
@@ -118,6 +120,16 @@ func GetSupportedPlatforms() []integration.Info {
 			PlatformFieldDescription: map[string]string{
 				"merchant_id": "Merchant UUID",
 				"api_key":     "Payment API Key",
+			},
+		},
+		{
+			Platform:    Nano.String(),
+			PlatformURL: "https://nano.org",
+			PlatformFieldDescription: map[string]string{
+				"pay_to":       "Nano account that receives payments (nano_...)",
+				"node_url":     "Nano node RPC URL the payments are read from (https)",
+				"currency":     "Currency the method charges (ISO code)",
+				"xno_per_unit": "Price in XNO of one unit of that currency",
 			},
 		},
 	}

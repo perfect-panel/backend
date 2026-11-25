@@ -171,3 +171,24 @@ func (l *EPayConfig) Unmarshal(data []byte) error {
 	aux := (*Alias)(l)
 	return json.Unmarshal(data, &aux)
 }
+
+// NanoConfig is a Nano (XNO) payment method. PayTo receives the payments,
+// NodeURL is the node RPC the payments are read from, and XNOPerUnit is the
+// operator's price in XNO of one unit of Currency, the currency the method
+// charges. It holds no key and no seed.
+type NanoConfig struct {
+	PayTo      string `json:"pay_to"`
+	NodeURL    string `json:"node_url"`
+	Currency   string `json:"currency"`
+	XNOPerUnit string `json:"xno_per_unit"`
+}
+
+func (l *NanoConfig) Marshal() ([]byte, error) {
+	type Alias NanoConfig
+	return json.Marshal((*Alias)(l))
+}
+
+func (l *NanoConfig) Unmarshal(data []byte) error {
+	type Alias NanoConfig
+	return json.Unmarshal(data, (*Alias)(l))
+}
