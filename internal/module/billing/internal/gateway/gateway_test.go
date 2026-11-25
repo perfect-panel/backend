@@ -151,6 +151,7 @@ func TestRegistryDescribesThePlatforms(t *testing.T) {
 		"Stripe":    {Body: true, StatusFailure: true},
 		"Cryptomus": {Body: true, TextReply: true, TextFailure: true},
 		"GMPay":     {Body: true, TextReply: true, StatusFailure: true},
+		"Nano":      {Body: true, StatusFailure: true},
 	} {
 		style, ok := registry.CallbackStyle(platform)
 		if !ok || style != want || !registry.Handles(platform) {
@@ -168,7 +169,7 @@ func TestRegistryDescribesThePlatforms(t *testing.T) {
 	// Every gateway records the payment expectation before it creates the
 	// payment, so a close of an order whose checkout "never started" must
 	// find it still not started when it commits, whatever the platform.
-	for _, platform := range []string{"EPay", "AlipayF2F", "Stripe", "Cryptomus", "GMPay"} {
+	for _, platform := range []string{"EPay", "AlipayF2F", "Stripe", "Cryptomus", "GMPay", "Nano"} {
 		if !registry.CloseWithoutCheckout(platform).RequireStableCheckout {
 			t.Fatalf("%s: a close before the checkout started does not require a stable checkout", platform)
 		}
@@ -183,6 +184,7 @@ func TestRegistryValidatesConfigurations(t *testing.T) {
 		"AlipayF2F": map[string]any{"app_id": "app", "private_key": "pk", "public_key": "pub", "sandbox": "true"},
 		"Cryptomus": map[string]any{"merchant_id": " m ", "api_key": " k "},
 		"GMPay":     map[string]any{"pid": "1000", "secret_key": "key", "url": "https://gateway.example"},
+		"Nano":      map[string]any{"pay_to": "nano_1111111111111111111111111111111111111111111111111111hifc8npp", "node_url": "https://node.example", "currency": "USD", "xno_per_unit": "1"},
 	}
 	for platform, config := range valid {
 		if normalized, err := registry.NormalizeConfig(platform, config); err != nil || normalized == "" {
@@ -234,6 +236,7 @@ func TestReconcileWithoutCheckoutRequiresStableCheckoutForEveryGateway(t *testin
 		"EPay":      `{"pid":"1","url":"https://pay.example","key":"k","type":"alipay"}`,
 		"Stripe":    `{"secret_key":"sk","payment":"card"}`,
 		"AlipayF2F": alipayTestConfig(t),
+		"Nano":      `{"pay_to":"nano_1111111111111111111111111111111111111111111111111111hifc8npp","node_url":"https://node.example","currency":"USD","xno_per_unit":"1"}`,
 	} {
 		t.Run(platform, func(t *testing.T) {
 			gw, err := NewRegistry().Open(&payment.Payment{Platform: platform, Config: config})
@@ -252,7 +255,7 @@ func TestReconcileWithoutCheckoutRequiresStableCheckoutForEveryGateway(t *testin
 // gateways, never a payment a provider such as an app store settles.
 func TestCollectsNamesBillingsOwnPaymentMethods(t *testing.T) {
 	for method, want := range map[string]bool{
-		"EPay": true, "AlipayF2F": true, "Stripe": true, "Cryptomus": true, "GMPay": true, "balance": true,
+		"EPay": true, "AlipayF2F": true, "Stripe": true, "Cryptomus": true, "GMPay": true, "Nano": true, "balance": true,
 		"AppleIAP": false, "CryptoSaaS": false, "": false,
 	} {
 		if got := Collects(method); got != want {

@@ -173,7 +173,7 @@ func TestCreatePaymentMethodValidatesFeeAndPlatform(t *testing.T) {
 // without a gateway has no callback.
 func TestPaymentCallbackStyles(t *testing.T) {
 	f := newFacade(t)
-	for _, platform := range []string{"EPay", "AlipayF2F", "Stripe", "Cryptomus"} {
+	for _, platform := range []string{"EPay", "AlipayF2F", "Stripe", "Cryptomus", "Nano"} {
 		if _, ok := f.svc.PaymentCallbackStyle(platform); !ok {
 			t.Fatalf("%s has no callback style", platform)
 		}
